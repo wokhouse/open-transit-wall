@@ -28,7 +28,6 @@ class Screen {
   void drawPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b);
   void clear();
   void drawBackdrop();  // RLE water/land bitmap from backdrop.h
-  void drawBorder();    // perimeter stroke from GRID_BORDER_RGB in config.h
 
  private:
   // Physical x on the linear DMA chain for a virtual panel column/row.

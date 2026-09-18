@@ -57,18 +57,3 @@ void Screen::drawBackdrop() {
     }
   }
 }
-
-void Screen::drawBorder() {
-  const uint8_t c[3] = GRID_BORDER_RGB;
-  if (!(c[0] | c[1] | c[2])) {
-    return;
-  }
-  for (int x = 0; x < DISPLAY_W; x++) {
-    drawPixel(x, 0, c[0], c[1], c[2]);
-    drawPixel(x, DISPLAY_H - 1, c[0], c[1], c[2]);
-  }
-  for (int y = 1; y < DISPLAY_H - 1; y++) {
-    drawPixel(0, y, c[0], c[1], c[2]);
-    drawPixel(DISPLAY_W - 1, y, c[0], c[1], c[2]);
-  }
-}

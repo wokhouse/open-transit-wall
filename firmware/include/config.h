@@ -34,13 +34,7 @@
 
 // --- Display look -----------------------------------------------------------
 #define DISPLAY_BRIGHTNESS 48     // 0-255; panels are very bright indoors
-#define VEHICLE_DOT_SIZE 1        // 1 = single pixel; 2 = 2x2 block (large walls)
 #define STATUS_PIXEL_ENABLED 1    // corner pixel: green=fresh, amber=aging, red=error
-
-// Single stroke around the display border so the wall's extent reads in the
-// dark. Perimeter cells only — no interior grid, no panel seams.
-// Pre-brightness RGB; {0,0,0} disables.
-#define GRID_BORDER_RGB {0, 0, 0}
 
 // --- Map area ---------------------------------------------------------------
 // Bounding box around the SFMTA metro service area (must match server/geo.py
@@ -59,8 +53,8 @@
 #define MAP_STRETCH_TO_FILL 0
 
 // --- Data source (the mini-proxy, not 511 directly) -------------------------
+// Fetches http://<PROXY_HOST>:8000/vehicles
 #define PROXY_PORT 8000
-#define PROXY_PATH "/vehicles"
 #define POLL_INTERVAL_MS 12000UL  // ESP32-side refresh; proxy rate-limits 511 itself
 #define STALE_AFTER_POLLS 3       // status pixel goes amber after this many failed polls
 

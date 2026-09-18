@@ -18,28 +18,7 @@
 #include "map_project.h"
 
 static const uint8_t LAND[3] = {2, 2, 2};
-static const uint8_t WATER[3] = {0, 0, 36};
-
-// Mirror firmware/include/config.h GRID_BORDER_RGB so the sim shows exactly
-// what the wall will show: perimeter stroke only, no interior grid.
-static const uint8_t GRID_BORDER[3] = {60, 60, 70};
-
-static void put(int x, int y, const uint8_t *rgb, int w, int h);
-
-static void drawBorder(int w, int h) {
-  const uint8_t *c = GRID_BORDER;
-  if (!(c[0] | c[1] | c[2])) {
-    return;
-  }
-  for (int x = 0; x < w; x++) {
-    put(x, 0, c, w, h);
-    put(x, h - 1, c, w, h);
-  }
-  for (int y = 1; y < h - 1; y++) {
-    put(0, y, c, w, h);
-    put(w - 1, y, c, w, h);
-  }
-}
+static const uint8_t WATER[3] = {0, 0, 0};
 
 struct Veh {
   double lat, lon;
@@ -114,7 +93,6 @@ int main(int argc, char **argv) {
       if (++x >= w) { x = 0; y++; }
     }
   }
-  drawBorder(w, h);
 
   // 2) vehicles — bbox mirrors server/geo.py BBOX; stretch mirrors
   // MAP_STRETCH_TO_FILL in config.h
@@ -154,12 +132,10 @@ int main(int argc, char **argv) {
         const uint8_t *p = &fb[(ay * w + ax) * 3];
         if (p[0] > 40 || p[1] > 40 || p[2] > 80) {
           putchar('o');  // vehicle (bright)
-        } else if (p[2] > 16) {
-          putchar('.');  // water
         } else if (p[0] | p[1] | p[2]) {
           putchar('#');  // land
         } else {
-          putchar(' ');
+          putchar(' ');  // water / background (black)
         }
       }
       putchar('\n');

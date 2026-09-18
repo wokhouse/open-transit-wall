@@ -95,19 +95,6 @@ function drawLand(land) {
   ctx.fill();
 }
 
-// Border stroke marking the display extent — mirrors firmware GRID_BORDER_RGB
-// in config.h. Grid-agnostic: no cell grid, no panel seams. ?grid=0 hides it.
-const GRID_BORDER = [0, 0, 0];
-
-function drawBorder() {
-  if (params.get("grid") === "0") return;
-  ctx.fillStyle = `rgb(${GRID_BORDER[0]},${GRID_BORDER[1]},${GRID_BORDER[2]})`;
-  ctx.fillRect(0, 0, W, 1);
-  ctx.fillRect(0, H - 1, W, 1);
-  ctx.fillRect(0, 0, 1, H);
-  ctx.fillRect(W - 1, 0, 1, H);
-}
-
 function drawVehicles(v) {
   for (const veh of v) {
     const [x, y] = project(veh.la, veh.lo);
@@ -149,7 +136,6 @@ async function tick() {
     if (!proj) initProjection(geo.bbox);
     const data = await (await fetch("/vehicles?full=1")).json();
     drawLand(geo.land);
-    drawBorder();
     drawVehicles(data.v);
     updateLegend(data.v);
     document.getElementById("meta").textContent =

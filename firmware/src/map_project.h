@@ -50,9 +50,6 @@ class MapProjection {
     return *x >= 0 && *y >= 0 && *x < width_ && *y < height_;
   }
 
-  int width() const { return width_; }
-  int height() const { return height_; }
-
  private:
   BBox box_{};
   int width_ = 0, height_ = 0;
