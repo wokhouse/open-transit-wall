@@ -25,7 +25,7 @@ tiled wall (128×64) is the same code — just regenerate the backdrop.
 |---|---|
 | `server/proxy.py` | Polls 511's SIRI VehicleMonitoring feed for SFMTA every 65 s on a shared timer, classifies vehicles, serves compact JSON at `GET /vehicles`, plus `/preview` (browser view of the wall), `/geo`, `/health`. Yard/deadhead vehicles (no route assigned) are filtered out. Set `TYPES=M` in `server/.env` to serve a metro-only wall (or any subset of `B R M C`). |
 | `server/classify.py` | Route → type/color logic. Standalone-importable so it can be reused elsewhere (e.g. a Pi Zero build). |
-| `firmware/` | PlatformIO + Arduino ESP32 firmware. Fetches the proxy, projects lat/lon → pixels, blits the backdrop, plots dots. |
+| `firmware/` | PlatformIO + Arduino ESP32 firmware. Fetches the proxy, projects lat/lon → pixels, blits the backdrop, plots dots. Each vehicle glides to its next known position at a random moment inside the ~60s data window, so the wall reads as independent movement rather than one synchronized jump. |
 | `tools/gen_backdrop.py` | Rasterizes the coarse SF shoreline to your exact matrix size into an RLE bitmap compiled into the firmware — dark land, darker water, and a white outline along the coastline. |
 | `sim/` + `tools/run_sim.sh` | Native simulator: renders exactly what the ESP32 will draw (same projection + backdrop code) to a BMP — no hardware needed. |
 

@@ -30,6 +30,7 @@ import sys
 import threading
 import time
 import zipfile
+import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -113,17 +114,21 @@ def compact_vehicles(raw_vehicles: list[dict]) -> list[dict]:
             "lo": round(vehicle["lon"], 5),
             "t": info["code"],
             "c": list(info["rgb"]),
+            # Stable id so the ESP32 can match vehicles across polls and
+            # animate each one's movement individually. 31 bits keeps the
+            # collision rate negligible at this fleet size (~2^-6 per day).
+            "i": zlib.crc32(vehicle["id"].encode()) & 0x7FFFFFFF,
         })
     return out
 
 
 def to_wire(vehicles: list[dict]) -> list[list]:
     """Project cached vehicles to the ESP32 wire format: flat
-    [lat, lon, r, g, b] arrays. Keyed objects overflowed the ESP32's heap at
-    rush-hour fleet sizes — every JSON key costs ~16 bytes of parse-time heap
-    next to the display framebuffer, so /vehicles ships arrays by default and
-    the keyed format stays available for the preview (?full=1)."""
-    return [[v["la"], v["lo"], *v["c"]] for v in vehicles]
+    [lat, lon, r, g, b, id] arrays. Keyed objects overflowed the ESP32's heap
+    at rush-hour fleet sizes — every JSON key costs ~16 bytes of parse-time
+    heap next to the display framebuffer, so /vehicles ships arrays by default
+    and the keyed format stays available for the preview (?full=1)."""
+    return [[v["la"], v["lo"], *v["c"], v["i"]] for v in vehicles]
 
 
 # --- Upstream fetching -------------------------------------------------------

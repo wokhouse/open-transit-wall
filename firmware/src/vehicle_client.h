@@ -11,6 +11,7 @@
 struct Vehicle {
   float lat, lon;
   uint8_t r, g, b;
+  uint32_t id;  // stable across polls (crc31 of the SIRI VehicleRef)
 };
 
 // Fetches /vehicles and fills `out` (up to maxVehicles). Returns the number

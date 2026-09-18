@@ -65,3 +65,13 @@
 #define STALE_AFTER_POLLS 3       // status pixel goes amber after this many failed polls
 
 #define MAX_VEHICLES 800          // live SFMTA feed observed ~676 vehicles
+
+// --- Per-vehicle motion ------------------------------------------------------
+// 511 only publishes positions ~every 65s. Instead of teleporting the whole
+// wall on each poll, every vehicle whose position changed picks a random
+// moment inside MOTION_WINDOW_MS and glides from its old pixel to the new one
+// over MOTION_GLIDE_MS — so the wall reads as many vehicles moving
+// independently rather than one synchronized jump.
+#define MOTION_WINDOW_MS 45000UL  // spread of animation start times
+#define MOTION_GLIDE_MS  5000     // how long a single glide takes
+#define RENDER_FPS       20       // continuous re-render rate

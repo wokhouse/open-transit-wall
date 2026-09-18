@@ -44,6 +44,7 @@ int fetchVehicles(const char *host, uint16_t port, Vehicle *out, int maxVehicles
     v.r = veh[2] | 0;
     v.g = veh[3] | 0;
     v.b = veh[4] | 0;
+    v.id = veh[5] | 0;
     count++;
   }
   return count;

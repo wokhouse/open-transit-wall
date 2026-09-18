@@ -39,5 +39,5 @@ def test_compact_all_types_when_unset(monkeypatch):
 
 
 def test_to_wire_flattens_for_esp32():
-    v = {"r": "N", "la": 37.76, "lo": -122.47, "t": "M", "c": [10, 20, 30]}
-    assert proxy.to_wire([v]) == [[37.76, -122.47, 10, 20, 30]]
+    v = {"r": "N", "la": 37.76, "lo": -122.47, "t": "M", "c": [10, 20, 30], "i": 65501}
+    assert proxy.to_wire([v]) == [[37.76, -122.47, 10, 20, 30, 65501]]
