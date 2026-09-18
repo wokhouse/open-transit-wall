@@ -137,9 +137,16 @@ static int findActive(uint32_t id) {
 }
 
 // Fold the fresh snapshot into the animation slots: matching vehicles get a
-// new target (scheduled at a random moment inside the motion window), new
-// vehicles appear in place, missing ones are erased.
-static void mergeVehicles(uint32_t nowMs) {
+// new target (scheduled at a random moment in the remainder of the upstream
+// refresh cycle), new vehicles appear in place, missing ones are erased.
+static void mergeVehicles(uint32_t nowMs, float upstreamAge) {
+  // Glides tile the whole refresh cycle: spread start times across whatever
+  // is left of it after the snapshot's own age.
+  int32_t spreadMs = (int32_t)(UPSTREAM_REFRESH_S * 1000)
+                     - (int32_t)(upstreamAge * 1000.0f) - MOTION_GLIDE_MS;
+  if (spreadMs < 1000) {
+    spreadMs = 1000;  // stale snapshot: still stagger, just tightly
+  }
   memset(seen, 0, activeCount);
   int moved = 0, fresh = 0;
   for (int i = 0; i < vehicleCount; i++) {
@@ -160,7 +167,7 @@ static void mergeVehicles(uint32_t nowMs) {
         a.r = v.r;
         a.g = v.g;
         a.b = v.b;
-        a.startMs = nowMs + random(MOTION_WINDOW_MS - MOTION_GLIDE_MS);
+        a.startMs = nowMs + random(spreadMs);
         a.durMs = MOTION_GLIDE_MS;
         moved++;
       }
@@ -265,7 +272,7 @@ void loop() {
     if (n >= 0) {
       vehicleCount = n;
       pollFailures = 0;
-      mergeVehicles(now);
+      mergeVehicles(now, upstreamAge);
     } else {
       pollFailures = min<uint8_t>(pollFailures + 1, 200);
       Serial.printf("[poll] fetch failed (%u consecutive)\n", pollFailures);
