@@ -6,7 +6,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from siri import parse_vehiclemonitor  # noqa: E402
+from siri import parse_vehiclemonitor
 
 FIXTURE = Path(__file__).resolve().parent.parent.parent / "fixtures" / "sample_vehiclemonitor.json"
 

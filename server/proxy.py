@@ -36,11 +36,10 @@ from pathlib import Path
 
 import httpx
 import uvicorn
+from classify import classify, load_routes
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
-
-from classify import classify, load_routes
 from geo import BBOX, SF_LAND
 from siri import parse_vehiclemonitor
 
@@ -194,7 +193,7 @@ def poll_loop(api_key: str | None, fixture: Path | None, record: bool,
             if first and api_key:
                 try:
                     refresh_routes(api_key)
-                except Exception as error:  # noqa: BLE001 - keep serving
+                except Exception as error:
                     print(f"[routes] refresh failed ({error}); using fallback")
 
             if fixture is not None:
@@ -203,7 +202,7 @@ def poll_loop(api_key: str | None, fixture: Path | None, record: bool,
                 payload = fetch_live(api_key)
                 if record:
                     FIXTURES_DIR.mkdir(exist_ok=True)
-                    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    stamp = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
                     (FIXTURES_DIR / f"vehiclemonitor_{stamp}.json").write_text(
                         json.dumps(payload, indent=1))
             else:
@@ -214,7 +213,7 @@ def poll_loop(api_key: str | None, fixture: Path | None, record: bool,
             print(f"[poll] {len(vehicles)} vehicles at {state.payload()['ts']}",
                   flush=True)
             first = False
-        except Exception as error:  # noqa: BLE001 - the proxy must keep serving
+        except Exception as error:
             print(f"[poll] error: {error}", file=sys.stderr)
         time.sleep(interval)
 
@@ -259,7 +258,7 @@ def main() -> None:
     args = parser.parse_args()
 
     api_key = os.environ.get("FIVE11_API_KEY")
-    interval = float(os.environ.get("POLL_SECONDS", 60))
+    interval = float(os.environ.get("POLL_SECONDS", "60"))
 
     if args.once:
         payload = (json.loads(args.fixture.read_text()) if args.fixture
@@ -274,7 +273,7 @@ def main() -> None:
     )
     thread.start()
     uvicorn.run(app, host=os.environ.get("HOST", "0.0.0.0"),
-                port=int(os.environ.get("PORT", 8000)), log_level="warning")
+                port=int(os.environ.get("PORT", "8000")), log_level="warning")
 
 
 if __name__ == "__main__":

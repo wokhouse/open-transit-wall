@@ -1,0 +1,21 @@
+# Ruff config for open-transit-wall (server, tools, tests).
+# Run: uvx ruff check server tools   (or pip install ruff && ruff check server tools)
+line-length = 100
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # import sorting
+    "B",    # flake8-bugbear (likely bugs)
+    "UP",   # pyupgrade
+    "DTZ",  # naive datetimes
+    "RUF",  # ruff-specific
+    "EXE",  # executable shebangs
+]
+
+[lint.per-file-ignores]
+# Imports follow sys.path setup in the tests and the standalone tools.
+"server/tests/**" = ["E402"]
+"tools/**" = ["E402"]

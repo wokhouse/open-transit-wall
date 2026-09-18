@@ -6,7 +6,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from classify import COLOR_BUS, COLOR_CABLE, COLOR_RAPID, classify, normalize_line  # noqa: E402
+from classify import COLOR_BUS, COLOR_CABLE, COLOR_RAPID, classify, normalize_line
 
 
 @pytest.fixture(scope="module")
