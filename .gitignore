@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Secrets
+server/.env
+firmware/include/secrets.h
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Local build artifacts
+build/
+*.ppm
+*.bmp
+
+# macOS
+.DS_Store
+
+# ZCode local session state
+.zcode/

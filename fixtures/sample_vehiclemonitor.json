@@ -1,0 +1,155 @@
+{
+  "Siri": {
+    "ServiceDelivery": {
+      "ResponseTimestamp": "2026-09-09T18:00:00Z",
+      "ProducerRef": "SFMTA",
+      "VehicleMonitoringDelivery": {
+        "ResponseTimestamp": "2026-09-09T18:00:00Z",
+        "ValidUntil": "2026-09-09T18:02:00Z",
+        "VehicleActivity": [
+          {
+            "RecordedAtTime": "2026-09-09T17:59:52Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "14R",
+              "DirectionRef": "1",
+              "PublishedLineName": "14R",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Mission Dr & Excelsior Av",
+              "DestinationName": "Downtown",
+              "VehicleLocation": { "Longitude": -122.4194, "Latitude": 37.7749 },
+              "Bearing": "45",
+              "Occupancy": "seatsAvailable",
+              "VehicleRef": "SFMTA_8213"
+            }
+          },
+          {
+            "RecordedAtTime": "2026-09-09T17:59:55Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "38",
+              "DirectionRef": "0",
+              "PublishedLineName": "38",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Transit Center",
+              "DestinationName": "Outer Richmond",
+              "VehicleLocation": { "Longitude": -122.4625, "Latitude": 37.7824 },
+              "Bearing": "270",
+              "VehicleRef": "SFMTA_5410"
+            }
+          },
+          {
+            "RecordedAtTime": "2026-09-09T17:59:58Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "N",
+              "DirectionRef": "1",
+              "PublishedLineName": "N",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Judah & La Playa",
+              "DestinationName": "4th & King",
+              "VehicleLocation": { "Longitude": -122.4723, "Latitude": 37.7601 },
+              "Bearing": "90",
+              "VehicleRef": "SFMTA_1502"
+            }
+          },
+          {
+            "RecordedAtTime": "2026-09-09T17:59:57Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "J",
+              "DirectionRef": "0",
+              "PublishedLineName": "J",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Balboa Park",
+              "DestinationName": "Embarcadero",
+              "VehicleLocation": { "Longitude": -122.4342, "Latitude": 37.7461 },
+              "Bearing": "10",
+              "VehicleRef": "SFMTA_1462"
+            }
+          },
+          {
+            "RecordedAtTime": "2026-09-09T17:59:50Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "L",
+              "DirectionRef": "0",
+              "PublishedLineName": "L",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Embarcadero",
+              "DestinationName": "Balboa Park",
+              "VehicleLocation": { "Longitude": -122.4907, "Latitude": 37.7462 },
+              "Bearing": "260",
+              "VehicleRef": "SFMTA_1437"
+            }
+          },
+          {
+            "RecordedAtTime": "2026-09-09T17:59:59Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "22",
+              "DirectionRef": "1",
+              "PublishedLineName": "22",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Fillmore",
+              "DestinationName": "Dogpatch",
+              "VehicleLocation": { "Longitude": -122.4301, "Latitude": 37.7683 },
+              "Bearing": "180",
+              "VehicleRef": "SFMTA_6007"
+            }
+          },
+          {
+            "RecordedAtTime": "2026-09-09T17:59:51Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "8BX",
+              "DirectionRef": "1",
+              "PublishedLineName": "8BX",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Downtown",
+              "DestinationName": "Palace of Fine Arts",
+              "VehicleLocation": { "Longitude": -122.4081, "Latitude": 37.7842 },
+              "Bearing": "350",
+              "VehicleRef": "SFMTA_5566"
+            }
+          },
+          {
+            "RecordedAtTime": "2026-09-09T17:59:54Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "PH",
+              "DirectionRef": "0",
+              "PublishedLineName": "PH",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Powell St Station",
+              "DestinationName": "Aquatic Park",
+              "VehicleLocation": { "Longitude": -122.4084, "Latitude": 37.7891 },
+              "Bearing": "0",
+              "VehicleRef": "CABLE_21"
+            }
+          },
+          {
+            "RecordedAtTime": "2026-09-09T17:59:49Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "30X",
+              "DirectionRef": "0",
+              "PublishedLineName": "30X",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Marina",
+              "DestinationName": "Transbay Terminal",
+              "VehicleLocation": { "Longitude": -122.4431, "Latitude": 37.8021 },
+              "Bearing": "120",
+              "VehicleRef": "SFMTA_5710"
+            }
+          },
+          {
+            "RecordedAtTime": "2026-09-09T17:59:53Z",
+            "MonitoredVehicleJourney": {
+              "LineRef": "SF:KT",
+              "DirectionRef": "1",
+              "PublishedLineName": "KT",
+              "OperatorRef": "SFMTA",
+              "OriginName": "Sunnydale",
+              "DestinationName": "Embarcadero",
+              "VehicleLocation": { "Longitude": -122.3969, "Latitude": 37.7565 },
+              "Bearing": "330",
+              "VehicleRef": "SFMTA_1490"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,410 @@
+{
+"30X": {
+"type": 3,
+"long": "MARINA EXPRESS",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"L": {
+"type": 0,
+"long": "TARAVAL",
+"color": "942D83",
+"text": "FFFFFF"
+},
+"FBUS": {
+"type": 3,
+"long": "MARKET & WHARVES BUS",
+"color": "B49A36",
+"text": "000000"
+},
+"14R": {
+"type": 3,
+"long": "MISSION RAPID",
+"color": "BF2B45",
+"text": "FFFFFF"
+},
+"18": {
+"type": 3,
+"long": "46TH AVENUE",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"19": {
+"type": 3,
+"long": "POLK",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"1X": {
+"type": 3,
+"long": "CALIFORNIA EXPRESS",
+"color": "BF2B45",
+"text": "FFFFFF"
+},
+"23": {
+"type": 3,
+"long": "MONTEREY",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"24": {
+"type": 3,
+"long": "DIVISADERO",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"25": {
+"type": 3,
+"long": "TREASURE ISLAND",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"27": {
+"type": 3,
+"long": "BRYANT",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"28": {
+"type": 3,
+"long": "19TH AVENUE",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"29": {
+"type": 3,
+"long": "SUNSET",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"714": {
+"type": 3,
+"long": "BART EARLY BIRD",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"90": {
+"type": 3,
+"long": "SAN BRUNO OWL",
+"color": "666666",
+"text": "FFFFFF"
+},
+"12": {
+"type": 3,
+"long": "FOLSOM-PACIFIC",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"14": {
+"type": 3,
+"long": "MISSION",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"2": {
+"type": 3,
+"long": "SUTTER",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"22": {
+"type": 3,
+"long": "FILLMORE",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"33": {
+"type": 3,
+"long": "ASHBURY-18TH ST",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"36": {
+"type": 3,
+"long": "TERESITA",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"38R": {
+"type": 3,
+"long": "GEARY RAPID",
+"color": "BF2B45",
+"text": "FFFFFF"
+},
+"45": {
+"type": 3,
+"long": "UNION-STOCKTON",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"58": {
+"type": 3,
+"long": "LAKE MERCED",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"38": {
+"type": 3,
+"long": "GEARY",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"48": {
+"type": 3,
+"long": "QUINTARA-24TH STREET",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"39": {
+"type": 3,
+"long": "COIT",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"43": {
+"type": 3,
+"long": "MASONIC",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"49": {
+"type": 3,
+"long": "VAN NESS-MISSION",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"30": {
+"type": 3,
+"long": "STOCKTON",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"31": {
+"type": 3,
+"long": "BALBOA",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"35": {
+"type": 3,
+"long": "EUREKA",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"5": {
+"type": 3,
+"long": "FULTON",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"37": {
+"type": 3,
+"long": "CORBETT",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"44": {
+"type": 3,
+"long": "O'SHAUGHNESSY",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"1": {
+"type": 3,
+"long": "CALIFORNIA",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"54": {
+"type": 3,
+"long": "FELTON",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"55": {
+"type": 3,
+"long": "DOGPATCH",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"56": {
+"type": 3,
+"long": "RUTLAND",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"57": {
+"type": 3,
+"long": "PARKMERCED",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"5R": {
+"type": 3,
+"long": "FULTON RAPID",
+"color": "BF2B45",
+"text": "FFFFFF"
+},
+"6": {
+"type": 3,
+"long": "HAYES-PARNASSUS",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"K": {
+"type": 0,
+"long": "INGLESIDE",
+"color": "437C93",
+"text": "FFFFFF"
+},
+"KBUS": {
+"type": 3,
+"long": "INGLESIDE BUS",
+"color": "437C93",
+"text": "FFFFFF"
+},
+"8BX": {
+"type": 3,
+"long": "BAYSHORE B EXPRESS",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"91": {
+"type": 3,
+"long": "3RD-19TH AVE OWL",
+"color": "666666",
+"text": "FFFFFF"
+},
+"15": {
+"type": 3,
+"long": "BAYVIEW HUNTERS POINT EXPRESS",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"LOWL": {
+"type": 3,
+"long": "OWL TARAVAL",
+"color": "666666",
+"text": "FFFFFF"
+},
+"66": {
+"type": 3,
+"long": "QUINTARA",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"M": {
+"type": 0,
+"long": "OCEAN VIEW",
+"color": "008547",
+"text": "FFFFFF"
+},
+"9R": {
+"type": 3,
+"long": "SAN BRUNO RAPID",
+"color": "BF2B45",
+"text": "FFFFFF"
+},
+"67": {
+"type": 3,
+"long": "BERNAL HEIGHTS",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"7": {
+"type": 3,
+"long": "HAIGHT-NORIEGA",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"CA": {
+"type": 5,
+"long": "CALIFORNIA STREET CABLE CAR",
+"color": "B49A36",
+"text": "000000"
+},
+"N": {
+"type": 0,
+"long": "JUDAH",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"F": {
+"type": 0,
+"long": "MARKET & WHARVES",
+"color": "B49A36",
+"text": "000000"
+},
+"8": {
+"type": 3,
+"long": "BAYSHORE",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"J": {
+"type": 0,
+"long": "CHURCH",
+"color": "A96614",
+"text": "FFFFFF"
+},
+"NBUS": {
+"type": 3,
+"long": "JUDAH BUS",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"8AX": {
+"type": 3,
+"long": "BAYSHORE A EXPRESS",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"52": {
+"type": 3,
+"long": "EXCELSIOR",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"9": {
+"type": 3,
+"long": "SAN BRUNO",
+"color": "005B95",
+"text": "FFFFFF"
+},
+"NOWL": {
+"type": 3,
+"long": "OWL JUDAH",
+"color": "666666",
+"text": "FFFFFF"
+},
+"PH": {
+"type": 5,
+"long": "POWELL-HYDE CABLE CAR",
+"color": "B49A36",
+"text": "000000"
+},
+"PM": {
+"type": 5,
+"long": "POWELL-MASON CABLE CAR",
+"color": "B49A36",
+"text": "000000"
+},
+"T": {
+"type": 0,
+"long": "THIRD",
+"color": "BF2B45",
+"text": "FFFFFF"
+},
+"TBUS": {
+"type": 3,
+"long": "THIRD BUS",
+"color": "BF2B45",
+"text": "FFFFFF"
+},
+"28R": {
+"type": 3,
+"long": "19TH AVENUE RAPID",
+"color": "BF2B45",
+"text": "FFFFFF"
+}
+}

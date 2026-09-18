@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>open-transit-wall preview</title>
+<style>
+  body { margin: 0; background: #06080c; color: #9fb2c4; font: 13px/1.5 system-ui, sans-serif;
+         display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+  header { padding: 14px 16px 4px; text-align: center; }
+  header h1 { font-size: 15px; margin: 0 0 2px; color: #d8e6f2; }
+  #wrap { margin: 12px; box-shadow: 0 0 40px rgba(0,0,0,.8); }
+  canvas { display: block; image-rendering: pixelated; }
+  footer { padding: 4px 16px 20px; text-align: center; }
+  #meta { font-variant-numeric: tabular-nums; }
+  .legend span { display: inline-block; width: 9px; height: 9px; margin: 0 4px 0 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>open-transit-wall &mdash; SFMTA live preview</h1>
+  <div id="meta">loading&hellip;</div>
+  <div id="legend" class="legend"></div>
+</header>
+<div id="wrap"><canvas id="mx"></canvas></div>
+<footer>Vehicle locations provided by 511 &middot; SFMTA open data</footer>
+<script>
+const params = new URLSearchParams(location.search);
+const W = parseInt(params.get("w") || "64", 10);
+const H = parseInt(params.get("h") || "32", 10);
+const SCALE = parseInt(params.get("scale") || Math.max(4, Math.floor(1024 / W)), 10);
+
+const canvas = document.getElementById("mx");
+canvas.width = W; canvas.height = H;
+canvas.style.width = W * SCALE + "px";
+canvas.style.height = H * SCALE + "px";
+const ctx = canvas.getContext("2d");
+
+const geoP = fetch("/geo").then(r => r.json());
+let geo = null;      // {bbox, land}
+let proj = null;     // projection constants
+
+const MAP_STRETCH = false;  // mirror MAP_STRETCH_TO_FILL in config.h
+
+function initProjection(bbox) {
+  if (MAP_STRETCH) {
+    // Stretch the bbox onto the full display: data reaches all four edges
+    // (mirrors MapProjection stretch mode in firmware/src/map_project.h).
+    proj = {
+      stretch: true,
+      sx: W / (bbox.lon_max - bbox.lon_min),
+      sy: H / (bbox.lat_max - bbox.lat_min),
+      lonMin: bbox.lon_min,
+      latMax: bbox.lat_max,
+    };
+    return;
+  }
+  // Same math as firmware aspect-fit mode: cos(mid-latitude) correction,
+  // aspect-preserving fit, centered.
+  const midCos = Math.cos((bbox.lat_min + bbox.lat_max) / 2 * Math.PI / 180);
+  const lonSpan = (bbox.lon_max - bbox.lon_min) * midCos;
+  const latSpan = bbox.lat_max - bbox.lat_min;
+  const s = Math.min(W / lonSpan, H / latSpan);
+  proj = {
+    stretch: false,
+    s,
+    x0: (W - lonSpan * s) / 2,
+    y0: (H - latSpan * s) / 2,
+    lonMin: bbox.lon_min,
+    latMax: bbox.lat_max,
+    midCos,
+  };
+}
+
+function project(lat, lon) {
+  if (proj.stretch) {
+    return [Math.floor((lon - proj.lonMin) * proj.sx),
+            Math.floor((proj.latMax - lat) * proj.sy)];
+  }
+  const x = proj.x0 + (lon - proj.lonMin) * proj.midCos * proj.s;
+  const y = proj.y0 + (proj.latMax - lat) * proj.s;
+  return [x, y];
+}
+
+function drawLand(land) {
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#020202";
+  ctx.beginPath();
+  land.forEach(([lat, lon], i) => {
+    const [x, y] = project(lat, lon);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Border stroke marking the display extent — mirrors firmware GRID_BORDER_RGB
+// in config.h. Grid-agnostic: no cell grid, no panel seams. ?grid=0 hides it.
+const GRID_BORDER = [0, 0, 0];
+
+function drawBorder() {
+  if (params.get("grid") === "0") return;
+  ctx.fillStyle = `rgb(${GRID_BORDER[0]},${GRID_BORDER[1]},${GRID_BORDER[2]})`;
+  ctx.fillRect(0, 0, W, 1);
+  ctx.fillRect(0, H - 1, W, 1);
+  ctx.fillRect(0, 0, 1, H);
+  ctx.fillRect(W - 1, 0, 1, H);
+}
+
+function drawVehicles(v) {
+  for (const veh of v) {
+    const [x, y] = project(veh.la, veh.lo);
+    if (x < 0 || y < 0 || x >= W || y >= H) continue;
+    ctx.fillStyle = `rgb(${veh.c[0]},${veh.c[1]},${veh.c[2]})`;
+    ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+  }
+}
+
+// Legend built from the live payload: metro gets one entry per line (each
+// line has its own color); bus/rapid/cable get one entry per class, and only
+// when a class is actually present in the data.
+const TYPE_LABELS = { B: "bus", R: "rapid", M: "metro", C: "cable car" };
+let legendSig = null;
+
+function updateLegend(v) {
+  const entries = [];
+  const seen = new Set();
+  for (const veh of v) {
+    if (veh.t === "M") {
+      if (!seen.has(veh.r)) { seen.add(veh.r); entries.push({ label: veh.r, c: veh.c }); }
+    } else if (!seen.has(veh.t)) {
+      seen.add(veh.t);
+      entries.push({ label: TYPE_LABELS[veh.t] || veh.t, c: veh.c });
+    }
+  }
+  entries.sort((a, b) => a.label.localeCompare(b.label));
+  const sig = entries.map(e => e.label + "=" + e.c.join(",")).join("|");
+  if (sig === legendSig) return;
+  legendSig = sig;
+  document.getElementById("legend").innerHTML = entries
+    .map(e => `<span style="background:rgb(${e.c[0]},${e.c[1]},${e.c[2]})"></span>${e.label}`)
+    .join("");
+}
+
+async function tick() {
+  try {
+    geo = geo ? geo : await geoP;
+    if (!proj) initProjection(geo.bbox);
+    const data = await (await fetch("/vehicles?full=1")).json();
+    drawLand(geo.land);
+    drawBorder();
+    drawVehicles(data.v);
+    updateLegend(data.v);
+    document.getElementById("meta").textContent =
+      `${data.count} vehicles \u00b7 upstream age ${Math.round(data.age)}s \u00b7 ${W}\u00d7${H}`;
+  } catch (e) {
+    document.getElementById("meta").textContent = "waiting for proxy\u2026";
+  }
+  setTimeout(tick, 2000);
+}
+tick();
+</script>
+</body>
+</html>
