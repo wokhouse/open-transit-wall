@@ -17,12 +17,16 @@
 #include <Arduino.h>
 #include <WiFi.h>
 
+#include <string.h>
+
 #include "config.h"
+#include "device_config.h"
 #include "map_project.h"
 #include "screen.h"
 #include "secrets.h"
 #include "vehicle_client.h"
 
+static RuntimeConfig cfg;  // from the cfg partition, or compiled secrets.h
 static Screen screen;
 static MapProjection projection;
 static Vehicle vehicles[MAX_VEHICLES];  // latest snapshot from the proxy
@@ -93,8 +97,8 @@ static void decodeBackdropIndices() {
 static void connectWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.printf("WiFi: connecting to %s ", WIFI_SSID);
+  WiFi.begin(cfg.ssid, cfg.password);
+  Serial.printf("WiFi: connecting to %s ", cfg.ssid);
   uint32_t start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
     delay(250);
@@ -252,6 +256,20 @@ void setup() {
   decodeBackdropIndices();
   screen.drawBackdrop();  // painted once; animate() only touches dot pixels
 
+  // Prefer the blob the web flasher wrote to the cfg partition; fall back to
+  // the compiled secrets.h values for a plain `pio run -t upload`.
+  if (!loadDeviceConfig(&cfg)) {
+    memset(&cfg, 0, sizeof(cfg));
+    strncpy(cfg.ssid, WIFI_SSID, CFG_SSID_LEN - 1);
+    strncpy(cfg.password, WIFI_PASSWORD, CFG_PASS_LEN - 1);
+    strncpy(cfg.proxyHost, PROXY_HOST, CFG_HOST_LEN - 1);
+    cfg.proxyPort = PROXY_PORT;
+    cfg.fromFlash = false;
+  }
+  Serial.printf("[cfg] source=%s ssid=%s proxy=%s:%u\n",
+                cfg.fromFlash ? "flash" : "compiled", cfg.ssid, cfg.proxyHost,
+                cfg.proxyPort);
+
   connectWifi();
 
   BBox bbox = {MAP_LAT_MIN, MAP_LAT_MAX, MAP_LON_MIN, MAP_LON_MAX};
@@ -268,7 +286,8 @@ void loop() {
       connectWifi();
     }
     float upstreamAge = 0.0f;
-    int n = fetchVehicles(PROXY_HOST, PROXY_PORT, vehicles, MAX_VEHICLES, &upstreamAge);
+    int n = fetchVehicles(cfg.proxyHost, cfg.proxyPort, vehicles, MAX_VEHICLES,
+                          &upstreamAge);
     if (n >= 0) {
       vehicleCount = n;
       pollFailures = 0;

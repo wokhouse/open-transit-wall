@@ -1,5 +1,9 @@
 #pragma once
 // Copy this file to firmware/include/secrets.h (gitignored) and fill it in.
+//
+// These are only FALLBACKS for `pio run -t upload` builds. Boards flashed from
+// the web flasher get their credentials from the `cfg` partition instead (see
+// device_config.h), which takes precedence whenever a valid blob is present.
 
 #define WIFI_SSID     "your-wifi-name"
 #define WIFI_PASSWORD "your-wifi-password"

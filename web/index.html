@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>open-transit-wall — flash &amp; configure</title>
+<meta name="description" content="Flash the open-transit-wall ESP32 firmware and configure WiFi and the transit proxy endpoint, entirely in your browser.">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <h1>open-transit-wall</h1>
+    <p class="sub">Flash the ESP32 firmware and point it at your WiFi + transit proxy —
+      straight from the browser. Nothing is uploaded; the device talks to your
+      computer over USB serial.</p>
+  </header>
+
+  <div id="unsupported" class="banner banner-error" hidden>
+    <strong>This browser can't talk to USB serial.</strong>
+    Use desktop <b>Chrome</b> or <b>Edge</b> (or Chrome on Android), and open this
+    page over <code>https://</code> or <code>localhost</code>.
+  </div>
+
+  <div id="manifest-error" class="banner banner-error" hidden></div>
+
+  <form id="flash-form" class="card" autocomplete="off">
+    <div class="grid">
+      <label class="field">
+        <span class="label">WiFi network name (SSID)</span>
+        <input id="ssid" name="ssid" type="text" required maxlength="32"
+               placeholder="MyHomeWiFi" spellcheck="false" autocapitalize="none">
+      </label>
+
+      <label class="field">
+        <span class="label">WiFi password</span>
+        <div class="with-toggle">
+          <input id="password" name="password" type="password" maxlength="64"
+                 placeholder="••••••••" spellcheck="false" autocapitalize="none">
+          <button type="button" id="toggle-password" class="ghost"
+                  aria-label="Show password">Show</button>
+        </div>
+      </label>
+
+      <label class="field">
+        <span class="label">Transit proxy host</span>
+        <input id="proxy-host" name="proxyHost" type="text" required
+               maxlength="63" placeholder="192.168.1.50" spellcheck="false"
+               autocapitalize="none" inputmode="url">
+        <span class="hint">Hostname or LAN IP of the machine running
+          <code>server/proxy.py</code> — no scheme, no port.</span>
+      </label>
+
+      <label class="field">
+        <span class="label">Proxy port</span>
+        <input id="proxy-port" name="proxyPort" type="number" required
+               min="1" max="65535" value="8000" inputmode="numeric">
+      </label>
+    </div>
+
+    <label class="check">
+      <input id="configure-only" type="checkbox">
+      <span>Only write settings — skip the firmware flash (use after a first install)</span>
+    </label>
+
+    <div class="actions">
+      <button type="submit" id="install-btn" class="primary" disabled>
+        Flash &amp; configure
+      </button>
+      <span id="manifest-info" class="manifest-info"></span>
+    </div>
+
+    <div id="progress-wrap" class="progress-wrap" hidden>
+      <div class="progress-track">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+      <span id="progress-label" class="progress-label">0%</span>
+    </div>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+
+    <details class="log-wrap" open>
+      <summary>Log</summary>
+      <pre id="log" class="log" aria-live="polite"></pre>
+    </details>
+  </form>
+
+  <section class="help">
+    <h2>Before you start</h2>
+    <ul>
+      <li>Connect the ESP32 over USB. Use a data cable, not a charge-only one.</li>
+      <li>Some clone boards need the WCH CH34x driver — see the project README.</li>
+      <li>Flashing erases the device, including any existing settings.</li>
+      <li>If auto-reset fails, hold <b>BOOT</b>, tap <b>EN</b>, release <b>BOOT</b>,
+        then click the button.</li>
+      <li>After it reboots the status pixel at the top-left of the wall turns
+        green when the proxy is reachable.</li>
+    </ul>
+    <p class="attrib">Vehicle data provided by
+      <a href="https://511.org/open-data/" rel="noopener">511</a> · SFMTA.</p>
+  </section>
+</main>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

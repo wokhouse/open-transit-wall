@@ -28,6 +28,7 @@ tiled wall (128×64) is the same code — just regenerate the backdrop.
 | `firmware/` | PlatformIO + Arduino ESP32 firmware. Fetches the proxy, projects lat/lon → pixels, blits the backdrop, plots dots. Each vehicle glides to its next known position at a random moment inside the ~60s data window, so the wall reads as independent movement rather than one synchronized jump. |
 | `tools/gen_backdrop.py` | Rasterizes the coarse SF shoreline to your exact matrix size into an RLE bitmap compiled into the firmware — dark land on a black sea. |
 | `sim/` + `tools/run_sim.sh` | Native simulator: renders exactly what the ESP32 will draw (same projection + backdrop code) to a BMP — no hardware needed. |
+| `web/` | Static web flasher (Web Serial + [esptool-js](https://github.com/espressif/esptool-js)). Writes the merged firmware and a `cfg`-partition blob holding WiFi credentials + the proxy endpoint, straight from the browser — no toolchain for the user. Published to GitHub Pages by `.github/workflows/pages.yml`. |
 
 ### Why a proxy?
 
@@ -67,20 +68,76 @@ Then open the preview: <http://localhost:8000/preview?w=64&h=32&scale=8>
 
 Run the tests: `.venv/bin/python -m pytest server/tests -q`
 
-### 2. Firmware
+### 2. Flash & configure from the browser
+
+The hosted flasher needs no toolchain: open the GitHub Pages site
+(`https://<user>.github.io/open-transit-wall/`), enter your WiFi network and
+the LAN address of the proxy, and click **Flash & configure**. It talks to the
+ESP32 over USB serial; nothing is uploaded. Desktop Chrome/Edge only (Web
+Serial is not in Safari/Firefox).
+
+One session does two writes: the merged firmware image at `0x0`, then a small
+config blob into the dedicated **`cfg` partition** (`0x190000`, 4 KB) — WiFi
+SSID/password, proxy host, proxy port, guarded by a magic number and CRC32. At
+boot the firmware prefers that blob and falls back to compiled `secrets.h` if
+it's absent or invalid (`firmware/include/device_config.h`). Re-tick
+**Only write settings** to change WiFi/proxy later without reflashing.
+
+The blob layout is shared by three implementations that must stay in sync:
+`firmware/src/device_config.cpp`, `web/config-blob.js`, and
+`tools/make_config.py`; `node web/config-blob.test.mjs` checks the layout.
+
+Enable Pages once under **Settings → Pages → Source: GitHub Actions**; the
+workflow builds the firmware, merges the image, vendors esptool-js, and
+deploys `web/`.
+
+<details>
+<summary>Serving the flasher locally / building the payload</summary>
+
+```bash
+pip install platformio
+tools/fetch_web_deps.sh          # vendored esptool-js bundle (pinned + checksummed)
+tools/build_web_firmware.sh      # build, merge, write web/firmware/{manifest.json,*.bin}
+python3 -m http.server -d web 8000   # then open http://localhost:8000
+```
+
+Serve over `http://localhost`, not `file://` — ES modules and Web Serial need a
+real origin. `tools/build_web_firmware.sh` merges bootloader + partition table +
+otadata seed + app with esptool, and `tools/assemble_web.py` reads the `cfg`
+offset straight from `firmware/partitions.csv` and hashes the image.
+</details>
+
+<details>
+<summary>Provisioning without a browser (scripted / CI)</summary>
+
+```bash
+python3 tools/make_config.py --ssid HomeNet --password hunter2 \
+    --host 192.168.1.50 --port 8000 -o /tmp/config.bin
+esptool.py write_flash 0x190000 /tmp/config.bin
+```
+</details>
+
+### 3. Firmware from source
 
 ```bash
 pio run -e esp32dev -t upload          # build + flash
 pio run -e esp32dev -t monitor         # watch it poll
 ```
 
-1. Copy `firmware/include/secrets.example.h` → `firmware/include/secrets.h`
-   (gitignored) and fill in WiFi + the proxy host's LAN IP.
+1. `pio run -t upload` bakes credentials in, so copy
+   `firmware/include/secrets.example.h` → `firmware/include/secrets.h`
+   (gitignored) and fill in WiFi + the proxy host's LAN IP. These are only the
+   **fallback**: a board configured by the web flasher uses its `cfg` blob
+   instead. (If you flash over serial but want browser-style config, write the
+   blob with `tools/make_config.py`.)
 2. Libraries (auto-installed by PlatformIO):
    [ESP32-HUB75-MatrixPanel-I2S-DMA](https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-I2S-DMA)
    and ArduinoJson.
 
-### 3. Simulator (no hardware)
+`firmware/partitions.csv` replaces PlatformIO's default table to add the `cfg`
+partition; keep it in place unless you also update the web manifest offset.
+
+### 4. Simulator (no hardware)
 
 ```bash
 curl -s localhost:8000/vehicles | .venv/bin/python tools/vehicles_to_csv.py > /tmp/v.csv

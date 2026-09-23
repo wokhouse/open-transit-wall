@@ -1,0 +1,67 @@
+name: web flasher
+
+# Builds the ESP32 firmware, merges it into a browser-flashable image, and
+# publishes the static flasher in web/ to GitHub Pages. Binaries are build
+# artifacts, never committed.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install --disable-pip-version-check platformio
+
+      - name: Build firmware and assemble web payload
+        env:
+          GIT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+        run: tools/build_web_firmware.sh
+
+      - name: Vendor browser flashing library
+        run: tools/fetch_web_deps.sh
+
+      - name: Check config blob layout
+        run: node web/config-blob.test.mjs
+
+      - name: Stage site
+        run: |
+          mkdir -p _site
+          cp -R web/. _site/
+          echo "--- staged files ---"
+          find _site -type f | sort
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

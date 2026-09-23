@@ -1,0 +1,3 @@
+# Runtime dependency for the web flasher, fetched by tools/fetch_web_deps.sh
+# and by the Pages workflow so the deployed site is self-contained.
+esptool-js.js
