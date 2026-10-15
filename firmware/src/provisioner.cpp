@@ -22,6 +22,7 @@
 #define PROV_PASS_MAX   63   // 802.11 passphrase cap
 #define PROV_HOST_MAX   127
 #define PROV_SCHEME_MAX 9    // "https://" / "http://"
+#define PROV_AGENCY_MAX 8    // registry id: [a-z0-9]{1,8}
 
 static Preferences prefs;
 
@@ -31,6 +32,7 @@ static char curSsid[PROV_SSID_MAX + 1] = "";
 static char curPass[PROV_PASS_MAX + 1] = "";
 static char curHost[PROV_HOST_MAX + 1] = "";
 static char curScheme[PROV_SCHEME_MAX + 1] = "";
+static char curAgency[PROV_AGENCY_MAX + 1] = "";
 static char curPort[8] = "";
 
 // A line buffer with no complete line yet.
@@ -55,12 +57,13 @@ static void printStored() {
     Serial.println("STORED none");
     return;
   }
-  Serial.printf("STORED ssid=%s pass=%s host=%s scheme=%s port=%s\n",
+  Serial.printf("STORED ssid=%s pass=%s host=%s scheme=%s port=%s agency=%s\n",
                 ssid.c_str(),
                 prefs.getString("pass", "").length() ? "set" : "empty",
                 prefs.getString("host", "").c_str(),
                 prefs.getString("scheme", "").c_str(),
-                prefs.getString("port", "").c_str());
+                prefs.getString("port", "").c_str(),
+                prefs.getString("agency", "").c_str());
 }
 
 static void printHelp() {
@@ -69,7 +72,8 @@ static void printHelp() {
   Serial.println("CMD set host=<proxy host, no scheme or port>");
   Serial.println("CMD set scheme=<https://|http://>");
   Serial.println("CMD set port=<proxy port>");
-  Serial.println("CMD get ssid|pass|host|scheme|port|all");
+  Serial.println("CMD set agency=<registry id, lowercase a-z0-9 up to 8>");
+  Serial.println("CMD get ssid|pass|host|scheme|port|agency|all");
   Serial.println("CMD status | save | erase | reboot | help");
 }
 
@@ -80,12 +84,14 @@ static void printStatus() {
                 curSsid[0] ? curSsid : "(unset)",
                 curPass[0] ? "set" : "(unset)");
   if (curHost[0]) {
-    Serial.printf("STATUS proxy=%s%s:%u/vehicles\n",
+    Serial.printf("STATUS proxy=%s%s:%u/vehicles%s%s\n",
                   curScheme[0] ? curScheme : "https://", curHost,
-                  portOf(curPort));
+                  portOf(curPort), curAgency[0] ? "?agency=" : "",
+                  curAgency);
   } else {
     Serial.println("STATUS proxy=(unset)");
   }
+  Serial.printf("STATUS agency=%s\n", curAgency[0] ? curAgency : "(unset)");
   Serial.printf("STATUS wifi=%s ip=%s\n",
                 WiFi.status() == WL_CONNECTED ? "connected" : "down",
                 WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString().c_str()
@@ -141,8 +147,20 @@ static void cmdSet(const String &arg) {
     }
     snprintf(curPort, sizeof(curPort), "%d", v);
     Serial.printf("OK port=%d (send save to persist)\n", v);
+  } else if (key == "agency") {
+    bool ok = n >= 1 && n <= PROV_AGENCY_MAX;
+    for (size_t i = 0; ok && i < n; i++) {
+      char c = val[i];
+      ok = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+    }
+    if (!ok) {
+      Serial.println("ERR agency: 1-8 chars, lowercase a-z0-9");
+      return;
+    }
+    val.toCharArray(curAgency, sizeof(curAgency));
+    Serial.printf("OK agency=%s (send save to persist)\n", curAgency);
   } else {
-    Serial.println("ERR unknown key (try: ssid pass host scheme port)");
+    Serial.println("ERR unknown key (try: ssid pass host scheme port agency)");
   }
 }
 
@@ -161,14 +179,17 @@ static void cmdGet(const String &arg) {
     Serial.printf("VAL scheme=%s\n", curScheme);
   } else if (arg == "port") {
     Serial.printf("VAL port=%u\n", portOf(curPort));
+  } else if (arg == "agency") {
+    Serial.printf("VAL agency=%s\n", curAgency);
   } else if (arg == "all" || arg.length() == 0) {
     cmdGet("ssid");
     cmdGet("pass");
     cmdGet("host");
     cmdGet("scheme");
     cmdGet("port");
+    cmdGet("agency");
   } else {
-    Serial.println("ERR unknown key (try: ssid pass host scheme port all)");
+    Serial.println("ERR unknown key (try: ssid pass host scheme port agency all)");
   }
 }
 
@@ -194,6 +215,7 @@ static void handleLine(String line) {
     prefs.putString("pass", curPass);
     prefs.putString("host", curHost);
     prefs.putString("scheme", curScheme);
+    prefs.putString("agency", curAgency);
     prefs.putString("port", curPort);
     storedSsidSet = curSsid[0] != '\0';
     Serial.println("OK saved");
@@ -229,6 +251,7 @@ void provLoad() {
   prefs.getString("host", "").toCharArray(curHost, sizeof(curHost));
   prefs.getString("scheme", "").toCharArray(curScheme, sizeof(curScheme));
   prefs.getString("port", "").toCharArray(curPort, sizeof(curPort));
+  prefs.getString("agency", "").toCharArray(curAgency, sizeof(curAgency));
 }
 
 // Provisioning is complete only with an SSID and a host: the binary has no
@@ -290,3 +313,4 @@ uint16_t provPort() {
   uint16_t p = portOf(curPort);
   return p ? p : 443;
 }
+const char *provAgency() { return curAgency; }

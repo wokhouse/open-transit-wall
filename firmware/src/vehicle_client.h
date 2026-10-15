@@ -1,22 +1,32 @@
 #pragma once
-// Fetch + parse the compact vehicle payload served by the proxy
-// (server/proxy.py  GET /vehicles). The scheme/host/port come from the
-// provisioner (NVS / WebSerial — nothing compiled in); HTTPS chains are
-// verified against the roots pinned in include/proxy_ca.h. The proxy owns
-// the call to 511 and the rate-limit discipline.
 
 #include <Arduino.h>
-#include <ArduinoJson.h>
-#include <HTTPClient.h>
-#include <WiFi.h>
 
+// A vehicle as parsed from the proxy payload. Colors are resolved at parse
+// time from the payload's "palette" map (type code -> RGB), so the renderer
+// never sees type codes and carries no compiled color table.
 struct Vehicle {
-  float lat, lon;
+  float lat;
+  float lon;
+  uint32_t id;
   uint8_t r, g, b;
-  uint32_t id;  // stable across polls (crc31 of the SIRI VehicleRef)
 };
 
-// Fetches /vehicles and fills `out` (up to maxVehicles). Returns the number
-// of vehicles parsed, or -1 on any network/parse error.
-int fetchVehicles(const char *host, uint16_t port, Vehicle *out, int maxVehicles,
-                  float *upstreamAgeSeconds);
+// Result of one /vehicles fetch. ok=false means the payload failed the wire
+// contract (missing/invalid age, next, bbox, or palette, or a parse error) and
+// the caller must treat it as a failed poll — no partial updates.
+struct PollResult {
+  bool ok;
+  bool agencyUnknown;  // server 400'd our agency id: re-provision
+  int count;
+  float age;
+  uint32_t next;       // seconds until the server's next upstream fetch
+  float bbox[4];       // lat_min, lat_max, lon_min, lon_max
+  Vehicle *vehicles;
+};
+
+// Fetches the fleet once. When agency is non-empty it is appended as
+// ?agency=<id>; empty means no parameter (single-agency servers).
+// The caller owns the Vehicle array; it is filled up to maxVehicles.
+PollResult fetchVehicles(const char *scheme, const char *host, uint16_t port,
+                        const char *agency, Vehicle *out, int maxVehicles);
