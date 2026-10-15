@@ -1,7 +1,8 @@
 #pragma once
 // Fetch + parse the compact vehicle payload served by the proxy
-// (server/proxy.py  GET /vehicles). Plain HTTP over the LAN — the proxy owns
-// the HTTPS call to 511 and the rate-limit discipline.
+// (server/proxy.py  GET /vehicles). HTTPS with the roots pinned in
+// include/proxy_ca.h by default (config.h PROXY_SCHEME) — the proxy owns
+// the call to 511 and the rate-limit discipline.
 
 #include <Arduino.h>
 #include <ArduinoJson.h>

@@ -6,7 +6,7 @@ RGB-Matrix-Px-64x32 (HUB75) driven by an ESP32 renders every bus, rapid bus,
 and metro train in the city as a colored dot on a dark SF map.
 
 ```
-511.org SIRI API ──HTTPS──> mini-proxy (Python) ──compact JSON on LAN──> ESP32 ──HUB75──> LED panels
+511.org SIRI API ──HTTPS──> mini-proxy (Python) ──HTTPS JSON, pinned roots──> ESP32 ──HUB75──> LED panels
 ```
 
 **Colors:** buses **blue** · rapid/express buses **red** · metro trains in
@@ -25,7 +25,7 @@ tiled wall (128×64) is the same code — just regenerate the backdrop.
 |---|---|
 | `server/proxy.py` | Polls 511's SIRI VehicleMonitoring feed for SFMTA every 65 s on a shared timer, classifies vehicles, serves compact JSON at `GET /vehicles`, plus `/preview` (browser view of the wall), `/geo`, `/health`. Yard/deadhead vehicles (no route assigned) are filtered out. Set `TYPES=M` in `server/.env` to serve a metro-only wall (or any subset of `B R M C`). |
 | `server/classify.py` | Route → type/color logic. Standalone-importable so it can be reused elsewhere (e.g. a Pi Zero build). |
-| `firmware/` | PlatformIO + Arduino ESP32 firmware. Fetches the proxy, projects lat/lon → pixels, blits the backdrop, plots dots. Each vehicle glides to its next known position at a random moment inside the ~60s data window, so the wall reads as independent movement rather than one synchronized jump. |
+| `firmware/` | PlatformIO + Arduino ESP32 firmware. Fetches the proxy over HTTPS (roots pinned in `firmware/include/proxy_ca.h`; defaults to the hosted app — see `secrets.example.h`), projects lat/lon → pixels, blits the backdrop, plots dots. Each vehicle glides to its next known position at a random moment inside the ~60s data window, so the wall reads as independent movement rather than one synchronized jump. |
 | `tools/gen_backdrop.py` | Rasterizes the coarse SF shoreline to your exact matrix size into an RLE bitmap compiled into the firmware — dark land on a black sea. |
 | `sim/` + `tools/run_sim.sh` | Native simulator: renders exactly what the ESP32 will draw (same projection + backdrop code) to a BMP — no hardware needed. |
 
@@ -66,6 +66,12 @@ Then open the preview: <http://localhost:8000/preview?w=64&h=32&scale=8>
 (`w`/`h` = your display size, `scale` = zoom).
 
 Run the tests: `.venv/bin/python -m pytest server/tests -q`
+
+The firmware defaults to the hosted instance on DigitalOcean App Platform
+(see `firmware/include/secrets.example.h`). Running `proxy.py` locally is
+the LAN dev path: put this machine's address in `PROXY_HOST` and set
+`PROXY_SCHEME`/`PROXY_PORT` in `firmware/include/config.h` to
+`"http://"`/`8000`.
 
 ### 2. Firmware
 

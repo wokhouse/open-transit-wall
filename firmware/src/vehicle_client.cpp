@@ -1,18 +1,36 @@
 #include "vehicle_client.h"
 
 #include <Arduino.h>
+#include <WiFiClientSecure.h>
+
+#include "config.h"
+#include "proxy_ca.h"
+
+// One TLS client reused across polls; the CA bundle is parsed into mbedTLS
+// trust anchors on first use and kept (~2 KB heap). PROXY_SCHEME/PROXY_PORT
+// come from config.h: HTTPS against the hosted app is the default, plain
+// HTTP against a LAN proxy.py is the dev override.
+static WiFiClientSecure secureClient;
+static bool caLoaded = false;
 
 int fetchVehicles(const char *host, uint16_t port, Vehicle *out, int maxVehicles,
                   float *upstreamAgeSeconds) {
+  if (!caLoaded) {
+    secureClient.setCACert(PROXY_CA_PEM);
+    caLoaded = true;
+  }
   HTTPClient http;
-  String url = String("http://") + host + ":" + String(port) + "/vehicles";
-  if (!http.begin(url)) {
+  String url = String(PROXY_SCHEME) + host + ":" + String(port) + "/vehicles";
+  if (!http.begin(secureClient, url)) {
     return -1;
   }
   http.setTimeout(5000);
   int status = http.GET();
   if (status != 200) {
-    Serial.printf("[http] GET status %d\n", status);
+    // Negative codes are HTTPClient transport errors: a TLS handshake
+    // failure is usually OOM or an untrusted/rotated CA (see proxy_ca.h).
+    Serial.printf("[http] GET status %d (heap %u)\n", status,
+                  ESP.getFreeHeap());
     http.end();
     return -1;
   }

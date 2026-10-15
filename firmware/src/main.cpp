@@ -107,6 +107,24 @@ static void connectWifi() {
   }
 }
 
+// HTTPS certificate validation needs the wall clock — the ESP32 has no RTC.
+// Sync once after WiFi comes up; SNTP keeps refreshing in the background.
+// Without a synced clock every TLS handshake fails as "not yet valid".
+static void syncTime() {
+  configTime(0, 0, "pool.ntp.org", "time.google.com");
+  Serial.print("NTP: syncing ");
+  uint32_t start = millis();
+  while (time(nullptr) < 1735689600 && millis() - start < 15000) {
+    delay(250);
+    Serial.print(".");
+  }
+  if (time(nullptr) >= 1735689600) {
+    Serial.println(" ok");
+  } else {
+    Serial.println(" FAILED (TLS will fail until the clock syncs)");
+  }
+}
+
 // Animation phase 0..255 (fixed-point), eased with smoothstep so each glide
 // starts and ends gently.
 static uint8_t phaseOf(const ActiveVehicle &a, uint32_t now) {
@@ -253,6 +271,7 @@ void setup() {
   screen.drawBackdrop();  // painted once; animate() only touches dot pixels
 
   connectWifi();
+  syncTime();
 
   BBox bbox = {MAP_LAT_MIN, MAP_LAT_MAX, MAP_LON_MIN, MAP_LON_MAX};
   projection.begin(bbox, DISPLAY_W, DISPLAY_H, MAP_STRETCH_TO_FILL);

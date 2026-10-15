@@ -53,8 +53,13 @@
 #define MAP_STRETCH_TO_FILL 0
 
 // --- Data source (the mini-proxy, not 511 directly) -------------------------
-// Fetches http://<PROXY_HOST>:8000/vehicles
-#define PROXY_PORT 8000
+// Default: the hosted app on DigitalOcean App Platform over HTTPS —
+// https://<PROXY_HOST>:443/vehicles, chain verified against the roots
+// pinned in include/proxy_ca.h (the domain goes in include/secrets.h).
+// LAN dev against server/proxy.py: PROXY_HOST = its address, PROXY_PORT
+// 8000, PROXY_SCHEME "http://" (the local proxy is plain HTTP).
+#define PROXY_SCHEME "https://"
+#define PROXY_PORT 443
 #define POLL_INTERVAL_MS 12000UL  // ESP32-side refresh; proxy rate-limits 511 itself
 #define STALE_AFTER_POLLS 3       // status pixel goes amber after this many failed polls
 
