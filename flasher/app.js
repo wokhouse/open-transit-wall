@@ -429,6 +429,11 @@ els.btnFlash.onclick = async () => {
       flashMode: 'keep',
       flashFreq: 'keep',
       calculateMD5Hash: md5hex,
+      reportProgress: (i, written, total) => {
+        if (written === 0 || written === total) {
+          flashLog(`${manifest.images[i].name}: ${written}/${total}`);
+        }
+      },
     });
     await device.after();  // hard reset into the new app
     // The Web Serial transport's close API is disconnect(), not close().
