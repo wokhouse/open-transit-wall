@@ -30,8 +30,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
       # Mirrors `pio check -e esp32dev` (platformio.ini: --suppress=unusedFunction,
-      # firmware sources only). cppcheck ships on GitHub's ubuntu runners.
+      # firmware sources only).
       - name: cppcheck
         run: cppcheck --quiet --error-exitcode=1 --suppress=unusedFunction firmware/src firmware/include
       - uses: actions/setup-python@v5
