@@ -39,8 +39,7 @@ import uvicorn
 from classify import classify, load_routes
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
-from geo import BBOX, SF_LAND
+from fastapi.responses import JSONResponse
 from siri import parse_vehiclemonitor
 
 SERVER_DIR = Path(__file__).resolve().parent
@@ -125,8 +124,7 @@ def to_wire(vehicles: list[dict]) -> list[list]:
     """Project cached vehicles to the ESP32 wire format: flat
     [lat, lon, r, g, b, id] arrays. Keyed objects overflowed the ESP32's heap
     at rush-hour fleet sizes — every JSON key costs ~16 bytes of parse-time
-    heap next to the display framebuffer, so /vehicles ships arrays by default
-    and the keyed format stays available for the preview (?full=1)."""
+    heap next to the display framebuffer, so /vehicles ships arrays only."""
     return [[v["la"], v["lo"], *v["c"], v["i"]] for v in vehicles]
 
 
@@ -224,27 +222,16 @@ app = FastAPI(title="open-transit-wall proxy")
 
 
 @app.get("/vehicles")
-def vehicles(full: bool = False) -> JSONResponse:
+def vehicles() -> JSONResponse:
     payload = state.payload()
-    if not full:
-        payload["v"] = to_wire(payload["v"])
+    payload["v"] = to_wire(payload["v"])
     return JSONResponse(payload, headers={"Cache-Control": "no-store"})
-
-
-@app.get("/geo")
-def geo() -> dict:
-    return {"bbox": BBOX, "land": SF_LAND}
 
 
 @app.get("/health")
 def health() -> dict:
     return {"upstream_age_s": None if not state.age() else round(state.age(), 1),
             "routes_cached": bool(state.routes)}
-
-
-@app.get("/preview")
-def preview() -> FileResponse:
-    return FileResponse(SERVER_DIR / "static" / "preview.html")
 
 
 def main() -> None:

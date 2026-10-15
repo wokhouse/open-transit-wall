@@ -7,8 +7,7 @@
 //                     reaches all four edges on any panel aspect.
 //   aspect-fit      — equirectangular with cos(mid-latitude) correction,
 //                     aspect preserved, centered (may leave margins).
-// The preview page (server/static/preview.html) and tools/gen_backdrop.py
-// mirror this math — keep them in sync.
+// tools/gen_backdrop.py mirrors this math — keep them in sync.
 
 #include <math.h>
 

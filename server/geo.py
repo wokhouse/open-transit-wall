@@ -1,8 +1,8 @@
 """Shared geography for the transit wall: SF bounding box and a coarse land polygon.
 
-Used by the proxy (served at /geo for the browser preview) and by
-tools/gen_backdrop.py (rasterized into the firmware backdrop). One source of
-truth so the preview, simulator, and LED matrix all show the same map.
+Used by tools/gen_backdrop.py (rasterized into the firmware backdrop) and
+mirrored by the simulator. One source of truth so the simulator and the LED
+matrix show the same map.
 
 The polygon is deliberately coarse (~170 m per pixel at 64x32, so precision
 beyond this is invisible). Coordinates are (lat, lon).

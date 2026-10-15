@@ -23,7 +23,7 @@ tiled wall (128×64) is the same code — just regenerate the backdrop.
 
 | Piece | What it does |
 |---|---|
-| `server/proxy.py` | Polls 511's SIRI VehicleMonitoring feed for SFMTA every 65 s on a shared timer, classifies vehicles, serves compact JSON at `GET /vehicles`, plus `/preview` (browser view of the wall), `/geo`, `/health`. Yard/deadhead vehicles (no route assigned) are filtered out. Set `TYPES=M` in `server/.env` to serve a metro-only wall (or any subset of `B R M C`). |
+| `server/proxy.py` | Polls 511's SIRI VehicleMonitoring feed for SFMTA every 65 s on a shared timer, classifies vehicles, serves compact JSON at `GET /vehicles`, plus `/health`. Yard/deadhead vehicles (no route assigned) are filtered out. Set `TYPES=M` in `server/.env` to serve a metro-only wall (or any subset of `B R M C`). |
 | `server/classify.py` | Route → type/color logic. Standalone-importable so it can be reused elsewhere (e.g. a Pi Zero build). |
 | `firmware/` | PlatformIO + Arduino ESP32 firmware. Fetches the proxy over HTTPS (roots pinned in `firmware/include/proxy_ca.h`; defaults to the hosted app — see `secrets.example.h`), projects lat/lon → pixels, blits the backdrop, plots dots. Each vehicle glides to its next known position at a random moment inside the ~60s data window, so the wall reads as independent movement rather than one synchronized jump. |
 | `tools/gen_backdrop.py` | Rasterizes the coarse SF shoreline to your exact matrix size into an RLE bitmap compiled into the firmware — dark land on a black sea. |
@@ -34,8 +34,8 @@ tiled wall (128×64) is the same code — just regenerate the backdrop.
 511's default token limit is **60 requests/hour**, and the raw SIRI JSON for
 all of SFMTA is ~3 MB — too much to parse on an ESP32. The proxy makes the
 single upstream request per minute and serves a ~40 KB compact payload that
-the display can refresh every few seconds. It also gives you the browser
-preview and fixture-based development with no API key.
+the display can refresh every few seconds. It also enables fixture-based
+development with no API key.
 
 Alternatives considered (and why not, for v1) live at the bottom.
 
@@ -61,9 +61,6 @@ develop offline:
 
 Use `--record` during live runs to save raw SIRI responses into `fixtures/`
 (great for tests and future offline work).
-
-Then open the preview: <http://localhost:8000/preview?w=64&h=32&scale=8>
-(`w`/`h` = your display size, `scale` = zoom).
 
 Run the tests: `.venv/bin/python -m pytest server/tests -q`
 
@@ -111,7 +108,7 @@ check a new matrix size before committing to it.
    ```bash
    python3 tools/gen_backdrop.py --w 128 --h 64
    ```
-3. Check it in the sim or at `/preview?w=128&h=64`.
+3. Check it in the sim (`tools/run_sim.sh`).
 
 Supported tile layouts: `LINE_*` (rows chained in one direction) and
 `SERPENTINE_*` (boustrophedon) — see `firmware/src/screen.h`.
@@ -198,15 +195,14 @@ pio device list
 ## Attribution
 
 Vehicle location data provided by [511](https://511.org/open-data/) · SFMTA.
-Required acknowledgment for 511 open data tokens; please keep the footer in
-`/preview` and this notice.
+Required acknowledgment for 511 open data tokens; please keep this notice.
 
 ## Alternatives considered
 
 - **Raspberry Pi Zero 2 W, no proxy** — viable; one Python program
   (fetch/classify/draw via
   [rpi-rgb-led-matrix](https://github.com/hzeller/rpi-rgb-led-matrix)).
-  Simplest stack, but SD-card fragility and no browser-preview dev loop.
+  Simplest stack, but SD-card fragility.
   `server/classify.py` is written to lift onto a Pi unchanged.
 - **ESP32/Pico talking to 511 directly** — needs streaming gzip + incremental
   GTFS-RT protobuf parsing (`/transit/vehiclepositions?agency=SF`). Feasible,
