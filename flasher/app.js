@@ -410,8 +410,14 @@ els.btnFlash.onclick = async () => {
       }
     }
     transport = new Transport(port);
-    const device = new ESPLoader({ transport });
+    // terminal adapter: esptool-js info lines into the page's flash log
+    const terminal = { clean() {}, write(m) { flashLog(m); }, writeLine(m) { flashLog(m); } };
+    const device = new ESPLoader({ transport, terminal });
     await device.detectChip();
+    // Run the RAM stub like esptool/PlatformIO do. Pure-ROM flashing erases
+    // inside FLASH_BEGIN, which this board's flash link answers with status
+    // 1,5; the stub defers erase into the write pass and just works.
+    await device.runStub();
     const fileArray = [];
     for (const img of manifest.images) {
       const data = new Uint8Array(await (await fetch(`firmware/${img.name}`)).arrayBuffer());
