@@ -47,5 +47,8 @@ jobs:
         with:
           path: ~/.platformio
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+      - name: Provide build-only secrets
+        # secrets.h is gitignored; the example values compile fine.
+        run: cp firmware/include/secrets.example.h firmware/include/secrets.h
       - name: Build firmware
-        run: pio run -e esp32dev
+        run: pio run -d firmware -e esp32dev
