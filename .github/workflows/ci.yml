@@ -46,9 +46,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.platformio
-          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
-      - name: Provide build-only secrets
-        # secrets.h is gitignored; the example values compile fine.
-        run: cp firmware/include/secrets.example.h firmware/include/secrets.h
+          # v2 key: the old key carried a stale espressif32 platform; the
+          # pin in platformio.ini is part of the key so bumps rebuild.
+          key: pio-v2-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
       - name: Build firmware
+        # One binary, no build-time secrets: WiFi/proxy settings are
+        # provisioned at runtime over WebSerial (docs/provisioning-protocol.md).
         run: pio run -d firmware -e esp32dev

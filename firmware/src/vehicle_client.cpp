@@ -5,24 +5,32 @@
 
 #include "config.h"
 #include "proxy_ca.h"
+#include "provisioner.h"
 
 // One TLS client reused across polls; the CA bundle is parsed into mbedTLS
-// trust anchors on first use and kept (~2 KB heap). PROXY_SCHEME/PROXY_PORT
-// come from config.h: HTTPS against the hosted app is the default, plain
-// HTTP against a LAN proxy.py is the dev override.
+// trust anchors on first use and kept (~2 KB heap). The scheme comes from
+// the provisioner: HTTPS against the hosted app is the default, plain HTTP
+// against a LAN proxy.py is provisioned, not compiled.
 static WiFiClientSecure secureClient;
 static bool caLoaded = false;
 
 int fetchVehicles(const char *host, uint16_t port, Vehicle *out, int maxVehicles,
                   float *upstreamAgeSeconds) {
   if (!caLoaded) {
-    if (!secureClient.setCACert(PROXY_CA_PEM)) {
-      Serial.println("[tls] CA bundle rejected — check proxy_ca.h");
+    // Core 3.x (platform 7.1.3): setCACert is void; the parse result comes
+    // from lastError(). "OK" means the bundle parsed into trust anchors.
+    char errbuf[128] = {0};
+    secureClient.setCACert(PROXY_CA_PEM);
+    secureClient.lastError(errbuf, sizeof(errbuf));
+    if (strcmp(errbuf, "OK") != 0) {
+      Serial.printf("[tls] CA bundle rejected (%s) — check proxy_ca.h\n",
+                    errbuf);
     }
     caLoaded = true;
   }
   HTTPClient http;
-  String url = String(PROXY_SCHEME) + host + ":" + String(port) + "/vehicles";
+  String url =
+      String(provScheme()) + host + ":" + String(port) + "/vehicles";
   if (!http.begin(secureClient, url)) {
     return -1;
   }
