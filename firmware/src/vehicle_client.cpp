@@ -16,7 +16,9 @@ static bool caLoaded = false;
 int fetchVehicles(const char *host, uint16_t port, Vehicle *out, int maxVehicles,
                   float *upstreamAgeSeconds) {
   if (!caLoaded) {
-    secureClient.setCACert(PROXY_CA_PEM);
+    if (!secureClient.setCACert(PROXY_CA_PEM)) {
+      Serial.println("[tls] CA bundle rejected — check proxy_ca.h");
+    }
     caLoaded = true;
   }
   HTTPClient http;
