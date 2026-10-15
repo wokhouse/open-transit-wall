@@ -7,7 +7,6 @@ venv/
 
 # Secrets
 server/.env
-firmware/include/secrets.h
 
 # PlatformIO
 .pio/

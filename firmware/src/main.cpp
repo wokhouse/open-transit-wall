@@ -1,8 +1,10 @@
 // open-transit-wall firmware entry point.
 //
-// ESP32-WROOM-32E + Waveshare RGB-Matrix-Px-64x64 (HUB75). Polls the local
-// mini-proxy for compact vehicle positions and plots them on the LED wall.
-// Copy include/secrets.example.h to include/secrets.h first.
+// ESP32-WROOM-32E + Waveshare RGB-Matrix-Px-64x64 (HUB75). Polls the mini-
+// proxy for compact vehicle positions and plots them on the LED wall. One
+// binary is flashed to every wall: WiFi credentials and the proxy host are
+// provisioned over WebSerial and kept in NVS (src/provisioner.h,
+// docs/provisioning-protocol.md). No secrets.h, no per-wall build.
 //
 // 511 only publishes positions every ~65s, so instead of teleporting the
 // wall on each poll, each vehicle that moved picks a random moment inside
@@ -19,8 +21,8 @@
 
 #include "config.h"
 #include "map_project.h"
+#include "provisioner.h"
 #include "screen.h"
-#include "secrets.h"
 #include "vehicle_client.h"
 
 static Screen screen;
@@ -93,8 +95,9 @@ static void decodeBackdropIndices() {
 static void connectWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.printf("WiFi: connecting to %s ", WIFI_SSID);
+  WiFi.disconnect();  // drop any stale config from a previous set
+  WiFi.begin(provSsid(), provPass());
+  Serial.printf("WiFi: connecting to %s ", provSsid());
   uint32_t start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
     delay(250);
@@ -270,24 +273,51 @@ void setup() {
   decodeBackdropIndices();
   screen.drawBackdrop();  // painted once; animate() only touches dot pixels
 
+  provLoad();
+  if (provNeeded()) {
+    // No complete config in NVS yet (needs ssid + host). Stay up on the
+    // serial console: the browser tool (or any terminal) can `set` values;
+    // the loop picks them up live — no reflash, no reboot needed.
+    Serial.println("UNPROVISIONED: open the browser tool and set "
+                   "ssid/pass/host, then save.");
+    return;
+  }
+
   connectWifi();
   syncTime();
-
-  BBox bbox = {MAP_LAT_MIN, MAP_LAT_MAX, MAP_LON_MIN, MAP_LON_MAX};
-  projection.begin(bbox, DISPLAY_W, DISPLAY_H, MAP_STRETCH_TO_FILL);
-
-  nextPollMs = millis();  // fetch immediately
 }
 
 void loop() {
   uint32_t now = millis();
+
+  // Serial provisioning commands work at any time: unprovisioned, or live
+  // while the wall runs (a corrected password takes effect on the next
+  // connect attempt without a reboot).
+  provPumpSerial();
+
   if ((int32_t)(now - nextPollMs) >= 0) {
     nextPollMs = now + POLL_INTERVAL_MS;
+    if (provNeeded()) {
+      return;  // still waiting for set ssid/pass — backdrop stays up
+    }
     if (WiFi.status() != WL_CONNECTED) {
       connectWifi();
+      if (WiFi.status() != WL_CONNECTED) {
+        return;
+      }
+      syncTime();  // TLS needs the wall clock; NTP only works over WiFi
+    }
+    // Begin the projection on the first ready cycle — covers both the
+    // provisioned-at-boot and the provisioned-live-from-serial paths.
+    static bool projectionReady = false;
+    if (!projectionReady) {
+      projectionReady = true;
+      BBox bbox = {MAP_LAT_MIN, MAP_LAT_MAX, MAP_LON_MIN, MAP_LON_MAX};
+      projection.begin(bbox, DISPLAY_W, DISPLAY_H, MAP_STRETCH_TO_FILL);
     }
     float upstreamAge = 0.0f;
-    int n = fetchVehicles(PROXY_HOST, PROXY_PORT, vehicles, MAX_VEHICLES, &upstreamAge);
+    int n = fetchVehicles(provPollHost(), provPort(), vehicles, MAX_VEHICLES,
+                          &upstreamAge);
     if (n >= 0) {
       vehicleCount = n;
       pollFailures = 0;

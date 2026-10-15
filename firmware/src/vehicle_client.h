@@ -1,7 +1,8 @@
 #pragma once
 // Fetch + parse the compact vehicle payload served by the proxy
-// (server/proxy.py  GET /vehicles). HTTPS with the roots pinned in
-// include/proxy_ca.h by default (config.h PROXY_SCHEME) — the proxy owns
+// (server/proxy.py  GET /vehicles). The scheme/host/port come from the
+// provisioner (NVS / WebSerial — nothing compiled in); HTTPS chains are
+// verified against the roots pinned in include/proxy_ca.h. The proxy owns
 // the call to 511 and the rate-limit discipline.
 
 #include <Arduino.h>

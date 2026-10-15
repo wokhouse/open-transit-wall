@@ -25,7 +25,7 @@ tiled wall (128×64) is the same code — just regenerate the backdrop.
 |---|---|
 | `server/proxy.py` | Polls 511's SIRI VehicleMonitoring feed for SFMTA every 65 s on a shared timer, classifies vehicles, serves compact JSON at `GET /vehicles`, plus `/health`. Yard/deadhead vehicles (no route assigned) are filtered out. Set `TYPES=M` in `server/.env` to serve a metro-only wall (or any subset of `B R M C`). |
 | `server/classify.py` | Route → type/color logic. Standalone-importable so it can be reused elsewhere (e.g. a Pi Zero build). |
-| `firmware/` | PlatformIO + Arduino ESP32 firmware. Fetches the proxy over HTTPS (roots pinned in `firmware/include/proxy_ca.h`; defaults to the hosted app — see `secrets.example.h`), projects lat/lon → pixels, blits the backdrop, plots dots. Each vehicle glides to its next known position at a random moment inside the ~60s data window, so the wall reads as independent movement rather than one synchronized jump. |
+| `firmware/` | PlatformIO + Arduino ESP32 firmware. One binary for every wall: WiFi credentials and the proxy host are provisioned at runtime over WebSerial and kept in NVS (see [Provisioning](#provisioning-over-webserial)). Fetches the proxy over HTTPS (roots pinned in `firmware/include/proxy_ca.h`; defaults to the hosted app — see `config.h`), projects lat/lon → pixels, blits the backdrop, plots dots. Each vehicle glides to its next known position at a random moment inside the ~60s data window, so the wall reads as independent movement rather than one synchronized jump. |
 | `tools/gen_backdrop.py` | Rasterizes the coarse SF shoreline to your exact matrix size into an RLE bitmap compiled into the firmware — dark land on a black sea. |
 | `sim/` + `tools/run_sim.sh` | Native simulator: renders exactly what the ESP32 will draw (same projection + backdrop code) to a BMP — no hardware needed. |
 
@@ -64,24 +64,58 @@ Use `--record` during live runs to save raw SIRI responses into `fixtures/`
 
 Run the tests: `.venv/bin/python -m pytest server/tests -q`
 
-The firmware defaults to the hosted instance on DigitalOcean App Platform
-(see `firmware/include/secrets.example.h`). Running `proxy.py` locally is
-the LAN dev path: put this machine's address in `PROXY_HOST` and set
-`PROXY_SCHEME`/`PROXY_PORT` in `firmware/include/config.h` to
-`"http://"`/`8000`.
+The firmware carries no endpoint at all — the browser tool prefills the
+hosted instance (`open-transit-wall-nuvez.ondigitalocean.app`) as a
+convenience, and the device only learns it by provisioning. Running
+`proxy.py` locally is the LAN dev path: provision `host` = this machine's
+address, `scheme=http://`, `port=8000` — no rebuild.
 
 ### 2. Firmware
 
+One binary, no build-time secrets — flash first, fill in the secrets after
+over WebSerial:
+
 ```bash
-pio run -e esp32dev -t upload          # build + flash
-pio run -e esp32dev -t monitor         # watch it poll
+pio run -e esp32dev -t upload          # build + flash (any wall, same binary)
+pio run -e esp32dev -t monitor         # optional: watch the log
 ```
 
-1. Copy `firmware/include/secrets.example.h` → `firmware/include/secrets.h`
-   (gitignored) and fill in WiFi + the proxy host's LAN IP.
-2. Libraries (auto-installed by PlatformIO):
-   [ESP32-HUB75-MatrixPanel-I2S-DMA](https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-I2S-DMA)
-   and ArduinoJson.
+Then provision the wall: open the browser tool (WebSerial) and click
+Connect. Until the tool is built, any serial terminal at 115200 works:
+
+```text
+set ssid=MyWifi
+set pass=hunter2
+set host=open-transit-wall-nuvez.ondigitalocean.app
+save
+```
+
+The firmware prints a banner on connect (`OTW-FW 1` + `UNPROVISIONED` or
+`STORED ...`), applies each `set` live, and `save` persists to NVS. The
+full command set is specified in [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
+— that spec is what the browser tool will be built against.
+
+Libraries (auto-installed by PlatformIO):
+[ESP32-HUB75-MatrixPanel-I2S-DMA](https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-I2S-DMA)
+and ArduinoJson.
+
+### Provisioning over WebSerial
+
+The protocol is line-based text over the USB serial bridge (115200):
+
+| you send | the wall answers |
+|---|---|
+| `set ssid=…` / `set pass=…` / `set host=…` | `OK …` — takes effect immediately |
+| `save` | `OK saved` — persists to NVS, survives power loss |
+| `get all` / `status` | current values / live health |
+| `erase` / `reboot` | wipe NVS copy / restart |
+
+A wall without an SSID **and** a host shows the backdrop and waits on the
+serial console; the moment both arrive it connects on the next poll cycle —
+no reflash, no reboot. `scheme`/`port` are optional extras for LAN dev
+against `server/proxy.py` (empty means HTTPS/443). See
+[`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
+for the exact grammar, limits, and error replies.
 
 ### 3. Simulator (no hardware)
 
