@@ -62,6 +62,7 @@ loadManifest();
 // stream to go idle rather than assuming one command = one line.
 
 async function startSession() {
+  if (session && !session.dead) await endSession();
   await port.open({ baudRate: 115200 });
   session = { reader: port.readable.getReader(),
               writer: port.writable.getWriter(),
@@ -69,30 +70,47 @@ async function startSession() {
   readLoop();
 }
 
+// Release the Web Serial port cleanly: cancel the reader (unlocks it),
+// drop both locks, then close. Without this the port stays locked and the
+// next open() fails with "The port is already open".
+async function endSession() {
+  if (!session) return;
+  const s = session;
+  session = null;
+  s.dead = true;
+  try { await s.reader.cancel(); } catch { /* already gone */ }
+  try { s.reader.releaseLock(); } catch { /* not locked */ }
+  try { s.writer.releaseLock(); } catch { /* not locked */ }
+  try { await port.close(); } catch { /* already closed */ }
+}
+
 async function readLoop() {
   const dec = new TextDecoder();
+  const s = session;
   try {
     while (true) {
-      const { value, done } = await session.reader.read();
+      const { value, done } = await s.reader.read();
       if (done) break;
-      session.buf += dec.decode(value, { stream: true });
+      s.buf += dec.decode(value, { stream: true });
       let nl;
-      while ((nl = session.buf.indexOf('\n')) >= 0) {
-        const line = session.buf.slice(0, nl).replace(/\r$/, '');
-        session.buf = session.buf.slice(nl + 1);
+      while ((nl = s.buf.indexOf('\n')) >= 0) {
+        const line = s.buf.slice(0, nl).replace(/\r$/, '');
+        s.buf = s.buf.slice(nl + 1);
         if (line.length) {
           boardLog(line);
-          session.lines.push(line);
-          session.lastLineAt = Date.now();
+          s.lines.push(line);
+          s.lastLineAt = Date.now();
         }
       }
     }
   } catch (e) {
-    boardLog(`!! serial read error: ${e.message}`);
+    if (session === s) boardLog(`!! serial read error: ${e.message}`);
   }
-  session.dead = true;
-  els.connState.textContent = 'disconnected';
-  boardLog('!! serial port closed');
+  if (session === s) {
+    s.dead = true;
+    els.connState.textContent = 'disconnected';
+    boardLog('!! serial port closed');
+  }
 }
 
 async function sendLine(line) {
@@ -102,14 +120,16 @@ async function sendLine(line) {
 // Collect reply lines: wait until nothing arrives for idleMs (capped at
 // maxMs total). Returns the lines seen since the last drain.
 async function awaitLines(idleMs = 700, maxMs = 8000) {
+  const s = session;
+  if (!s) return [];
   const start = Date.now();
-  session.lines = [];
-  session.lastLineAt = Date.now();
-  while (Date.now() - session.lastLineAt < idleMs && Date.now() - start < maxMs) {
-    if (session.dead) break;
+  s.lines = [];
+  s.lastLineAt = Date.now();
+  while (Date.now() - s.lastLineAt < idleMs && Date.now() - start < maxMs) {
+    if (s.dead) break;
     await new Promise((r) => setTimeout(r, 50));
   }
-  return session.lines.slice();
+  return s.lines.slice();
 }
 
 async function ask(cmd, idleMs, maxMs) {
@@ -382,6 +402,13 @@ els.btnFlash.onclick = async () => {
   flashLog(`flashing ${manifest.images.length} images (version ${manifest.version})…`);
   let transport = null;
   try {
+    await endSession();  // free the port from any console session first
+    // Fit check: with flashSize 'keep' esptool-js skips its own check.
+    for (const img of manifest.images) {
+      if (img.offset + img.size > manifest.flash_bytes) {
+        throw new Error(`${img.name} at 0x${img.offset.toString(16)} exceeds the ${manifest.flash_bytes} byte flash`);
+      }
+    }
     transport = new Transport(port);
     const device = new ESPLoader({ transport });
     await device.detectChip();
@@ -393,6 +420,9 @@ els.btnFlash.onclick = async () => {
     }
     // calculateMD5Hash gets the final bytes esptool-js writes; it then reads
     // each region back and compares. This is a real transport verification.
+    // flashSize 'keep': PlatformIO built these images for this board's
+    // flash, so the bootloader header is already correct — and 'detect'
+    // needs a flash-RDID the CH340 bridge sometimes drops.
     await device.writeFlash({
       fileArray,
       flashSize: manifest.flash_size,
@@ -401,14 +431,16 @@ els.btnFlash.onclick = async () => {
       calculateMD5Hash: md5hex,
     });
     await device.after();  // hard reset into the new app
-    try { await transport.close(); } catch { /* port may already be gone */ }
+    // The Web Serial transport's close API is disconnect(), not close().
+    try { await transport.disconnect(); } catch { /* port may already be gone */ }
+    transport = null;
     flashLog('flash complete, md5 verified, board reset.');
     await startSession();
     await readBanner();
   } catch (e) {
     flashLog(`flash failed: ${e.message}`);
     flashLog('if the board is mid-boot, hold its BOOT button, click Flash again, and release once writing starts.');
-    try { await transport?.close(); } catch { /* ignore */ }
+    try { await transport?.disconnect(); } catch { /* ignore */ }
   }
   setBusy(false);
 };

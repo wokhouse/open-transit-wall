@@ -109,7 +109,12 @@ def main() -> int:
         "version": args.version,
         "built": datetime.now(UTC).isoformat(timespec="seconds"),
         "chip": "esp32",
-        "flash_size": "detect",
+        # 'keep': the images come from PlatformIO with a valid 4 MB
+        # bootloader header, so esptool-js must not probe the flash RDID
+        # (the CH340 bridge can drop that command) nor rewrite the header.
+        # The page does its own fit check against flash_bytes.
+        "flash_size": "keep",
+        "flash_bytes": 4 * 1024 * 1024,
         "fw_version": fw_protocol_version(),
         "images": entries,
     }
