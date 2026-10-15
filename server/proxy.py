@@ -52,6 +52,7 @@ from classify import (
 )
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from siri import parse_vehiclemonitor
 
@@ -353,6 +354,16 @@ def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
 # --- HTTP surface ------------------------------------------------------------
 
 app = FastAPI(title="open-transit-wall proxy")
+
+# The GitHub-Pages web flasher (flasher/) fetches /agencies from a different
+# origin. Everything the proxy serves is read-only public data, so any
+# origin may GET it.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 def resolve_agency(agency: str | None) -> AgencyState | None:

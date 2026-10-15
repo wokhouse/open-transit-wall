@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>open-transit-wall · web flasher</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>open-transit-wall web flasher</h1>
+  <p class="sub">Flash the ESP32 and provision its wall over Web Serial.
+  Chrome or Edge, over HTTPS. The firmware images below come from this
+  page's own build — <span id="fw-version">…</span>.</p>
+
+  <p id="browser-warn" class="warn" hidden>This browser has no Web Serial
+  API. Open this page in Chrome or Edge (desktop).</p>
+
+  <section id="step-connect">
+    <h2>1 · connect the board</h2>
+    <p>Plug the ESP32 in over USB, then pick its serial port.</p>
+    <button id="btn-connect">Connect</button>
+    <span id="conn-state" class="muted">not connected</span>
+  </section>
+
+  <section id="step-flash">
+    <h2>2 · flash firmware</h2>
+    <p>Writes the four images at their bootloader offsets
+    (<code>0x1000 · 0x8000 · 0xe000 · 0x10000</code>) and verifies each
+    one's md5 in flash. Takes about a minute.</p>
+    <button id="btn-flash" disabled>Flash</button>
+    <button id="btn-skip-flash" disabled>Skip — board already runs current firmware</button>
+    <pre id="flash-log" class="log" hidden></pre>
+  </section>
+
+  <section id="step-provision">
+    <h2>3 · configure the wall</h2>
+    <p>Server first: the page asks it which agencies it runs, then the
+    board is pointed at it.</p>
+
+    <label for="server-url">Server URL</label>
+    <input id="server-url" type="url" placeholder="https://your-proxy.example" size="40">
+    <button id="btn-discover">Discover agencies</button>
+    <span id="discover-state" class="muted"></span>
+
+    <label for="agency">Agency</label>
+    <select id="agency" disabled></select>
+    <input id="agency-manual" type="text" placeholder="or type an id (a-z0-9, 1-8)"
+           pattern="[a-z0-9]{1,8}" maxlength="8" hidden>
+
+    <label for="ssid">WiFi network</label>
+    <input id="ssid" type="text" maxlength="32">
+    <label for="pass">WiFi password</label>
+    <input id="pass" type="password" maxlength="63" autocomplete="off">
+    <p class="muted small">Leave the password empty to keep what the board
+    already has — it is never read back over the wire.</p>
+
+    <label for="host">Proxy host</label>
+    <input id="host" type="text" placeholder="proxy.example.com" maxlength="127">
+    <div class="row">
+      <div>
+        <label for="scheme">Scheme</label>
+        <select id="scheme">
+          <option value="">default (https)</option>
+          <option value="https://">https://</option>
+          <option value="http://">http://</option>
+        </select>
+      </div>
+      <div>
+        <label for="port">Port</label>
+        <input id="port" type="number" min="1" max="65535" placeholder="default (443)">
+      </div>
+    </div>
+
+    <button id="btn-save" disabled>Send to board</button>
+    <button id="btn-erase" disabled>Erase board</button>
+    <pre id="prov-log" class="log" hidden></pre>
+  </section>
+
+  <section id="step-console">
+    <h2>console</h2>
+    <p class="muted small">Everything the board prints, live. Commands you
+    send with <code>Send</code> go straight to the provisioning line
+    protocol (<code>status</code>, <code>get all</code>, <code>help</code>…).</p>
+    <pre id="console" class="log" hidden></pre>
+    <div class="row">
+      <input id="cmd" type="text" placeholder="status" size="30" disabled>
+      <button id="btn-send-cmd" disabled>Send</button>
+      <button id="btn-clear-console" disabled>Clear</button>
+    </div>
+  </section>
+
+  <p class="muted small">Protocol: <a
+  href="https://github.com/wokhouse/open-transit-wall/blob/main/docs/provisioning-protocol.md">docs/provisioning-protocol.md</a>.
+  Source: <a href="https://github.com/wokhouse/open-transit-wall">wokhouse/open-transit-wall</a>.</p>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

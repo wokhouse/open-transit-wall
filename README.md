@@ -38,6 +38,7 @@ backdrop at the new size.
 | `firmware/` | PlatformIO + Arduino ESP32 firmware. One binary for every wall: WiFi credentials, the proxy endpoint, and the agency id are provisioned at runtime over WebSerial and kept in NVS (see [Provisioning](#provisioning-over-webserial)). Fetches the proxy over HTTPS (roots pinned in `firmware/include/proxy_ca.h`), projects lat/lon → pixels using the bbox from the payload, and plots dots in the payload's palette colors. Each vehicle glides to its next known position at a random moment inside the server's advertised refresh cycle, so the wall reads as independent movement rather than one synchronized jump. |
 | `tools/gen_backdrop.py` | Rasterizes the coarse shoreline for one or more agencies (`--agency sf --agency ct`) to your exact matrix size into an RLE bitmap compiled into the firmware — dark land on a black sea. The wall picks its provisioned agency's entry at boot. |
 | `sim/` + `tools/run_sim.sh` | Native simulator: renders exactly what the ESP32 will draw (same projection + backdrop code) to a BMP — no hardware needed. |
+| `flasher/` | The [web flasher](https://wokhouse.github.io/open-transit-wall/): a static page (no framework, vendored esptool-js) that flashes the CI-built firmware over WebSerial, then walks the provisioning protocol — discovers agencies from your server URL and writes WiFi/proxy/agency to the board. `.github/workflows/pages.yml` builds the firmware with `tools/build_firmware.py` and ships the images alongside the page, so they always match. |
 
 ### Why a proxy?
 
@@ -100,8 +101,9 @@ pio run -e esp32dev -t upload          # build + flash (any wall, same binary)
 pio run -e esp32dev -t monitor         # optional: watch the log
 ```
 
-Then provision the wall: open the browser tool (WebSerial) and click
-Connect. Until the tool is built, any serial terminal at 115200 works:
+Then provision the wall: open the [web flasher](https://wokhouse.github.io/open-transit-wall/)
+(Chrome/Edge over HTTPS — it also flashes the firmware over WebSerial, no
+PlatformIO needed), or use any serial terminal at 115200:
 
 ```text
 set ssid=MyWifi
@@ -119,7 +121,7 @@ entry (see `tools/gen_backdrop.py`).
 The firmware prints a banner on connect (`OTW-FW 2` + `UNPROVISIONED` or
 `STORED ...`), applies each `set` live, and `save` persists to NVS. The
 full command set is specified in [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
-— that spec is what the browser tool will be built against.
+— the web flasher in `flasher/` is built against exactly that spec.
 
 Libraries (auto-installed by PlatformIO):
 [ESP32-HUB75-MatrixPanel-I2S-DMA](https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-I2S-DMA)

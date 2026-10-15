@@ -1,9 +1,11 @@
 # Web flasher plan
 
-Status: planned, not built. A static page on GitHub Pages that flashes the
+Status: implemented. A static page on GitHub Pages that flashes the
 ESP32 firmware over Web Serial, then provisions the board (WiFi, proxy URL,
 agency) by speaking the protocol in `docs/provisioning-protocol.md`. No
 build toolchain on the user's machine: open the URL, plug in the board.
+Live at https://wokhouse.github.io/open-transit-wall/ (Pages build type
+`workflow`, `.github/workflows/pages.yml`).
 
 Supersedes the earlier flasher WIP (OTWCFG-framed protocol, stashed on
 `main` as `stash@{0}`): the protocol it spoke no longer exists. The
