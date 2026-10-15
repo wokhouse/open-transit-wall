@@ -31,7 +31,7 @@ import threading
 import time
 import zipfile
 import zlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -80,7 +80,7 @@ class Snapshot:
     def payload(self) -> dict:
         with self._lock:
             return {
-                "ts": datetime.fromtimestamp(self._fetched_at, tz=timezone.utc).isoformat(),
+                "ts": datetime.fromtimestamp(self._fetched_at, tz=UTC).isoformat(),
                 "age": round(time.time() - self._fetched_at, 1),
                 "count": len(self._vehicles),
                 "v": self._vehicles,
