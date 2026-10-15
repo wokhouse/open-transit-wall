@@ -33,9 +33,10 @@ jobs:
       - name: Install cppcheck
         run: sudo apt-get update && sudo apt-get install -y cppcheck
       # Mirrors `pio check -e esp32dev` (platformio.ini: --suppress=unusedFunction,
-      # firmware sources only).
+      # firmware sources only). The -I flags replicate the include paths pio check
+      # passes automatically — screen.h includes config.h from firmware/include.
       - name: cppcheck
-        run: cppcheck --quiet --error-exitcode=1 --suppress=unusedFunction firmware/src firmware/include
+        run: cppcheck --quiet --error-exitcode=1 --suppress=unusedFunction -I firmware/include -I firmware/src firmware/src firmware/include
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
