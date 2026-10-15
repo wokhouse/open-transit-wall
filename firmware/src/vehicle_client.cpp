@@ -16,8 +16,10 @@
 // One TLS client reused across polls; the CA bundle is parsed into mbedTLS
 // trust anchors on first use and kept (~2 KB heap). The scheme comes from
 // the provisioner: HTTPS against the hosted app is the default, plain HTTP
-// against a LAN proxy.py is provisioned, not compiled.
+// against a LAN proxy.py is provisioned, not compiled — so a plain client
+// is used for http:// URLs (TLS to a plain server fails the handshake).
 static WiFiClientSecure secureClient;
+static WiFiClient plainClient;
 static bool caLoaded = false;
 
 static void ensureCa() {
@@ -80,9 +82,13 @@ PollResult fetchVehicles(const char *scheme, const char *host, uint16_t port,
   }
 
   HTTPClient http;
-  ensureCa();
+  const bool secure = strncmp(scheme, "https", 5) == 0;
+  if (secure) {
+    ensureCa();
+  }
   http.setTimeout(8000);
-  if (!http.begin(secureClient, url)) {
+  // WiFiClientSecure derives from WiFiClient; begin() accepts either.
+  if (!http.begin(secure ? secureClient : plainClient, url)) {
     return res;
   }
   int code = http.GET();
