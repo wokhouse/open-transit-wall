@@ -26,14 +26,11 @@ static void ensureCa() {
   if (caLoaded) {
     return;
   }
-  // Core 3.x (platform 7.1.3): setCACert is void; the parse result comes
-  // from lastError(). "OK" means the bundle parsed into trust anchors.
-  char errbuf[128] = {0};
+  // Core 3.x: setCACert only stores the PEM — mbedTLS parses and validates
+  // it at connect time. There is no meaningful check to run here; a bad
+  // bundle shows up as a failed fetch, and fetchVehicles prints
+  // secureClient.lastError() for connection failures.
   secureClient.setCACert(PROXY_CA_PEM);
-  secureClient.lastError(errbuf, sizeof(errbuf));
-  if (strcmp(errbuf, "OK") != 0) {
-    Serial.printf("[tls] CA bundle rejected (%s) — check proxy_ca.h\n", errbuf);
-  }
   caLoaded = true;
 }
 
@@ -101,6 +98,14 @@ PollResult fetchVehicles(const char *scheme, const char *host, uint16_t port,
     return res;
   }
   if (code != 200) {
+    // Negative codes are connection/TLS failures; lastError() carries the
+    // mbedTLS message (e.g. a cert that doesn't verify against the bundle).
+    if (code < 0 && secure) {
+      char errbuf[128] = {0};
+      if (secureClient.lastError(errbuf, sizeof(errbuf)) != 0) {
+        Serial.printf("[tls] fetch failed: %s\n", errbuf);
+      }
+    }
     http.end();
     return res;
   }
