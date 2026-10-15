@@ -1,22 +1,15 @@
-"""Shared geography for the transit wall: SF bounding box and a coarse land polygon.
+"""Shared geography for the transit wall: coarse land polygons for backdrops.
 
-Used by tools/gen_backdrop.py (rasterized into the firmware backdrop) and
-mirrored by the simulator. One source of truth so the simulator and the LED
-matrix show the same map.
+Used by tools/gen_backdrop.py (rasterized into the firmware backdrop). One
+source of truth so the simulator and the LED matrix show the same map.
 
-The polygon is deliberately coarse (~170 m per pixel at 64x32, so precision
+Bounding boxes live in server/agencies.json — the registry is the single
+source of truth, and the server ships the bbox to clients on the wire.
+Land polygons stay here, keyed by agency id to match.
+
+The polygons are deliberately coarse (~170 m per pixel at 64x32, so precision
 beyond this is invisible). Coordinates are (lat, lon).
 """
-
-# Bounding box around the SFMTA metro service area (live fleet extents from
-# 2026-09: N Ocean Beach .. T Sunnydale / Wharves), padded ~1-2 px so the data
-# sits just inside the edges. Must match firmware/include/config.h MAP_*.
-BBOX = {
-    "lat_min": 37.705,
-    "lat_max": 37.810,
-    "lon_min": -122.512,
-    "lon_max": -122.385,
-}
 
 # Coarse SF peninsula shoreline, traced clockwise starting at the Golden Gate.
 SF_LAND = [
@@ -57,6 +50,12 @@ SF_LAND = [
     (37.806, -122.454),  # Crissy Field
     (37.808, -122.465),
 ]
+
+# Land polygons per agency id, matching server/agencies.json. Agencies with no
+# entry here get a blank (all-water) backdrop; the vehicle map still works.
+LAND_POLYGONS = {
+    "sf": SF_LAND,
+}
 
 # Palette indices shared with the firmware backdrop (see gen_backdrop.py).
 LAND_RGB = (2, 2, 2)

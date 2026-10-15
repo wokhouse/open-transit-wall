@@ -6,7 +6,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from classify import COLOR_BUS, COLOR_CABLE, COLOR_RAPID, classify, normalize_line
+from classify import COLOR_BUS, COLOR_CABLE, COLOR_RAPID, MUNI_FALLBACK, classify, normalize_line
+
+# These tests exercise SFMTA classification, so they pass the SFMTA fallback
+# table explicitly — classify() has no agency default anymore.
+RT = MUNI_FALLBACK
 
 
 @pytest.fixture(scope="module")
@@ -40,7 +44,7 @@ def test_rapid_detection_uses_long_name():
 
 
 def test_metro_uses_line_color_fallback():
-    result = classify("N")
+    result = classify("N", fallback=RT)
     assert result["code"] == "M"
     assert result["rgb"] == (0, 87, 184)  # N Judah fallback blue
 
@@ -51,13 +55,13 @@ def test_metro_prefers_gtfs_color():
 
 
 def test_kt_throughrun_is_metro():
-    assert classify("KT")["code"] == "M"
-    assert classify("SF:KT")["code"] == "M"
+    assert classify("KT", fallback=RT)["code"] == "M"
+    assert classify("SF:KT", fallback=RT)["code"] == "M"
 
 
 def test_cable_car_is_amber():
-    assert classify("PH")["code"] == "C"
-    assert classify("PH")["rgb"] == COLOR_CABLE
+    assert classify("PH", fallback=RT)["code"] == "C"
+    assert classify("PH", fallback=RT)["rgb"] == COLOR_CABLE
 
 
 def test_unknown_line_defaults_to_bus():

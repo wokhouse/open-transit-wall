@@ -42,13 +42,13 @@ void Screen::drawPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b) {
 
 void Screen::clear() { dma_->clearScreen(); }
 
-void Screen::drawBackdrop() {
-  // backdrop_rle is row-major (count, colorIndex) pairs; index 0 = land,
+void Screen::drawBackdrop(const BackdropDef &bd) {
+  // The RLE is row-major (count, colorIndex) pairs; index 0 = land,
   // 1 = water. Total pixels == DISPLAY_W * DISPLAY_H by construction.
   int x = 0, y = 0;
-  for (unsigned int i = 0; i + 1 < backdrop_rle_len; i += 2) {
-    const uint8_t *rgb = backdrop_rle[i + 1] == 1 ? BACKDROP_WATER : BACKDROP_LAND;
-    for (uint8_t n = backdrop_rle[i]; n > 0; n--) {
+  for (unsigned int i = 0; i + 1 < bd.rle_len; i += 2) {
+    const uint8_t *rgb = bd.rle[i + 1] == 1 ? BACKDROP_WATER : BACKDROP_LAND;
+    for (uint8_t n = bd.rle[i]; n > 0; n--) {
       drawPixel(x, y, rgb[0], rgb[1], rgb[2]);
       if (++x >= DISPLAY_W) {
         x = 0;

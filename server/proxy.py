@@ -1,9 +1,11 @@
 """open-transit-wall mini-proxy.
 
-Fetches the 511 SIRI VehicleMonitoring feed for SFMTA on a shared timer
-(default 65s, keeping a live run under 511's default token limit of 60
-requests/hour including the startup GTFS routes refresh) and serves a
-compact vehicle list for the ESP32 display.
+Serves one or more transit agencies from server/agencies.json (the registry).
+Each served agency is polled from the 511 SIRI VehicleMonitoring feed on its
+own timer (POLL_SECONDS per agency) and served as a compact vehicle list for
+the ESP32 display. Which agencies a deployment runs is set by
+SERVED_AGENCIES; the payload carries the agency's bbox, refresh cadence, and
+type->color palette so clients are configured entirely from the wire.
 
 Usage:
   python proxy.py --fixture ../fixtures/sample_vehiclemonitor.json   # offline
@@ -11,13 +13,14 @@ Usage:
   python proxy.py             # live fetch
 
 Configuration via environment (or server/.env):
-  FIVE11_API_KEY   511 open-data token (required for live mode)
-  POLL_SECONDS     upstream poll interval (default 65; a full minute of
-                   polling plus the startup GTFS refresh stays within 511's
-                   default 60 req/hour)
-  HOST / PORT      bind address (default 0.0.0.0:8000)
-  TYPES            vehicle classes to serve: subset of B,R,M,C (empty = all;
-                   TYPES=M,C gives a metro + cable car wall)
+  FIVE11_API_KEY    511 open-data token (required for live mode)
+  SERVED_AGENCIES   comma-separated registry ids to run (default: sf)
+  POLL_SECONDS      upstream poll interval per agency (default 65, minimum 1). The
+                    operator picks a value that keeps
+                    len(SERVED_AGENCIES) * 3600/POLL_SECONDS under the token
+                    cap (511's default is 60 req/hour); the server warns at
+                    startup if it would exceed that, but does not enforce.
+  HOST / PORT       bind address (default 0.0.0.0:8000)
 """
 
 from __future__ import annotations
@@ -26,6 +29,7 @@ import argparse
 import io
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -36,7 +40,16 @@ from pathlib import Path
 
 import httpx
 import uvicorn
-from classify import classify, load_routes
+from classify import (
+    COLOR_BUS,
+    COLOR_CABLE,
+    COLOR_RAPID,
+    METRO_DEFAULT,
+    MUNI_FALLBACK,
+    classify,
+    hex_to_rgb,
+    load_routes,
+)
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -47,41 +60,112 @@ load_dotenv(SERVER_DIR / ".env")
 
 ROOT = SERVER_DIR.parent
 FIXTURES_DIR = ROOT / "fixtures"
-ROUTES_JSON = SERVER_DIR / "routes.json"
+AGENCIES_JSON = SERVER_DIR / "agencies.json"
 UPSTREAM_URL = "https://api.511.org/transit/VehicleMonitoring"
 DATAFEED_URL = "https://api.511.org/transit/datafeeds"
+OPERATORS_URL = "https://api.511.org/transit/operators"
 
-# Which vehicle classes to serve: subset of B(bus) R(rapid) M(metro) C(cable).
-# Empty = all. Tolerant of "M,C", "MC", "m c". Set TYPES=M,C in .env for a
-# metro + cable car wall.
-def parse_types(value: str) -> set:
-    return {c for token in value.upper().split(",")
-            for c in token.strip() if c in "BRMC"}
+# 511's default token allowance; only used to warn at startup, never enforced.
+DEFAULT_TOKEN_RPH = 60
+
+# Default type -> RGB palette shipped on the wire, built from classify's
+# color constants so the two can't drift. Registry entries may override per
+# agency ("palette": {"M": [r, g, b], ...} in agencies.json).
+DEFAULT_PALETTE = {
+    "B": list(COLOR_BUS),
+    "R": list(COLOR_RAPID),
+    "M": hex_to_rgb(METRO_DEFAULT),
+    "C": list(COLOR_CABLE),
+}
+
+AGENCY_ID_RE = re.compile(r"^[a-z0-9]{1,8}$")
 
 
-TYPES = parse_types(os.environ.get("TYPES", ""))
+def redact(text: str) -> str:
+    """Strip the API key from an error/log string before printing.
+
+    httpx's HTTPStatusError embeds the full request URL, and 511 only
+    accepts the key as a query param (header auth 401s), so every upstream
+    4xx/5xx — including expected 429s — would otherwise log the key."""
+    api_key = os.environ.get("FIVE11_API_KEY")
+    if api_key:
+        text = text.replace(api_key, "[api-key]")
+    return text
 
 
-class Snapshot:
-    """Latest vehicle list, shared between the poll thread and handlers."""
+def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
+    """Read agencies.json and sanity-check every entry before anything starts."""
+    registry = json.loads(path.read_text())
+    for agency_id, cfg in registry.items():
+        if not AGENCY_ID_RE.match(agency_id):
+            raise ValueError(f"registry id {agency_id!r} must match {AGENCY_ID_RE.pattern}")
+        for key in ("name", "siri_agency", "bbox"):
+            if key not in cfg:
+                raise ValueError(f"registry entry {agency_id!r} missing {key!r}")
+        for key in ("lat_min", "lat_max", "lon_min", "lon_max"):
+            if not isinstance(cfg["bbox"].get(key), (int, float)):
+                raise ValueError(f"registry entry {agency_id!r} bbox.{key} missing or not a number")
+    return registry
 
-    def __init__(self) -> None:
+
+def parse_served(value: str, registry: dict[str, dict]) -> list[str]:
+    """SERVED_AGENCIES -> validated, deduplicated list of registry ids.
+
+    Duplicates would start one poll thread per entry against the same
+    AgencyState, silently doubling the upstream rate the operator's
+    token math assumes."""
+    ids = list(dict.fromkeys(t.strip() for t in value.split(",") if t.strip()))
+    if not ids:
+        ids = ["sf"]  # the historical single-agency deployment
+    unknown = [agency_id for agency_id in ids if agency_id not in registry]
+    if unknown:
+        raise ValueError(f"SERVED_AGENCIES names unknown agencies {unknown}; "
+                         f"registry has {sorted(registry)}")
+    return ids
+
+
+class AgencyState:
+    """Per-agency latest vehicle list + poll schedule, shared between the
+    poll thread and handlers."""
+
+    def __init__(self, agency_id: str, cfg: dict) -> None:
+        self.id = agency_id
+        self.name = cfg["name"]
+        self.siri_agency = cfg["siri_agency"]
+        self.bbox = [cfg["bbox"]["lat_min"], cfg["bbox"]["lat_max"],
+                     cfg["bbox"]["lon_min"], cfg["bbox"]["lon_max"]]
+        self.palette = {**DEFAULT_PALETTE, **(cfg.get("palette") or {})}
+        # SFMTA keeps its offline line table; other agencies rely on GTFS.
+        self.fallback = MUNI_FALLBACK if agency_id == "sf" else None
+        self.routes_path = SERVER_DIR / f"routes_{agency_id}.json"
         self._lock = threading.Lock()
         self._vehicles: list[dict] = []
         self._fetched_at: float = 0.0
-        self.routes: dict[str, dict] = load_routes(ROUTES_JSON)
+        self._next_fetch_at: float = 0.0
+        self.routes: dict[str, dict] = load_routes(self.routes_path)
 
     def update(self, vehicles: list[dict]) -> None:
         with self._lock:
             self._vehicles = vehicles
             self._fetched_at = time.time()
 
+    def arm_next_poll(self, interval: float) -> None:
+        with self._lock:
+            self._next_fetch_at = time.time() + interval
+
     def payload(self) -> dict:
         with self._lock:
+            now = time.time()
+            palette = {code: self.palette[code]
+                       for code in {v["t"] for v in self._vehicles}
+                       if code in self.palette}
             return {
                 "ts": datetime.fromtimestamp(self._fetched_at, tz=UTC).isoformat(),
-                "age": round(time.time() - self._fetched_at, 1),
+                "age": round(now - self._fetched_at, 1),
+                "next": max(0, round(self._next_fetch_at - now)),
                 "count": len(self._vehicles),
+                "bbox": self.bbox,
+                "palette": palette,
                 "v": self._vehicles,
             }
 
@@ -89,29 +173,42 @@ class Snapshot:
         with self._lock:
             return time.time() - self._fetched_at
 
+    @property
+    def fetched(self) -> bool:
+        """False until the first successful upstream poll."""
+        with self._lock:
+            return self._fetched_at > 0
 
-state = Snapshot()
+    def ts(self) -> str:
+        with self._lock:
+            return datetime.fromtimestamp(self._fetched_at, tz=UTC).isoformat()
 
 
-def compact_vehicles(raw_vehicles: list[dict]) -> list[dict]:
+REGISTRY = load_registry()
+SERVED = parse_served(os.environ.get("SERVED_AGENCIES", ""), REGISTRY)
+STATES: dict[str, AgencyState] = {
+    agency_id: AgencyState(agency_id, REGISTRY[agency_id]) for agency_id in SERVED
+}
+
+
+def compact_vehicles(raw_vehicles: list[dict], routes: dict[str, dict],
+                     fallback: dict[str, dict] | None = None) -> list[dict]:
     """Map parsed SIRI entries to the cached vehicle dicts.
 
     Vehicles without a route reference (yards / deadheading, ~20% of the feed)
     are dropped — they'd plot as misclassified dots clustered at the depots.
+    No type filtering: every active vehicle the agency reports is served.
     """
     out = []
     for vehicle in raw_vehicles:
         if not vehicle["line"]:
             continue
-        info = classify(vehicle["line"], state.routes)
-        if TYPES and info["code"] not in TYPES:
-            continue
+        info = classify(vehicle["line"], routes, fallback)
         out.append({
             "r": info["line"],
             "la": round(vehicle["lat"], 5),
             "lo": round(vehicle["lon"], 5),
             "t": info["code"],
-            "c": list(info["rgb"]),
             # Stable id so the ESP32 can match vehicles across polls and
             # animate each one's movement individually. 31 bits keeps the
             # collision rate negligible at this fleet size (~2^-6 per day).
@@ -122,18 +219,20 @@ def compact_vehicles(raw_vehicles: list[dict]) -> list[dict]:
 
 def to_wire(vehicles: list[dict]) -> list[list]:
     """Project cached vehicles to the ESP32 wire format: flat
-    [lat, lon, r, g, b, id] arrays. Keyed objects overflowed the ESP32's heap
-    at rush-hour fleet sizes — every JSON key costs ~16 bytes of parse-time
-    heap next to the display framebuffer, so /vehicles ships arrays only."""
-    return [[v["la"], v["lo"], *v["c"], v["i"]] for v in vehicles]
+    [lat, lon, type_code, id] arrays. Keyed objects overflowed the ESP32's
+    heap at rush-hour fleet sizes — every JSON key costs ~16 bytes of
+    parse-time heap next to the display framebuffer, so /vehicles ships
+    arrays only. Colors are not per-vehicle: the payload's palette maps type
+    codes to RGB, so a row carries one short string instead of three ints."""
+    return [[v["la"], v["lo"], v["t"], v["i"]] for v in vehicles]
 
 
 # --- Upstream fetching -------------------------------------------------------
 
-def fetch_live(api_key: str) -> dict:
+def fetch_live(api_key: str, siri_agency: str) -> dict:
     response = httpx.get(
         UPSTREAM_URL,
-        params={"api_key": api_key, "agency": "SF", "format": "json"},
+        params={"api_key": api_key, "agency": siri_agency, "format": "json"},
         timeout=20.0,
         follow_redirects=True,
     )
@@ -142,11 +241,12 @@ def fetch_live(api_key: str) -> dict:
     return json.loads(response.text.lstrip("\ufeff \t\r\n"))
 
 
-def refresh_routes(api_key: str) -> None:
-    """Download the SFMTA GTFS static feed and cache route types/colors."""
+def refresh_routes(api_key: str, state: AgencyState) -> None:
+    """Download the agency's GTFS static feed and cache route types/colors."""
     response = httpx.get(
         DATAFEED_URL,
-        params={"api_key": api_key, "operator_id": "SF", "status": "active"},
+        params={"api_key": api_key, "operator_id": state.siri_agency,
+                "status": "active"},
         timeout=60.0,
         follow_redirects=True,
     )
@@ -177,43 +277,77 @@ def refresh_routes(api_key: str) -> None:
         routes[route_id] = entry
         routes[short] = entry
 
-    ROUTES_JSON.write_text(json.dumps(routes, indent=0))
+    state.routes_path.write_text(json.dumps(routes, indent=0))
     state.routes = routes
-    print(f"[routes] cached {len(routes)//2} SFMTA routes -> {ROUTES_JSON.name}",
+    print(f"[routes] cached {len(routes)//2} {state.name} routes -> {state.routes_path.name}",
           flush=True)
 
 
-def poll_loop(api_key: str | None, fixture: Path | None, record: bool,
-              interval: float) -> None:
+def check_operator_codes(api_key: str) -> None:
+    """Warn (never block) when a registry siri_agency is missing from 511's
+    live operator list — the authoritative source for accepted agency codes."""
+    try:
+        response = httpx.get(OPERATORS_URL, params={"api_key": api_key},
+                             timeout=30.0, follow_redirects=True)
+        response.raise_for_status()
+        operators = json.loads(response.content.decode("utf-8-sig"))
+        known = {op.get("Id") for op in operators}
+    except Exception as error:
+        print(f"[registry] operator list unavailable ({redact(str(error))}); "
+              "skipping check", file=sys.stderr)
+        return
+    for state in STATES.values():
+        if state.siri_agency not in known:
+            print(f"[registry] WARNING: {state.id} uses siri_agency "
+                  f"{state.siri_agency!r}, which is not in 511's operator list",
+                  file=sys.stderr)
+
+
+def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
+              record: bool, interval: float, start_delay: float = 0.0) -> None:
+    """Poll one agency on a fixed schedule.
+
+    Slots are absolute (start + k*interval), so the advertised `next` and the
+    operator's token math stay true even when a fetch is slow; a fetch that
+    overruns its slot skips to the next one instead of shifting the whole
+    schedule. start_delay staggers agencies so N threads don't stampede 511
+    in the same second."""
+    if start_delay > 0:
+        time.sleep(start_delay)
     first = True
+    next_slot = time.monotonic()
     while True:
+        next_slot += interval
         try:
             if first and api_key:
                 try:
-                    refresh_routes(api_key)
+                    refresh_routes(api_key, state)
                 except Exception as error:
-                    print(f"[routes] refresh failed ({error}); using fallback")
+                    print(f"[routes] refresh failed ({redact(str(error))}); "
+                          "using fallback")
 
             if fixture is not None:
                 payload = json.loads(fixture.read_text())
             elif api_key:
-                payload = fetch_live(api_key)
+                payload = fetch_live(api_key, state.siri_agency)
                 if record:
                     FIXTURES_DIR.mkdir(exist_ok=True)
                     stamp = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
-                    (FIXTURES_DIR / f"vehiclemonitor_{stamp}.json").write_text(
+                    (FIXTURES_DIR / f"vehiclemonitor_{state.id}_{stamp}.json").write_text(
                         json.dumps(payload, indent=1))
             else:
                 raise RuntimeError("FIVE11_API_KEY not set (use --fixture for offline dev)")
 
-            vehicles = compact_vehicles(parse_vehiclemonitor(payload))
+            vehicles = compact_vehicles(parse_vehiclemonitor(payload),
+                                       state.routes, state.fallback)
             state.update(vehicles)
-            print(f"[poll] {len(vehicles)} vehicles at {state.payload()['ts']}",
+            print(f"[poll:{state.id}] {len(vehicles)} vehicles at {state.ts()}",
                   flush=True)
             first = False
         except Exception as error:
-            print(f"[poll] error: {error}", file=sys.stderr)
-        time.sleep(interval)
+            print(f"[poll:{state.id}] error: {redact(str(error))}", file=sys.stderr)
+        state.arm_next_poll(interval)
+        time.sleep(max(0.0, next_slot - time.monotonic()))
 
 
 # --- HTTP surface ------------------------------------------------------------
@@ -221,17 +355,55 @@ def poll_loop(api_key: str | None, fixture: Path | None, record: bool,
 app = FastAPI(title="open-transit-wall proxy")
 
 
-@app.get("/vehicles")
-def vehicles() -> JSONResponse:
+def resolve_agency(agency: str | None) -> AgencyState | None:
+    """Map the ?agency= param to a served agency. No param is only allowed
+    when the deployment serves exactly one agency — old firmware and
+    single-agency self-hosters keep working."""
+    if agency is None:
+        if len(STATES) == 1:
+            return next(iter(STATES.values()))
+        return None
+    return STATES.get(agency)
+
+
+def wire_payload(state: AgencyState) -> dict:
+    """The exact JSON /vehicles ships: state payload with vehicle rows
+    projected to the wire format."""
     payload = state.payload()
     payload["v"] = to_wire(payload["v"])
+    return payload
+
+
+@app.get("/agencies")
+def agencies() -> dict:
+    """Static discovery for the WebSerial flasher: what this server runs."""
+    return {"agencies": [{"id": state.id, "name": state.name}
+                         for state in STATES.values()]}
+
+
+@app.get("/vehicles")
+def vehicles(agency: str | None = None) -> JSONResponse:
+    state = resolve_agency(agency)
+    if state is None:
+        wanted = agency[:32] if agency else "(no agency param)"
+        return JSONResponse(
+            {"error": f"unknown agency {wanted!r}; this server serves "
+                      f"{sorted(STATES)}"},
+            status_code=400, headers={"Cache-Control": "no-store"})
+    payload = wire_payload(state)
     return JSONResponse(payload, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"upstream_age_s": None if not state.age() else round(state.age(), 1),
-            "routes_cached": bool(state.routes)}
+    return {
+        "serving": sorted(STATES),
+        "upstream_age_s": {agency_id: (None if not state.fetched
+                                       else round(state.age(), 1))
+                           for agency_id, state in STATES.items()},
+        "routes_cached": {agency_id: bool(state.routes)
+                          for agency_id, state in STATES.items()},
+    }
 
 
 def main() -> None:
@@ -241,24 +413,57 @@ def main() -> None:
     parser.add_argument("--record", action="store_true",
                         help="save raw live responses to fixtures/")
     parser.add_argument("--once", action="store_true",
-                        help="fetch once, print the compact payload, exit")
+                        help="fetch once, print the exact /vehicles wire payload, exit")
+    parser.add_argument("--agency", default=None,
+                        help="registry id for --once (default: the first served agency)")
     args = parser.parse_args()
 
     api_key = os.environ.get("FIVE11_API_KEY")
-    interval = float(os.environ.get("POLL_SECONDS", "60"))
-
-    if args.once:
-        payload = (json.loads(args.fixture.read_text()) if args.fixture
-                   else fetch_live(api_key))
-        print(json.dumps(compact_vehicles(parse_vehiclemonitor(payload)), indent=1))
+    try:
+        interval = float(os.environ.get("POLL_SECONDS", "65"))
+    except ValueError:
+        parser.error("POLL_SECONDS must be a number")
+        return
+    if interval < 1:
+        parser.error("POLL_SECONDS must be >= 1")
         return
 
-    thread = threading.Thread(
-        target=poll_loop,
-        args=(api_key, args.fixture, args.record, interval),
-        daemon=True,
-    )
-    thread.start()
+    if args.once:
+        agency_id = args.agency or SERVED[0]
+        if agency_id not in STATES:
+            parser.error(f"--agency {agency_id!r} is not served "
+                         f"(SERVED_AGENCIES={','.join(SERVED)})")
+            return
+        state = STATES[agency_id]
+        if args.fixture:
+            payload = json.loads(args.fixture.read_text())
+        elif api_key:
+            payload = fetch_live(api_key, state.siri_agency)
+        else:
+            parser.error("--once needs FIVE11_API_KEY or --fixture")
+            return
+        state.update(compact_vehicles(parse_vehiclemonitor(payload),
+                                     state.routes, state.fallback))
+        print(json.dumps(wire_payload(state), indent=1))
+        return
+
+    print(f"[poll] serving {len(STATES)} agencies ({', '.join(SERVED)}) "
+          f"each every {interval:g}s", flush=True)
+    total_rph = len(STATES) * 3600.0 / interval
+    if total_rph > DEFAULT_TOKEN_RPH:
+        print(f"[poll] WARNING: {total_rph:.1f} req/h total is over the "
+              f"{DEFAULT_TOKEN_RPH} req/h default token; raise POLL_SECONDS "
+              "or drop an agency", file=sys.stderr)
+    if api_key:
+        check_operator_codes(api_key)
+
+    for i, state in enumerate(STATES.values()):
+        threading.Thread(
+            target=poll_loop,
+            args=(state, api_key, args.fixture, args.record, interval,
+                  i * min(interval / max(1, len(STATES)), 5.0)),
+            daemon=True,
+        ).start()
     uvicorn.run(app, host=os.environ.get("HOST", "0.0.0.0"),
                 port=int(os.environ.get("PORT", "8000")), log_level="warning")
 

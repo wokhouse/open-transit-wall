@@ -2,14 +2,20 @@
 //
 // ESP32-WROOM-32E + Waveshare RGB-Matrix-Px-64x64 (HUB75). Polls the mini-
 // proxy for compact vehicle positions and plots them on the LED wall. One
-// binary is flashed to every wall: WiFi credentials and the proxy host are
-// provisioned over WebSerial and kept in NVS (src/provisioner.h,
-// docs/provisioning-protocol.md). No secrets.h, no per-wall build.
+// binary is flashed to every wall: WiFi credentials, the proxy endpoint, and
+// the agency id are provisioned over WebSerial and kept in NVS
+// (src/provisioner.h, docs/provisioning-protocol.md). No secrets.h, no
+// per-wall build.
 //
-// 511 only publishes positions every ~65s, so instead of teleporting the
-// wall on each poll, each vehicle that moved picks a random moment inside
-// MOTION_WINDOW_MS and glides to its new pixel (see config.h) — the wall
-// reads as many vehicles moving independently.
+// The proxy publishes positions every POLL_SECONDS and advertises the exact
+// seconds until its next upstream fetch in the payload ("next"). Instead of
+// teleporting the wall on each poll, each vehicle that moved picks a random
+// moment inside the remaining refresh cycle and glides to its new pixel
+// (see config.h) — the wall reads as many vehicles moving independently.
+//
+// The map bounding box and the vehicle colors also come from the payload
+// ("bbox", "palette"): nothing about the agency is compiled except the
+// backdrop bitmap, which is looked up by agency id below.
 //
 // Rendering is strictly incremental: the backdrop is painted once at boot
 // and the loop only rewrites the individual pixels that change as dots
@@ -18,7 +24,9 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <string.h>
 
+#include "backdrop.h"
 #include "config.h"
 #include "map_project.h"
 #include "provisioner.h"
@@ -77,12 +85,24 @@ static void redrawOccupants(int x, int y, int skipIdx) {
   }
 }
 
-static void decodeBackdropIndices() {
+// The backdrop is the one per-agency artifact that cannot come over the
+// wire. gen_backdrop.py --agency <id> emits one BackdropDef per agency;
+// the wall picks its provisioned agency's entry at boot.
+static const BackdropDef *backdropFor(const char *agency) {
+  for (unsigned int i = 0; i < backdrop_count; i++) {
+    if (strcmp(backdrops[i].agency, agency) == 0) {
+      return &backdrops[i];
+    }
+  }
+  return nullptr;
+}
+
+static void decodeBackdropIndices(const BackdropDef &bd) {
   int x = 0, y = 0;
-  for (unsigned int i = 0; i + 1 < backdrop_rle_len; i += 2) {
-    for (uint8_t n = backdrop_rle[i]; n > 0; n--) {
+  for (unsigned int i = 0; i + 1 < bd.rle_len; i += 2) {
+    for (uint8_t n = bd.rle[i]; n > 0; n--) {
       if (x < DISPLAY_W && y < DISPLAY_H) {
-        bgIndex[y * DISPLAY_W + x] = backdrop_rle[i + 1];
+        bgIndex[y * DISPLAY_W + x] = bd.rle[i + 1];
       }
       if (++x >= DISPLAY_W) {
         x = 0;
@@ -160,10 +180,12 @@ static int findActive(uint32_t id) {
 // Fold the fresh snapshot into the animation slots: matching vehicles get a
 // new target (scheduled at a random moment in the remainder of the upstream
 // refresh cycle), new vehicles appear in place, missing ones are erased.
-static void mergeVehicles(uint32_t nowMs, float upstreamAge) {
+// nextS/age come from the payload: the server's own cadence, not a compiled
+// constant.
+static void mergeVehicles(uint32_t nowMs, float upstreamAge, uint32_t nextS) {
   // Glides tile the whole refresh cycle: spread start times across whatever
   // is left of it after the snapshot's own age.
-  int32_t spreadMs = (int32_t)(UPSTREAM_REFRESH_S * 1000)
+  int32_t spreadMs = (int32_t)(nextS * 1000)
                      - (int32_t)(upstreamAge * 1000.0f) - MOTION_GLIDE_MS;
   if (spreadMs < 1000) {
     spreadMs = 1000;  // stale snapshot: still stagger, just tightly
@@ -174,7 +196,7 @@ static void mergeVehicles(uint32_t nowMs, float upstreamAge) {
     const Vehicle &v = vehicles[i];
     int px, py;
     if (!projection.project(v.lat, v.lon, &px, &py)) {
-      continue;  // outside the configured bounding box
+      continue;  // outside the agency's advertised bounding box
     }
     int s = findActive(v.id);
     if (s >= 0) {
@@ -270,8 +292,6 @@ void setup() {
   }
   screen.setBrightness(DISPLAY_BRIGHTNESS);
   screen.clear();
-  decodeBackdropIndices();
-  screen.drawBackdrop();  // painted once; animate() only touches dot pixels
 
   provLoad();
   if (provNeeded()) {
@@ -281,6 +301,18 @@ void setup() {
     Serial.println("UNPROVISIONED: open the browser tool and set "
                    "ssid/pass/host, then save.");
     return;
+  }
+
+  // The backdrop is chosen once at boot from the provisioned agency id.
+  // Changing agency is a re-provision + reboot, not a live edit.
+  const BackdropDef *bd = backdropFor(provAgency());
+  if (bd) {
+    decodeBackdropIndices(*bd);
+    screen.drawBackdrop(*bd);  // painted once; animate() only touches dot pixels
+  } else {
+    Serial.printf("BACKDROP none for agency '%s' — blank map; regenerate with "
+                  "tools/gen_backdrop.py --agency %s and reflash\n",
+                  provAgency(), provAgency());
   }
 
   connectWifi();
@@ -296,6 +328,8 @@ void loop() {
   provPumpSerial();
 
   if ((int32_t)(now - nextPollMs) >= 0) {
+    // Fallback cadence only for failed polls; a successful poll re-arms
+    // from the server's advertised "next".
     nextPollMs = now + POLL_INTERVAL_MS;
     if (provNeeded()) {
       return;  // still waiting for set ssid/pass — backdrop stays up
@@ -307,25 +341,52 @@ void loop() {
       }
       syncTime();  // TLS needs the wall clock; NTP only works over WiFi
     }
-    // Begin the projection on the first ready cycle — covers both the
-    // provisioned-at-boot and the provisioned-live-from-serial paths.
-    static bool projectionReady = false;
-    if (!projectionReady) {
-      projectionReady = true;
-      BBox bbox = {MAP_LAT_MIN, MAP_LAT_MAX, MAP_LON_MIN, MAP_LON_MAX};
-      projection.begin(bbox, DISPLAY_W, DISPLAY_H, MAP_STRETCH_TO_FILL);
-    }
-    float upstreamAge = 0.0f;
-    int n = fetchVehicles(provPollHost(), provPort(), vehicles, MAX_VEHICLES,
-                          &upstreamAge);
-    if (n >= 0) {
-      vehicleCount = n;
-      pollFailures = 0;
-      mergeVehicles(now, upstreamAge);
-    } else {
+    PollResult poll = fetchVehicles(provScheme(), provPollHost(), provPort(),
+                                    provAgency(), vehicles, MAX_VEHICLES);
+    if (!poll.ok) {
       pollFailures = min<uint8_t>(pollFailures + 1, 200);
-      Serial.printf("[poll] fetch failed (%u consecutive)\n", pollFailures);
+      if (poll.agencyUnknown) {
+        Serial.println("[poll] server 400: agency id not served — "
+                       "check `get agency` against the server's /agencies");
+      } else {
+        Serial.printf("[poll] fetch failed (%u consecutive)\n", pollFailures);
+      }
+      return;
     }
+    pollFailures = 0;
+    vehicleCount = poll.count;
+    // next == 0 means the server's refresh is due now: re-poll promptly.
+    // Clamp the top end so a misconfigured server can't overflow the
+    // uint32 math (and wrap into a poll hammer) or set an absurd wait.
+    uint32_t waitS = poll.next > 0 ? poll.next : 1;
+    if (waitS > 3600) {
+      waitS = 3600;
+    }
+    // Re-arm from the post-fetch clock: `now` predates a fetch that can
+    // take seconds, and scheduling from it would make the wall re-poll
+    // faster than the server refreshes.
+    nextPollMs = millis() + waitS * 1000UL;
+
+    // The payload's bbox is the projection's source of truth. Re-init when
+    // it changes (agency re-provision, or a registry edit server-side);
+    // pixel positions under the old bbox are no longer meaningful.
+    static float curBbox[4] = {0, 0, 0, 0};
+    bool bboxChanged = memcmp(curBbox, poll.bbox, sizeof(curBbox)) != 0;
+    if (bboxChanged) {
+      memcpy(curBbox, poll.bbox, sizeof(curBbox));
+      BBox bbox = {poll.bbox[0], poll.bbox[1], poll.bbox[2], poll.bbox[3]};
+      projection.begin(bbox, DISPLAY_W, DISPLAY_H, MAP_STRETCH_TO_FILL);
+      if (activeCount > 0) {
+        // Old dots sit at pixels from the previous bbox: wipe them all.
+        for (int i = 0; i < activeCount; i++) {
+          paintBg(actives[i].dx, actives[i].dy);
+        }
+        activeCount = 0;
+      }
+      Serial.printf("[map] bbox %.4f,%.4f,%.4f,%.4f\n", poll.bbox[0],
+                    poll.bbox[1], poll.bbox[2], poll.bbox[3]);
+    }
+    mergeVehicles(now, poll.age, poll.next);
   }
 
   static uint32_t nextFrameMs = 0;

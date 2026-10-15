@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-#define OTW_FW_VERSION 1
+#define OTW_FW_VERSION 2
 
 // Load the stored values into RAM (call once, before any WiFi use).
 void provLoad();
@@ -24,3 +24,6 @@ const char *provPass();
 const char *provScheme();
 const char *provPollHost();  // host without scheme or port
 uint16_t provPort();
+// Registry id of the agency this wall displays ("" = no agency param, which
+// works against single-agency servers).
+const char *provAgency();
