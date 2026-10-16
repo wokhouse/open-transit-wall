@@ -11,7 +11,7 @@ const els = {
   btnFlash: $('btn-flash'), btnSkip: $('btn-skip-flash'), flashLog: $('flash-log'),
   serverUrl: $('server-url'), btnDiscover: $('btn-discover'), discoverState: $('discover-state'),
   agency: $('agency'), agencyManual: $('agency-manual'),
-  ssid: $('ssid'), pass: $('pass'), host: $('host'), scheme: $('scheme'), port: $('port'),
+  ssid: $('ssid'), pass: $('pass'),
   btnSave: $('btn-save'), btnErase: $('btn-erase'), provLog: $('prov-log'),
   console: $('console'), cmd: $('cmd'), btnSendCmd: $('btn-send-cmd'),
   btnClearConsole: $('btn-clear-console'),
@@ -194,11 +194,8 @@ async function readBanner() {
   }
   if (board.stored) {
     els.ssid.value = board.stored.ssid;
-    els.host.value = board.stored.host;
-    els.scheme.value = board.stored.scheme;
-    els.port.value = board.stored.port || '';
     els.agencyManual.value = board.stored.agency;
-    // Point the discovery at whatever server the board already uses.
+    // Point the Server URL at whatever server the board already uses.
     if (board.stored.host) {
       const scheme = board.stored.scheme || 'https://';
       const portPart = board.stored.port && board.stored.port !== 443 ? `:${board.stored.port}` : '';
@@ -263,15 +260,32 @@ function chosenAgency() {
   return els.agency.disabled ? els.agencyManual.value.trim() : els.agency.value;
 }
 
+// Split the Server URL into the three values the firmware stores separately
+// (set host / set scheme / set port). Returns null unless it parses to a
+// plain http(s) origin with a valid host.
+function serverParts(raw) {
+  let u;
+  try { u = new URL(raw.trim()); } catch { return null; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+  if (!/^[a-z0-9.-]{1,127}$/i.test(u.hostname)) return null;
+  const port = u.port ? Number(u.port) : (u.protocol === 'https:' ? 443 : 80);
+  return { host: u.hostname, scheme: u.protocol + '//', port };
+}
+
 els.btnSave.onclick = async () => {
   if (!session || session.dead) { provLog('not connected.'); return; }
   setBusy(true);
   const cmds = [];
   if (els.ssid.value) cmds.push(`set ssid=${els.ssid.value}`);
   if (els.pass.value) cmds.push(`set pass=${els.pass.value}`);
-  if (els.host.value) cmds.push(`set host=${els.host.value.trim()}`);
-  if (els.scheme.value) cmds.push(`set scheme=${els.scheme.value}`);
-  if (els.port.value) cmds.push(`set port=${els.port.value}`);
+  // One Server URL field serves both discovery and the board: split it into
+  // the scheme/host/port the provisioning protocol stores.
+  const parts = serverParts(els.serverUrl.value);
+  if (!parts) {
+    provLog('a server URL is required — the wall needs a server to poll.');
+    setBusy(false); return;
+  }
+  cmds.push(`set host=${parts.host}`, `set scheme=${parts.scheme}`, `set port=${parts.port}`);
   const agency = chosenAgency();
   if (agency) {
     if (!/^[a-z0-9]{1,8}$/.test(agency)) {
@@ -279,10 +293,6 @@ els.btnSave.onclick = async () => {
       setBusy(false); return;
     }
     cmds.push(`set agency=${agency}`);
-  }
-  if (!els.host.value.trim()) {
-    provLog('a proxy host is required — the wall needs a server to poll.');
-    setBusy(false); return;
   }
   try {
     for (const c of cmds) {
