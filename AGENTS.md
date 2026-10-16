@@ -7,10 +7,6 @@ every bus, rapid bus, and metro train as a colored dot.
 Repo: `/home/fungj/projects/open-transit-wall` (worktrees under
 `~/.paseo/worktrees/0pedc9uz/<name>`).
 
-Note: this file is the content intended for a repo-root `AGENTS.md`. A write
-to `AGENTS.md` was denied by a protected-file guard, so the content lives here
-until an operator moves it.
-
 Read `README.md` and the `docs/` files listed at the end before you change
 code.
 
