@@ -17,26 +17,20 @@
   API. Open this page in Chrome or Edge (desktop).</p>
 
   <section id="step-connect">
-    <h2>1 · connect the board</h2>
-    <p>Plug the ESP32 in over USB, then pick its serial port.</p>
+    <h2>1 · select device</h2>
     <button id="btn-connect">Connect</button>
     <span id="conn-state" class="muted">not connected</span>
   </section>
 
   <section id="step-flash">
     <h2>2 · flash firmware</h2>
-    <p>Writes the four images at their bootloader offsets
-    (<code>0x1000 · 0x8000 · 0xe000 · 0x10000</code>) and verifies each
-    one's md5 in flash. Takes about a minute.</p>
     <button id="btn-flash" disabled>Flash</button>
     <button id="btn-skip-flash" disabled>Skip — board already runs current firmware</button>
     <pre id="flash-log" class="log" hidden></pre>
   </section>
 
   <section id="step-provision">
-    <h2>3 · configure the wall</h2>
-    <p>Server first: the page asks it which agencies it runs, then the
-    board is pointed at it.</p>
+    <h2>3 · configure network settings</h2>
 
     <label for="server-url">Server URL</label>
     <input id="server-url" type="url" placeholder="https://your-proxy.example" size="40">
@@ -79,9 +73,6 @@
 
   <section id="step-console">
     <h2>console</h2>
-    <p class="muted small">Everything the board prints, live. Commands you
-    send with <code>Send</code> go straight to the provisioning line
-    protocol (<code>status</code>, <code>get all</code>, <code>help</code>…).</p>
     <pre id="console" class="log" hidden></pre>
     <div class="row">
       <input id="cmd" type="text" placeholder="status" size="30" disabled>
