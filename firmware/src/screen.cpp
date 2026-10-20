@@ -2,9 +2,13 @@
 
 bool Screen::begin() {
   HUB75_I2S_CFG cfg(PANEL_RES_X, PANEL_RES_Y, PANEL_COUNT);
-#ifdef E_PIN_OVERRIDE
-  cfg.gpio.e = E_PIN_OVERRIDE;
-#endif
+  // Field order: r1 g1 b1 r2 g2 b2 a b c d e lat oe clk (config.h carries
+  // the per-board map).
+  cfg.gpio = { HUB75_PIN_R1, HUB75_PIN_G1, HUB75_PIN_B1,
+               HUB75_PIN_R2, HUB75_PIN_G2, HUB75_PIN_B2,
+               HUB75_PIN_A,  HUB75_PIN_B,  HUB75_PIN_C,
+               HUB75_PIN_D,  HUB75_PIN_E,  HUB75_PIN_LAT,
+               HUB75_PIN_OE, HUB75_PIN_CLK };
   dma_ = new MatrixPanel_I2S_DMA();
   return dma_->begin(cfg);
 }

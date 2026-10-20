@@ -2,11 +2,13 @@
 
 Live transit map on a tiling LED matrix wall. Vehicle positions come from the
 [511.org open data API](https://511.org/open-data/); a Waveshare
-RGB-Matrix-Px-64x64 (HUB75, 1/32-scan) driven by an ESP32 renders every
-active vehicle of a transit agency as a colored dot on a dark map.
+RGB-Matrix-Px-64x64 (HUB75, 1/32-scan) driven by an ESP32-S3 board renders
+every active vehicle of a transit agency as a colored dot on a dark map.
+Supported boards: Waveshare ESP32-S3-RGB-Matrix (default) and Adafruit
+MatrixPortal S3.
 
 ```
-511.org SIRI API ──HTTPS──> mini-proxy (Python) ──HTTPS JSON, pinned roots──> ESP32 ──HUB75──> LED panels
+511.org SIRI API ──HTTPS──> mini-proxy (Python) ──HTTPS JSON, pinned roots──> ESP32-S3 ──HUB75──> LED panels
 ```
 
 **One codebase, many agencies.** The server runs one or more agencies from
@@ -93,12 +95,13 @@ address, `scheme=http://`, `port=8000` — no rebuild.
 
 ### 2. Firmware
 
-One binary, no build-time secrets — flash first, fill in the secrets after
-over WebSerial:
+One binary per board, no build-time secrets — flash first, fill in the
+secrets after over WebSerial:
 
 ```bash
-pio run -e esp32dev -t upload          # build + flash (any wall, same binary)
-pio run -e esp32dev -t monitor         # optional: watch the log
+pio run -e s3rgbmatrix -t upload       # Waveshare ESP32-S3-RGB-Matrix
+pio run -e matrixportal-s3 -t upload   # Adafruit MatrixPortal S3
+pio run -e <env> -t monitor            # optional: watch the log
 ```
 
 Then provision the wall: open the [web flasher](https://wokhouse.github.io/open-transit-wall/)
@@ -192,66 +195,49 @@ Backdrops are generated with the aspect fit by default; pass `--stretch` to
 
 ## Wiring & power
 
-### HUB75 pinout (ESP32-WROOM-32E, library defaults)
+### Boards
 
-The 16-pin HUB75 input connector on the panel, mapped to the GPIOs this
-firmware expects. GPIO assignments verified against the library's
-`src/platforms/esp32/esp32-default-pins.hpp`.
+Both supported boards have an onboard HUB75 connector — no adapter board or
+jumper wires. The PlatformIO env and the web flasher's board dropdown pick
+the same pin map (`firmware/include/config.h`).
 
-| Pin | Signal | ESP32 GPIO | | Pin | Signal | ESP32 GPIO |
-|----:|--------|-----------:|--|----:|--------|-----------:|
-| 1 | R1 | 25 | | 9 | A | 23 |
-| 2 | G1 | 26 | | 10 | B | 19 |
-| 3 | B1 | 27 | | 11 | C | 5 |
-| 4 | GND | GND | | 12 | D | 17 |
-| 5 | R2 | 14 | | 13 | CLK | 16 |
-| 6 | G2 | 12 | | 14 | LAT/STB | 4 |
-| 7 | B2 | 13 | | 15 | OE | 15 |
-| 8 | E (address line) | 32 | | 16 | GND | GND |
-
-**Verify against your panel's silkscreen before powering up.** Pin layouts are
-a de-facto standard and mostly agree, but pin 8 varies between panels: some
-label it GND, others E/n.C. (Waveshare prints the signal names on the PCB next
-to the connector.) Pins 4 and 16 are grounds on all variants.
-
-These 64×64 panels are **1/32-scan**, so the **E address line must be wired**
-to the HUB75 connector's pin 8 — `E_PIN_OVERRIDE 32` in `config.h` drives it
-(the library default `-1` is only correct for 1/16-scan panels).
+- **Waveshare ESP32-S3-RGB-Matrix** (default, env `s3rgbmatrix`): the HUB75
+  connector sits behind the panel mounting area. 64×64 panels are 1/32-scan,
+  so the E address line must be driven; the board's connector pin 8 is E and
+  `config.h` drives it on GPIO9.
+- **Adafruit MatrixPortal S3** (env `matrixportal-s3`): front-facing HUB75
+  output. For 64×64 (1/32-scan) panels, close the board's E-line solder
+  jumper toward the pad marked **8** (it ships set for 64×32 panels). This
+  target builds with PSRAM off on purpose: the panel lines include
+  GPIO35-37, which the module's octal PSRAM would claim.
 
 ### Power
 
 - **The panel needs its own 5 V supply** — Waveshare specs 5 V / 2.5 A (≤12 W)
-  for the P2.5–P3 panels and up to 4 A for P4–P5, through the VH4 socket. That
-  is far beyond the ESP32's regulator: never power the panel from the board's
-  5 V or USB pin.
-- **Common ground is required** between the panel supply and the ESP32. Connect
-  ground first, disconnect it last.
-- Check the VH4 terminal polarity before connecting (per Waveshare, a −5 V
+  for the P2.5–P3 panels and up to 4 A for P4–P5. Feed it through the board's
+  5 V power input, which carries panel current to the HUB75 connector; never
+  power the panel from USB.
+- **Common ground is required** between the panel supply and the board.
+  Connect ground first, disconnect it last.
+- Check the power terminal polarity before connecting (per Waveshare, a −5 V
   reading means the terminal is faulty). On tiled walls, inject 5 V at each
   panel rather than daisy-chaining power through the ribbon.
-- The ESP32 itself can stay powered over USB while flashing — just make sure
+- The board itself can stay powered over USB while flashing — just make sure
   grounds are tied.
 - Set `DISPLAY_BRIGHTNESS` in `config.h` — full-white full-brightness is far
   beyond spec; the dot map only needs modest brightness (default 48/255).
 
-### Practical note
+### USB serial
 
-A bare ESP32-DevKitC has 2.54 mm headers while the panel takes a 16-pin IDC
-ribbon, so you need either a HUB75 adapter/breakout board or jumper wires into
-a 16-pin IDC socket. ESP32 GPIOs are 3.3 V logic; the HUB75 library is
-designed for direct ESP32-to-panel connection, so no level shifting is used.
-
-### USB serial driver
-
-Many clone boards use a WCH CH34x bridge (vendor `0x1A86`). macOS's built-in
-CH34x driver only matches product IDs `0x7523` and `0x55D4`; if your board
-reports something else (e.g. `0x7522`, CH341) no `/dev/cu.*` port appears and
-PlatformIO can't see the board. Install WCH's driver — `CH34XSER_MAC.ZIP` from
-<https://www.wch-ic.com/downloads/CH34XSER_MAC_ZIP.html> — which covers
-CH340/CH341 and macOS 11+. Verify you actually have a port before flashing:
+Both boards expose the ESP32-S3's native USB (no USB-UART bridge), so no
+driver install is needed — the port shows up as vendor `303A` (Espressif) or
+`239A` (Adafruit). The web flasher talks to it over WebSerial. If a flash
+attempt can't connect, hold the board's BOOT button, reset or replug, and
+release once the ROM bootloader takes the port. Verify you actually have a
+port before flashing:
 
 ```bash
-ls /dev/cu.*        # expect something like /dev/cu.usbserial-XXXX or /dev/cu.wchusbserialXXXX
+ls /dev/cu.*        # expect something like /dev/cu.usbmodemXXXX
 pio device list
 ```
 
