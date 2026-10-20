@@ -24,13 +24,52 @@
 //   SERPENTINE_TOP_RIGHT_DOWN ... starting right->left
 #define TILE_LAYOUT LINE_TOP_LEFT_DOWN
 
-// Display data pins follow the library defaults (R1=25 G1=26 B1=27 R2=14
-// G2=12 B2=13 A=23 B=19 C=5 D=17 CLK=16 LAT=4 OE=15; verified against
-// esp32-default-pins.hpp in the library). The E address line is only needed
-// for 1/32-scan panels (64x64); the library default is -1 (unused), which is
-// correct for 1/16-scan 64x32 panels. 64x64 panels are 1/32-scan and need E
-// wired to the HUB75 connector's pin 8:
-#define E_PIN_OVERRIDE 32
+// --- Board pinout -----------------------------------------------------------
+// Full HUB75 GPIO map per board; the platformio.ini env selects the board
+// with -DOTW_BOARD_MATRIXPORTAL_S3 (default: Waveshare). Every line is set
+// explicitly — do not rely on the library's per-chip defaults.
+#if defined(OTW_BOARD_MATRIXPORTAL_S3)
+// Adafruit MatrixPortal S3 (https://www.adafruit.com/product/5778).
+// Map from Adafruit's CircuitPython board module (pins.c). The panel lines
+// include GPIO35-37, which the module's octal PSRAM would claim: this
+// target must build with PSRAM off (the board def's qio_qspi memory type
+// does that). 64x64 panels also need the board's E-line solder jumper
+// closed (toward the pad marked 8).
+#define HUB75_PIN_R1 42
+#define HUB75_PIN_G1 41
+#define HUB75_PIN_B1 40
+#define HUB75_PIN_R2 38
+#define HUB75_PIN_G2 39
+#define HUB75_PIN_B2 37
+#define HUB75_PIN_A  45
+#define HUB75_PIN_B  36
+#define HUB75_PIN_C  48
+#define HUB75_PIN_D  35
+#define HUB75_PIN_E  21
+#define HUB75_PIN_CLK 2
+#define HUB75_PIN_LAT 47
+#define HUB75_PIN_OE 14
+#else
+// Waveshare ESP32-S3-RGB-Matrix (https://www.waveshare.com/esp32-s3-rgb-matrix.htm).
+// Matches the library's ESP32-S3 defaults (verified against
+// esp32s3-default-pins.hpp) plus E on GPIO9 — 64x64 panels are 1/32-scan
+// and need E wired to the HUB75 connector's pin 8 (the library default
+// -1 is only correct for 1/16-scan 64x32 panels).
+#define HUB75_PIN_R1 4
+#define HUB75_PIN_G1 5
+#define HUB75_PIN_B1 6
+#define HUB75_PIN_R2 7
+#define HUB75_PIN_G2 15
+#define HUB75_PIN_B2 16
+#define HUB75_PIN_A  18
+#define HUB75_PIN_B  8
+#define HUB75_PIN_C  3
+#define HUB75_PIN_D  42
+#define HUB75_PIN_E  9
+#define HUB75_PIN_CLK 41
+#define HUB75_PIN_LAT 40
+#define HUB75_PIN_OE 2
+#endif
 
 // --- Display look -----------------------------------------------------------
 #define DISPLAY_BRIGHTNESS 48     // 0-255; panels are very bright indoors

@@ -9,7 +9,7 @@
 <body>
 <main>
   <h1>open-transit-wall web flasher</h1>
-  <p class="sub">Flash the ESP32 and provision its wall over Web Serial.
+  <p class="sub">Flash the ESP32-S3 and provision its wall over Web Serial.
   Chrome or Edge, over HTTPS. The firmware images below come from this
   page's own build — <span id="fw-version">…</span>.</p>
 
@@ -24,16 +24,26 @@
 
   <section id="step-flash">
     <h2>2 · flash firmware</h2>
+    <label for="board-preset">Board</label>
+    <select id="board-preset">
+      <option value="s3rgbmatrix" selected>Waveshare ESP32-S3-RGB-Matrix</option>
+      <option value="matrixportal-s3">Adafruit MatrixPortal S3</option>
+    </select>
     <button id="btn-flash" disabled>Flash</button>
-    <button id="btn-skip-flash" disabled>Skip — board already runs current firmware</button>
     <pre id="flash-log" class="log" hidden></pre>
   </section>
 
   <section id="step-provision">
     <h2>3 · configure network settings</h2>
 
+    <label for="server-preset">Server</label>
+    <select id="server-preset">
+      <option value="https://open-transit-wall-nuvez.ondigitalocean.app" selected>SFMTA (hello@fungj.net)</option>
+      <option value="">Custom…</option>
+    </select>
     <label for="server-url">Server URL</label>
-    <input id="server-url" type="url" placeholder="https://your-proxy.example" size="40">
+    <input id="server-url" type="url" placeholder="https://your-proxy.example" size="40"
+           value="https://open-transit-wall-nuvez.ondigitalocean.app">
     <button id="btn-discover">Discover agencies</button>
     <span id="discover-state" class="muted"></span>
 

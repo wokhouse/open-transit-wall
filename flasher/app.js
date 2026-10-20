@@ -8,8 +8,9 @@ const $ = (id) => document.getElementById(id);
 const els = {
   fwVersion: $('fw-version'), browserWarn: $('browser-warn'),
   btnConnect: $('btn-connect'), connState: $('conn-state'),
-  btnFlash: $('btn-flash'), btnSkip: $('btn-skip-flash'), flashLog: $('flash-log'),
-  serverUrl: $('server-url'), btnDiscover: $('btn-discover'), discoverState: $('discover-state'),
+  btnFlash: $('btn-flash'), boardPreset: $('board-preset'), flashLog: $('flash-log'),
+  serverUrl: $('server-url'), serverPreset: $('server-preset'),
+  btnDiscover: $('btn-discover'), discoverState: $('discover-state'),
   agency: $('agency'), agencyManual: $('agency-manual'),
   ssid: $('ssid'), pass: $('pass'),
   btnSave: $('btn-save'), btnErase: $('btn-erase'), provLog: $('prov-log'),
@@ -34,7 +35,7 @@ const provLog = (m) => logTo(els.provLog, m);
 const boardLog = (m) => logTo(els.console, m);
 
 function setBusy(busy) {
-  for (const b of [els.btnConnect, els.btnFlash, els.btnSkip, els.btnDiscover,
+  for (const b of [els.btnConnect, els.btnFlash, els.btnDiscover,
                    els.btnSave, els.btnErase, els.btnSendCmd]) {
     b.disabled = busy || b.dataset.wantDisabled === '1';
   }
@@ -55,6 +56,12 @@ async function loadManifest() {
   }
 }
 loadManifest();
+
+// The image set for the board picked in the dropdown.
+function selectedBoard() {
+  if (!manifest) return null;
+  return manifest.boards.find((b) => b.id === els.boardPreset.value) || null;
+}
 
 // ---------- serial line session ----------
 // One reader loop feeds both the console view and command replies. Replies
@@ -200,6 +207,7 @@ async function readBanner() {
       const scheme = board.stored.scheme || 'https://';
       const portPart = board.stored.port && board.stored.port !== 443 ? `:${board.stored.port}` : '';
       els.serverUrl.value = `${scheme}${board.stored.host}${portPart}`;
+      syncServerPreset();
     }
     provLog('prefilled from the board — change anything and send.');
   } else {
@@ -217,6 +225,20 @@ function enableProvisioning() {
   els.btnDiscover.dataset.wantDisabled = '0';
   setBusy(false);
 }
+
+// ---------- server URL presets ----------
+// The dropdown is a convenience for the URL input: picking a preset fills
+// the input, typing a URL that matches no preset switches it to
+// "Custom…". The input stays the single source of truth.
+function syncServerPreset() {
+  const v = els.serverUrl.value.trim();
+  const match = [...els.serverPreset.options].some(o => o.value && o.value === v);
+  els.serverPreset.value = match ? v : '';
+}
+els.serverPreset.onchange = () => {
+  if (els.serverPreset.value) els.serverUrl.value = els.serverPreset.value;
+};
+els.serverUrl.addEventListener('input', syncServerPreset);
 
 // ---------- agency discovery ----------
 
@@ -391,46 +413,77 @@ els.btnConnect.onclick = async () => {
   }
   els.connState.textContent = 'port selected';
   els.btnFlash.disabled = false;
-  els.btnSkip.disabled = false;
+  flashForced = false;  // a new port is a new board: check currency again
 };
+els.boardPreset.onchange = () => { flashForced = false; };
 
-els.btnSkip.onclick = async () => {
-  setBusy(true);
-  try {
-    await startSession();
-    await readBanner();
-  } catch (e) {
-    boardLog(`!! could not talk to the app: ${e.message} — if the board is in the ROM bootloader, flash it instead.`);
-  }
-  setBusy(false);
-};
+// Flash first checks whether the board already runs current firmware: if
+// the app answers with the manifest's provisioning protocol version, there
+// is nothing to flash. A second click re-flashes anyway (same protocol,
+// older build). A board in the ROM bootloader never answers, so it falls
+// through to flashing.
+let flashForced = false;
 
 els.btnFlash.onclick = async () => {
   if (!manifest) { flashLog('no firmware manifest — cannot flash.'); return; }
+  const fwBoard = selectedBoard();
+  if (!fwBoard) { flashLog('no staged images for the selected board.'); return; }
   setBusy(true);
   els.flashLog.hidden = false;
-  flashLog(`flashing ${manifest.images.length} images (version ${manifest.version})…`);
+  if (!flashForced) {
+    try {
+      await startSession();
+      await readBanner();
+      if (board && board.fw >= manifest.fw_version) {
+        flashLog(`board already runs current firmware (provisioning protocol v${board.fw}) — nothing to flash.`);
+        flashLog('click Flash again to re-flash anyway.');
+        flashForced = true;
+        setBusy(false);
+        return;  // leave the session open: provisioning can continue
+      }
+      await endSession();  // not current (or no app): the loader needs the port
+    } catch (e) {
+      boardLog(`!! pre-flash check skipped: ${e.message}`);
+      await endSession();
+    }
+  }
+  flashForced = false;
+  flashLog(`flashing ${fwBoard.images.length} images for ${fwBoard.name} (version ${manifest.version})…`);
   let transport = null;
   try {
     await endSession();  // free the port from any console session first
     // Fit check: with flashSize 'keep' esptool-js skips its own check.
-    for (const img of manifest.images) {
-      if (img.offset + img.size > manifest.flash_bytes) {
-        throw new Error(`${img.name} at 0x${img.offset.toString(16)} exceeds the ${manifest.flash_bytes} byte flash`);
+    for (const img of fwBoard.images) {
+      if (img.offset + img.size > fwBoard.flash_bytes) {
+        throw new Error(`${img.name} at 0x${img.offset.toString(16)} exceeds the ${fwBoard.flash_bytes} byte flash`);
       }
     }
     transport = new Transport(port);
     // terminal adapter: esptool-js info lines into the page's flash log
     const terminal = { clean() {}, write(m) { flashLog(m); }, writeLine(m) { flashLog(m); } };
     const device = new ESPLoader({ transport, terminal });
-    await device.detectChip();
+    // The currency check (or a console session) just closed this port; USB
+    // CDC devices — especially the S3 ROM USB-Serial-JTAG — can take a
+    // moment to accept open() again. Retry the connect instead of failing
+    // the whole flash.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await device.detectChip();
+        break;
+      } catch (e) {
+        if (attempt >= 3) throw e;
+        flashLog(`port not ready (${e.message}) — retrying connect ${attempt}/3…`);
+        try { await transport.disconnect(); } catch { /* not open */ }
+        await new Promise((r) => setTimeout(r, 600 * attempt));
+      }
+    }
     // Run the RAM stub like esptool/PlatformIO do. Pure-ROM flashing erases
     // inside FLASH_BEGIN, which this board's flash link answers with status
     // 1,5; the stub defers erase into the write pass and just works.
     await device.runStub();
     const fileArray = [];
-    for (const img of manifest.images) {
-      const data = new Uint8Array(await (await fetch(`firmware/${img.name}`)).arrayBuffer());
+    for (const img of fwBoard.images) {
+      const data = new Uint8Array(await (await fetch(`firmware/${fwBoard.id}/${img.name}`)).arrayBuffer());
       if (data.length !== img.size) throw new Error(`${img.name}: got ${data.length} bytes, manifest says ${img.size}`);
       fileArray.push({ data, address: img.offset });
     }
@@ -438,16 +491,16 @@ els.btnFlash.onclick = async () => {
     // each region back and compares. This is a real transport verification.
     // flashSize 'keep': PlatformIO built these images for this board's
     // flash, so the bootloader header is already correct — and 'detect'
-    // needs a flash-RDID the CH340 bridge sometimes drops.
+    // needs a flash-RDID probe the boot bridge sometimes drops.
     await device.writeFlash({
       fileArray,
-      flashSize: manifest.flash_size,
+      flashSize: fwBoard.flash_size,
       flashMode: 'keep',
       flashFreq: 'keep',
       calculateMD5Hash: md5hex,
       reportProgress: (i, written, total) => {
         if (written === 0 || written === total) {
-          flashLog(`${manifest.images[i].name}: ${written}/${total}`);
+          flashLog(`${fwBoard.images[i].name}: ${written}/${total}`);
         }
       },
     });
@@ -456,8 +509,20 @@ els.btnFlash.onclick = async () => {
     try { await transport.disconnect(); } catch { /* port may already be gone */ }
     transport = null;
     flashLog('flash complete, md5 verified, board reset.');
-    await startSession();
-    await readBanner();
+    // The app's USB CDC re-enumerates a moment after the reset; retry the
+    // reopen rather than reporting a failure on a flash that succeeded.
+    try {
+      for (let attempt = 1; ; attempt++) {
+        try { await startSession(); break; }
+        catch (e) {
+          if (attempt >= 4) throw e;
+          await new Promise((r) => setTimeout(r, 800 * attempt));
+        }
+      }
+      await readBanner();
+    } catch {
+      flashLog('flashed, but the port did not come back on its own — click Connect, then provision in step 3.');
+    }
   } catch (e) {
     flashLog(`flash failed: ${e.message}`);
     flashLog('if the board is mid-boot, hold its BOOT button, click Flash again, and release once writing starts.');

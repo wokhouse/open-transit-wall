@@ -1,6 +1,6 @@
 # Provisioning protocol (WebSerial contract)
 
-One firmware binary is flashed to every wall (`pio run -e esp32dev -t
+One firmware binary is flashed to every wall (`pio run -e s3rgbmatrix -t
 upload`). The WiFi network name, WiFi password, and proxy host are written to
 the device afterwards, from the browser tool, over WebSerial — this is the
 ONLY provisioning path: the binary carries no secrets, no endpoint, no
