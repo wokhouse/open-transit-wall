@@ -102,10 +102,11 @@
 
 // --- Per-vehicle motion ------------------------------------------------------
 // The proxy publishes positions every POLL_SECONDS and advertises the exact
-// seconds until its next upstream fetch in the payload ("next"). Each vehicle
-// whose position changed picks a random moment inside the *remaining* refresh
-// cycle and glides to its new pixel over MOTION_GLIDE_MS — so glides tile
-// the whole cycle instead of bursting right after each snapshot. There is no
-// compiled refresh constant: `next` is authoritative per response.
+// seconds until its next upstream fetch in the payload ("next"). The
+// *remaining* refresh cycle is split into one equal slot per vehicle whose
+// position changed; each glides to its new pixel over MOTION_GLIDE_MS at a
+// random moment inside its slot — so glides tile the whole cycle evenly
+// instead of bursting after each snapshot or clumping by chance. There is
+// no compiled refresh constant: `next` is authoritative per response.
 #define MOTION_GLIDE_MS  5000     // how long a single glide takes
 #define RENDER_FPS       20       // continuous re-render rate
