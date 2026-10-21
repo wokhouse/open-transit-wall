@@ -61,8 +61,8 @@ def snap(r, g, b):
 def render(src, size):
     """Rasterize the SVG at SS x size and reduce to size x size palette
     indices (one per panel pixel, majority vote over each SSxSS block)."""
-    from resvg_py import svg_to_bytes
     from PIL import Image
+    from resvg_py import svg_to_bytes
     png = svg_to_bytes(svg_path=str(src), width=size * SS, height=size * SS)
     im = Image.open(io.BytesIO(png)).convert("RGBA")
 
