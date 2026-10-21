@@ -9,9 +9,10 @@
 //
 // The proxy publishes positions every POLL_SECONDS and advertises the exact
 // seconds until its next upstream fetch in the payload ("next"). Instead of
-// teleporting the wall on each poll, each vehicle that moved picks a random
-// moment inside the remaining refresh cycle and glides to its new pixel
-// (see config.h) — the wall reads as many vehicles moving independently.
+// teleporting the wall on each poll, the remaining refresh cycle is split
+// into one equal slot per moved vehicle, and each one glides to its new
+// pixel at a random moment inside its slot (see config.h) — the wall reads
+// as many vehicles moving independently, spread evenly over the cycle.
 //
 // The map bounding box and the vehicle colors also come from the payload
 // ("bbox", "palette"): nothing about the agency is compiled except the
@@ -57,6 +58,7 @@ struct ActiveVehicle {
 static ActiveVehicle actives[MAX_VEHICLES];
 static int activeCount = 0;
 static bool seen[MAX_VEHICLES];
+static int16_t slotOrder[MAX_VEHICLES];  // shuffled glide-slot assignment
 
 static void drawStatusPixel();
 
@@ -209,8 +211,13 @@ static int findActive(uint32_t id) {
   return -1;
 }
 
+// True when the fresh snapshot would move this dot: a new pixel or colour.
+static bool targetChanged(const ActiveVehicle &a, const Vehicle &v, int px, int py) {
+  return px != a.tx || py != a.ty || v.r != a.r || v.g != a.g || v.b != a.b;
+}
+
 // Fold the fresh snapshot into the animation slots: matching vehicles get a
-// new target (scheduled at a random moment in the remainder of the upstream
+// new target (scheduled inside an equal slot of the remaining upstream
 // refresh cycle), new vehicles appear in place, missing ones are erased.
 // nextS/age come from the payload: the server's own cadence, not a compiled
 // constant.
@@ -222,6 +229,41 @@ static void mergeVehicles(uint32_t nowMs, float upstreamAge, uint32_t nextS) {
   if (spreadMs < 1000) {
     spreadMs = 1000;  // stale snapshot: still stagger, just tightly
   }
+
+  // Count this snapshot's glides first, then give each one an equal slot
+  // inside the cycle and a random moment inside that slot (stratified
+  // sampling). Independent randoms clump: some moments get several glides
+  // at once while others stay dark.
+  int willMove = 0;
+  for (int i = 0; i < vehicleCount; i++) {
+    const Vehicle &v = vehicles[i];
+    int px, py;
+    if (!projection.project(v.lat, v.lon, &px, &py)) {
+      continue;  // outside the agency's advertised bounding box
+    }
+    int s = findActive(v.id);
+    if (s >= 0 && targetChanged(actives[s], v, px, py)) {
+      willMove++;
+    }
+  }
+  int32_t strideMs = willMove > 0 ? spreadMs / willMove : spreadMs;
+  if (strideMs < 1) {
+    strideMs = 1;
+  }
+
+  // Shuffle which vehicle gets which slot. Payload order is stable across
+  // polls, so unshuffled slots would make the same vehicles glide first
+  // every cycle.
+  for (int i = 0; i < willMove; i++) {
+    slotOrder[i] = i;
+  }
+  for (int i = willMove - 1; i > 0; i--) {
+    int j = random(i + 1);
+    int16_t t = slotOrder[i];
+    slotOrder[i] = slotOrder[j];
+    slotOrder[j] = t;
+  }
+
   memset(seen, 0, activeCount);
   int moved = 0, fresh = 0;
   for (int i = 0; i < vehicleCount; i++) {
@@ -234,7 +276,7 @@ static void mergeVehicles(uint32_t nowMs, float upstreamAge, uint32_t nextS) {
     if (s >= 0) {
       seen[s] = true;
       ActiveVehicle &a = actives[s];
-      if (px != a.tx || py != a.ty || v.r != a.r || v.g != a.g || v.b != a.b) {
+      if (targetChanged(a, v, px, py)) {
         a.sx = a.dx;  // glide starts from the pixel it's visually at
         a.sy = a.dy;
         a.tx = px;
@@ -242,7 +284,9 @@ static void mergeVehicles(uint32_t nowMs, float upstreamAge, uint32_t nextS) {
         a.r = v.r;
         a.g = v.g;
         a.b = v.b;
-        a.startMs = nowMs + random(spreadMs);
+        // One glide per slot; which vehicle takes which slot is shuffled,
+        // and the start is jittered inside the slot.
+        a.startMs = nowMs + (int32_t)slotOrder[moved] * strideMs + random(strideMs);
         a.durMs = MOTION_GLIDE_MS;
         moved++;
       }
