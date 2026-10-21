@@ -1,4 +1,6 @@
-# open-transit-wall
+<p align="center"><img src="assets/logo.svg" width="160" alt="open transit wall logo"></p>
+
+# Open Transit Wall
 
 Live transit map on a tiling LED matrix wall. Vehicle positions come from the
 [511.org open data API](https://511.org/open-data/); a Waveshare
