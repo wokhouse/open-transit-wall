@@ -36,7 +36,7 @@ fi
 echo "vehicles: $(wc -l < "$CSV") rows -> $CSV"
 
 CXX="${CXX:-c++}"
-"$CXX" -std=c++17 -O1 -I firmware/src -o "$OUT" "$SRC"
+"$CXX" -std=c++17 -O1 -I firmware/src -o "$OUT" "$SRC" firmware/src/status_screen.cpp
 "$OUT" "$CSV" "$BMP" 64 64 8 1 "${AGENCY_ARGS[@]+"${AGENCY_ARGS[@]}"}"
 echo "rendered: $BMP"
 command -v open >/dev/null 2>&1 && open "$BMP" || true

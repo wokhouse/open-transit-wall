@@ -24,6 +24,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <esp_system.h>  // esp_random() for the splash animation seed
 #include <string.h>
 
 #include "backdrop.h"
@@ -31,6 +32,7 @@
 #include "map_project.h"
 #include "provisioner.h"
 #include "screen.h"
+#include "status_screen.h"
 #include "vehicle_client.h"
 
 static Screen screen;
@@ -57,6 +59,30 @@ static int activeCount = 0;
 static bool seen[MAX_VEHICLES];
 
 static void drawStatusPixel();
+
+// What the panel is currently showing. The map is the normal state
+// (ERR_NONE); splash, setup-needed, and error screens replace it until the
+// condition clears. Screens are drawn once on the transition, never per
+// loop iteration — the incremental-render rule governs the map path only.
+enum ErrorKind {
+  ERR_NONE,       // showing the map
+  ERR_SPLASH,     // boot splash (bouncing logo) — the panel's initial state
+  ERR_PROVISION,  // no ssid/host configured yet
+  ERR_WIFI,       // configured, but the network won't take us
+  ERR_SERVER,     // network up, proxy unreachable
+  ERR_AGENCY,     // proxy 400s our agency id
+  ERR_NOMAP,      // no compiled backdrop for the provisioned agency
+};
+// Track what the panel ACTUALLY shows. Boot draws the splash, so that's the
+// initial state — initializing to ERR_NONE would make the first
+// showScreen(ERR_NONE) a no-op and leave the splash under the map.
+static ErrorKind shownError = ERR_SPLASH;
+static const BackdropDef *curBackdrop = nullptr;  // chosen at (re)provision
+
+// Splash animation state: the roundel bounces around the panel while the
+// wall loads (Wi-Fi/NTP waits below drive frames).
+static SplashState splashState;
+static void drawSplashFrame();  // defined with the screen helpers below
 
 // Backdrop pixel class (0 land / 1 water) decoded from the RLE once at boot,
 // so a vacated pixel can be repainted without touching the rest of the map.
@@ -122,6 +148,9 @@ static void connectWifi() {
   while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
     delay(250);
     Serial.print(".");
+    if (shownError == ERR_SPLASH) {
+      drawSplashFrame();  // keep the logo bouncing while we wait
+    }
   }
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf(" connected, ip=%s\n", WiFi.localIP().toString().c_str());
@@ -140,6 +169,9 @@ static void syncTime() {
   while (time(nullptr) < 1735689600 && millis() - start < 15000) {
     delay(250);
     Serial.print(".");
+    if (shownError == ERR_SPLASH) {
+      drawSplashFrame();  // keep the logo bouncing while we wait
+    }
   }
   if (time(nullptr) >= 1735689600) {
     Serial.println(" ok");
@@ -282,6 +314,63 @@ static void drawStatusPixel() {
 #endif
 }
 
+// Paint the panel for a (possibly new) error state. No-op when the panel
+// already shows it, so the retry loop can call this every cycle without
+// repainting. Clearing back to the map repaints the backdrop (dots are
+// dropped — they were drawn under the error screen).
+static void putScreenPixel(void *, int x, int y, uint8_t r, uint8_t g,
+                           uint8_t b) {
+  screen.drawPixel(x, y, r, g, b);
+}
+
+// One frame of the bouncing splash. Called from setup's blocking waits so
+// the logo moves while the wall loads.
+static void drawSplashFrame() {
+  screen.clear();
+  showSplashFrame(putScreenPixel, nullptr, &splashState);
+}
+
+static void showScreen(ErrorKind kind) {
+  if (kind == shownError) {
+    return;
+  }
+  shownError = kind;
+  // Every status screen replaces whatever was on the panel wholesale:
+  // wipe first so no pixels from the previous screen bleed through.
+  screen.clear();
+  switch (kind) {
+    case ERR_SPLASH:
+      showSplashFrame(putScreenPixel, nullptr, &splashState);
+      break;
+    case ERR_PROVISION:
+      showSetupNeeded(putScreenPixel, nullptr);
+      break;
+    case ERR_WIFI:
+      showWifiError(putScreenPixel, nullptr);
+      break;
+    case ERR_SERVER:
+      showServerError(putScreenPixel, nullptr);
+      break;
+    case ERR_AGENCY:
+      showAgencyError(putScreenPixel, nullptr);
+      break;
+    case ERR_NOMAP:
+      showNoMapError(putScreenPixel, nullptr, provAgency());
+      break;
+    case ERR_NONE:
+    default:
+      if (curBackdrop) {
+        screen.drawBackdrop(*curBackdrop);
+      } else {
+        screen.clear();
+      }
+      // Dots from before the error screen are gone; forget them so the
+      // next merge re-adds vehicles at their current positions.
+      activeCount = 0;
+      break;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(200);
@@ -291,7 +380,14 @@ void setup() {
     while (true) delay(1000);
   }
   screen.setBrightness(DISPLAY_BRIGHTNESS);
+
+  // Splash while we figure out what to show: the roundel bouncing DVD-style
+  // around the panel while the wall loads. Replaced by the map or an error
+  // screen below. Seed from the SoC RNG so every boot takes a different
+  // path (initial diagonal and corner bounces both derive from this).
   screen.clear();
+  splashState.seed = esp_random();
+  drawSplashFrame();
 
   provLoad();
   if (provNeeded()) {
@@ -300,15 +396,15 @@ void setup() {
     // the loop picks them up live — no reflash, no reboot needed.
     Serial.println("UNPROVISIONED: open the browser tool and set "
                    "ssid/pass/host, then save.");
+    showScreen(ERR_PROVISION);
     return;
   }
 
   // The backdrop is chosen once at boot from the provisioned agency id.
   // Changing agency is a re-provision + reboot, not a live edit.
-  const BackdropDef *bd = backdropFor(provAgency());
-  if (bd) {
-    decodeBackdropIndices(*bd);
-    screen.drawBackdrop(*bd);  // painted once; animate() only touches dot pixels
+  curBackdrop = backdropFor(provAgency());
+  if (curBackdrop) {
+    decodeBackdropIndices(*curBackdrop);
   } else {
     Serial.printf("BACKDROP none for agency '%s' — blank map; regenerate with "
                   "tools/gen_backdrop.py --agency %s and reflash\n",
@@ -317,6 +413,13 @@ void setup() {
 
   connectWifi();
   syncTime();
+  if (WiFi.status() != WL_CONNECTED) {
+    showScreen(ERR_WIFI);
+  } else if (!curBackdrop) {
+    showScreen(ERR_NOMAP);
+  } else {
+    showScreen(ERR_NONE);  // paint the map
+  }
 }
 
 void loop() {
@@ -332,14 +435,29 @@ void loop() {
     // from the server's advertised "next".
     nextPollMs = now + POLL_INTERVAL_MS;
     if (provNeeded()) {
-      return;  // still waiting for set ssid/pass — backdrop stays up
+      showScreen(ERR_PROVISION);
+      return;  // still waiting for set ssid/pass
+    }
+    if (!curBackdrop) {
+      // Either boot found no backdrop for this agency, or the agency was
+      // (re)provisioned live since then: pick the backdrop for the current
+      // id before polling. A null result keeps the NO MAP screen up.
+      curBackdrop = backdropFor(provAgency());
+      if (curBackdrop) {
+        decodeBackdropIndices(*curBackdrop);
+      }
     }
     if (WiFi.status() != WL_CONNECTED) {
       connectWifi();
       if (WiFi.status() != WL_CONNECTED) {
+        showScreen(ERR_WIFI);
         return;
       }
       syncTime();  // TLS needs the wall clock; NTP only works over WiFi
+    }
+    if (!curBackdrop) {
+      showScreen(ERR_NOMAP);
+      return;
     }
     PollResult poll = fetchVehicles(provScheme(), provPollHost(), provPort(),
                                     provAgency(), vehicles, MAX_VEHICLES);
@@ -348,12 +466,15 @@ void loop() {
       if (poll.agencyUnknown) {
         Serial.println("[poll] server 400: agency id not served — "
                        "check `get agency` against the server's /agencies");
+        showScreen(ERR_AGENCY);
       } else {
         Serial.printf("[poll] fetch failed (%u consecutive)\n", pollFailures);
+        showScreen(ERR_SERVER);
       }
       return;
     }
     pollFailures = 0;
+    showScreen(ERR_NONE);  // no-op while the map is up; repaints after an error
     vehicleCount = poll.count;
     // next == 0 means the server's refresh is due now: re-poll promptly.
     // Clamp the top end so a misconfigured server can't overflow the
