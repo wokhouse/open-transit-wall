@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Transit Wall · web flasher</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <img class="logo" src="logo.svg" width="72" height="72" alt="Open Transit Wall logo">
+  <h1>Open Transit Wall web flasher</h1>
+  <p class="sub">Flash the ESP32-S3 and provision its wall over Web Serial.
+  Chrome or Edge, over HTTPS. The firmware images below come from this
+  page's own build — <span id="fw-version">…</span>.</p>
+
+  <p id="browser-warn" class="warn" hidden>This browser has no Web Serial
+  API. Open this page in Chrome or Edge (desktop).</p>
+
+  <section id="step-connect">
+    <h2>1 · select device</h2>
+    <button id="btn-connect">Connect</button>
+    <span id="conn-state" class="muted">not connected</span>
+  </section>
+
+  <section id="step-flash">
+    <h2>2 · flash firmware</h2>
+    <label for="board-preset">Board</label>
+    <select id="board-preset">
+      <option value="s3rgbmatrix" selected>Waveshare ESP32-S3-RGB-Matrix</option>
+      <option value="matrixportal-s3">Adafruit MatrixPortal S3</option>
+    </select>
+    <button id="btn-flash" disabled>Flash</button>
+    <pre id="flash-log" class="log" hidden></pre>
+  </section>
+
+  <section id="step-provision">
+    <h2>3 · configure network settings</h2>
+
+    <label for="server-preset">Server</label>
+    <select id="server-preset">
+      <option value="https://open-transit-wall-nuvez.ondigitalocean.app" selected>SFMTA (hello@fungj.net)</option>
+      <option value="">Custom…</option>
+    </select>
+    <label for="server-url">Server URL</label>
+    <input id="server-url" type="url" placeholder="https://your-proxy.example" size="40"
+           value="https://open-transit-wall-nuvez.ondigitalocean.app">
+    <button id="btn-discover">Discover agencies</button>
+    <span id="discover-state" class="muted"></span>
+
+    <label for="agency">Agency</label>
+    <select id="agency" disabled></select>
+    <input id="agency-manual" type="text" placeholder="or type an id (a-z0-9, 1-8)"
+           pattern="[a-z0-9]{1,8}" maxlength="8" hidden>
+
+    <label for="ssid">WiFi network</label>
+    <input id="ssid" type="text" maxlength="32">
+    <label for="pass">WiFi password</label>
+    <input id="pass" type="password" maxlength="63" autocomplete="off">
+    <p class="muted small">Leave the password empty to keep what the board
+    already has — it is never read back over the wire.</p>
+
+    <button id="btn-save" disabled>Send to board</button>
+    <button id="btn-erase" disabled>Erase board</button>
+    <pre id="prov-log" class="log" hidden></pre>
+  </section>
+
+  <section id="step-console">
+    <h2>console</h2>
+    <pre id="console" class="log" hidden></pre>
+    <div class="row">
+      <input id="cmd" type="text" placeholder="status" size="30" disabled>
+      <button id="btn-send-cmd" disabled>Send</button>
+      <button id="btn-clear-console" disabled>Clear</button>
+    </div>
+  </section>
+
+  <p class="muted small">Protocol: <a
+  href="https://github.com/wokhouse/open-transit-wall/blob/main/docs/provisioning-protocol.md">docs/provisioning-protocol.md</a>.
+  Source: <a href="https://github.com/wokhouse/open-transit-wall">wokhouse/open-transit-wall</a>.</p>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

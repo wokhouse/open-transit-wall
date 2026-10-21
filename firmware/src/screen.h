@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "ESP32-HUB75-MatrixPanel-I2S-DMA.h"
+#include "backdrop.h"  // generated table; BackdropDef used by drawBackdrop
 #include "config.h"
 
 #define DISPLAY_W (PANEL_RES_X * PANEL_CHAIN_W)
@@ -27,7 +28,7 @@ class Screen {
   void setBrightness(uint8_t brightness);  // 0-255
   void drawPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b);
   void clear();
-  void drawBackdrop();  // RLE water/land bitmap from backdrop.h
+  void drawBackdrop(const BackdropDef &bd);  // RLE bitmap from backdrop.h
 
  private:
   // Physical x on the linear DMA chain for a virtual panel column/row.
@@ -36,9 +37,8 @@ class Screen {
   MatrixPanel_I2S_DMA *dma_ = nullptr;
 };
 
-// Backdrop (generated); defined in backdrop.h.
-#include "backdrop.h"
-
+// Backdrop colors for the RLE indices (0 = land, 1 = water), applied at
+// render time so the generated table stores one byte per run, not RGB.
 static const uint8_t BACKDROP_LAND[3] = {2, 2, 2};
 static const uint8_t BACKDROP_WATER[3] = {0, 0, 0};
 

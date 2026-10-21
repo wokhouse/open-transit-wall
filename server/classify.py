@@ -3,10 +3,10 @@
 Written as a dependency-free module so it can be lifted onto a Raspberry Pi
 (alternative architecture) or reused in scripts unchanged.
 
-Route metadata comes from the SFMTA GTFS static feed (routes.txt), cached to
-routes.json by the proxy at startup. Until that file exists (or when the API
-key is missing) the built-in MUNI_FALLBACK table below is used; it is also the
-fallback for lines missing from GTFS.
+Route metadata comes from the agency's GTFS static feed (routes.txt), cached
+to routes_<agency>.json by the proxy at startup. The built-in MUNI_FALLBACK
+table below is SFMTA-specific and is only consulted when the caller passes it
+as `fallback` — other agencies pass nothing.
 """
 
 from __future__ import annotations
@@ -15,12 +15,19 @@ import json
 import re
 from pathlib import Path
 
-# --- Palette (also mirrored in firmware/include/config.h and sim) -----------
+# --- Palette (the wire palette in proxy.py is built from these) --------------
 COLOR_BUS = (0, 64, 255)        # local bus: blue
 COLOR_RAPID = (255, 32, 16)     # rapid / express bus: red
 COLOR_CABLE = (180, 120, 20)    # cable car: dim amber
-# Metro (route_type 0/1) uses the official line color from GTFS route_color,
-# falling back to MUNI_FALLBACK below.
+# The wire palette has one color per type code (rows carry only the code),
+# so metro lines share this generic blue on the wall. The per-line GTFS
+# route_color below is still resolved internally but cannot reach the wire.
+METRO_DEFAULT = "0089D0"        # the generic metro blue shipped on the wire
+
+
+def hex_to_rgb(value: str) -> list[int]:
+    """'0089D0' -> [0, 137, 208]."""
+    return [int(value[i:i + 2], 16) for i in (0, 2, 4)]
 
 # Approximate Muni metro/heritage line colors (hex, no #). GTFS route_color
 # overrides these when available.
@@ -44,8 +51,6 @@ CABLE_TYPES = {5, 7}
 
 # 14R, 9R, 38R, 8BX, 30X, 76X ... (digits then R/RX/BX/X)
 RAPID_PATTERN = re.compile(r"^\d{1,3}(R|RX|BX|X)$", re.IGNORECASE)
-
-_TYPE_CODES = {"B": "B", "R": "R", "M": "M", "C": "C"}
 
 
 def normalize_line(line_ref: str) -> str:
@@ -72,32 +77,36 @@ def load_routes(path: str | Path) -> dict[str, dict]:
         return {}
 
 
-def classify(line_ref: str, routes: dict[str, dict] | None = None) -> dict:
+def classify(line_ref: str, routes: dict[str, dict] | None = None,
+             fallback: dict[str, dict] | None = None) -> dict:
     """Classify a vehicle's line.
 
+    `fallback` is an agency-specific table of {line: {type, color}} used when
+    GTFS metadata is missing (pass MUNI_FALLBACK for SFMTA, nothing else).
     Returns {"code": "B"|"R"|"M"|"C", "rgb": (r, g, b), "line": "14R"}.
     """
     line = normalize_line(line_ref)
     info = None
     if routes:
-        info = routes.get(line) or routes.get(f"SF:{line}")
-    if info is None and line not in MUNI_FALLBACK:
+        info = routes.get(line)
+    if info is None and line not in (fallback or {}):
         # GTFS route_ids sometimes carry a suffix/space differences.
         for key, value in (routes or {}).items():
             if normalize_line(key) == line:
                 info = value
                 break
 
-    fallback = MUNI_FALLBACK.get(line)
+    fallback = fallback or {}
+    fallback_entry = fallback.get(line)
     route_type = None
     color_hex = None
     if info:
         route_type = info.get("type")
         color_hex = info.get("color")
-    if route_type is None and fallback:
-        route_type = fallback["type"]
-    if not color_hex and fallback:
-        color_hex = fallback["color"]
+    if route_type is None and fallback_entry:
+        route_type = fallback_entry["type"]
+    if not color_hex and fallback_entry:
+        color_hex = fallback_entry["color"]
 
     if route_type in METRO_TYPES:
         return {"code": "M", "rgb": _hex_to_rgb(color_hex or "FFFFFF"), "line": line}

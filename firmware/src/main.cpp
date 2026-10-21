@@ -2,14 +2,20 @@
 //
 // ESP32-WROOM-32E + Waveshare RGB-Matrix-Px-64x64 (HUB75). Polls the mini-
 // proxy for compact vehicle positions and plots them on the LED wall. One
-// binary is flashed to every wall: WiFi credentials and the proxy host are
-// provisioned over WebSerial and kept in NVS (src/provisioner.h,
-// docs/provisioning-protocol.md). No secrets.h, no per-wall build.
+// binary is flashed to every wall: WiFi credentials, the proxy endpoint, and
+// the agency id are provisioned over WebSerial and kept in NVS
+// (src/provisioner.h, docs/provisioning-protocol.md). No secrets.h, no
+// per-wall build.
 //
-// 511 only publishes positions every ~65s, so instead of teleporting the
-// wall on each poll, each vehicle that moved picks a random moment inside
-// MOTION_WINDOW_MS and glides to its new pixel (see config.h) — the wall
-// reads as many vehicles moving independently.
+// The proxy publishes positions every POLL_SECONDS and advertises the exact
+// seconds until its next upstream fetch in the payload ("next"). Instead of
+// teleporting the wall on each poll, each vehicle that moved picks a random
+// moment inside the remaining refresh cycle and glides to its new pixel
+// (see config.h) — the wall reads as many vehicles moving independently.
+//
+// The map bounding box and the vehicle colors also come from the payload
+// ("bbox", "palette"): nothing about the agency is compiled except the
+// backdrop bitmap, which is looked up by agency id below.
 //
 // Rendering is strictly incremental: the backdrop is painted once at boot
 // and the loop only rewrites the individual pixels that change as dots
@@ -18,11 +24,15 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <esp_system.h>  // esp_random() for the splash animation seed
+#include <string.h>
 
+#include "backdrop.h"
 #include "config.h"
 #include "map_project.h"
 #include "provisioner.h"
 #include "screen.h"
+#include "status_screen.h"
 #include "vehicle_client.h"
 
 static Screen screen;
@@ -49,6 +59,30 @@ static int activeCount = 0;
 static bool seen[MAX_VEHICLES];
 
 static void drawStatusPixel();
+
+// What the panel is currently showing. The map is the normal state
+// (ERR_NONE); splash, setup-needed, and error screens replace it until the
+// condition clears. Screens are drawn once on the transition, never per
+// loop iteration — the incremental-render rule governs the map path only.
+enum ErrorKind {
+  ERR_NONE,       // showing the map
+  ERR_SPLASH,     // boot splash (bouncing logo) — the panel's initial state
+  ERR_PROVISION,  // no ssid/host configured yet
+  ERR_WIFI,       // configured, but the network won't take us
+  ERR_SERVER,     // network up, proxy unreachable
+  ERR_AGENCY,     // proxy 400s our agency id
+  ERR_NOMAP,      // no compiled backdrop for the provisioned agency
+};
+// Track what the panel ACTUALLY shows. Boot draws the splash, so that's the
+// initial state — initializing to ERR_NONE would make the first
+// showScreen(ERR_NONE) a no-op and leave the splash under the map.
+static ErrorKind shownError = ERR_SPLASH;
+static const BackdropDef *curBackdrop = nullptr;  // chosen at (re)provision
+
+// Splash animation state: the roundel bounces around the panel while the
+// wall loads (Wi-Fi/NTP waits below drive frames).
+static SplashState splashState;
+static void drawSplashFrame();  // defined with the screen helpers below
 
 // Backdrop pixel class (0 land / 1 water) decoded from the RLE once at boot,
 // so a vacated pixel can be repainted without touching the rest of the map.
@@ -77,12 +111,24 @@ static void redrawOccupants(int x, int y, int skipIdx) {
   }
 }
 
-static void decodeBackdropIndices() {
+// The backdrop is the one per-agency artifact that cannot come over the
+// wire. gen_backdrop.py --agency <id> emits one BackdropDef per agency;
+// the wall picks its provisioned agency's entry at boot.
+static const BackdropDef *backdropFor(const char *agency) {
+  for (unsigned int i = 0; i < backdrop_count; i++) {
+    if (strcmp(backdrops[i].agency, agency) == 0) {
+      return &backdrops[i];
+    }
+  }
+  return nullptr;
+}
+
+static void decodeBackdropIndices(const BackdropDef &bd) {
   int x = 0, y = 0;
-  for (unsigned int i = 0; i + 1 < backdrop_rle_len; i += 2) {
-    for (uint8_t n = backdrop_rle[i]; n > 0; n--) {
+  for (unsigned int i = 0; i + 1 < bd.rle_len; i += 2) {
+    for (uint8_t n = bd.rle[i]; n > 0; n--) {
       if (x < DISPLAY_W && y < DISPLAY_H) {
-        bgIndex[y * DISPLAY_W + x] = backdrop_rle[i + 1];
+        bgIndex[y * DISPLAY_W + x] = bd.rle[i + 1];
       }
       if (++x >= DISPLAY_W) {
         x = 0;
@@ -102,6 +148,9 @@ static void connectWifi() {
   while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
     delay(250);
     Serial.print(".");
+    if (shownError == ERR_SPLASH) {
+      drawSplashFrame();  // keep the logo bouncing while we wait
+    }
   }
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf(" connected, ip=%s\n", WiFi.localIP().toString().c_str());
@@ -120,6 +169,9 @@ static void syncTime() {
   while (time(nullptr) < 1735689600 && millis() - start < 15000) {
     delay(250);
     Serial.print(".");
+    if (shownError == ERR_SPLASH) {
+      drawSplashFrame();  // keep the logo bouncing while we wait
+    }
   }
   if (time(nullptr) >= 1735689600) {
     Serial.println(" ok");
@@ -160,10 +212,12 @@ static int findActive(uint32_t id) {
 // Fold the fresh snapshot into the animation slots: matching vehicles get a
 // new target (scheduled at a random moment in the remainder of the upstream
 // refresh cycle), new vehicles appear in place, missing ones are erased.
-static void mergeVehicles(uint32_t nowMs, float upstreamAge) {
+// nextS/age come from the payload: the server's own cadence, not a compiled
+// constant.
+static void mergeVehicles(uint32_t nowMs, float upstreamAge, uint32_t nextS) {
   // Glides tile the whole refresh cycle: spread start times across whatever
   // is left of it after the snapshot's own age.
-  int32_t spreadMs = (int32_t)(UPSTREAM_REFRESH_S * 1000)
+  int32_t spreadMs = (int32_t)(nextS * 1000)
                      - (int32_t)(upstreamAge * 1000.0f) - MOTION_GLIDE_MS;
   if (spreadMs < 1000) {
     spreadMs = 1000;  // stale snapshot: still stagger, just tightly
@@ -174,7 +228,7 @@ static void mergeVehicles(uint32_t nowMs, float upstreamAge) {
     const Vehicle &v = vehicles[i];
     int px, py;
     if (!projection.project(v.lat, v.lon, &px, &py)) {
-      continue;  // outside the configured bounding box
+      continue;  // outside the agency's advertised bounding box
     }
     int s = findActive(v.id);
     if (s >= 0) {
@@ -260,6 +314,63 @@ static void drawStatusPixel() {
 #endif
 }
 
+// Paint the panel for a (possibly new) error state. No-op when the panel
+// already shows it, so the retry loop can call this every cycle without
+// repainting. Clearing back to the map repaints the backdrop (dots are
+// dropped — they were drawn under the error screen).
+static void putScreenPixel(void *, int x, int y, uint8_t r, uint8_t g,
+                           uint8_t b) {
+  screen.drawPixel(x, y, r, g, b);
+}
+
+// One frame of the bouncing splash. Called from setup's blocking waits so
+// the logo moves while the wall loads.
+static void drawSplashFrame() {
+  screen.clear();
+  showSplashFrame(putScreenPixel, nullptr, &splashState);
+}
+
+static void showScreen(ErrorKind kind) {
+  if (kind == shownError) {
+    return;
+  }
+  shownError = kind;
+  // Every status screen replaces whatever was on the panel wholesale:
+  // wipe first so no pixels from the previous screen bleed through.
+  screen.clear();
+  switch (kind) {
+    case ERR_SPLASH:
+      showSplashFrame(putScreenPixel, nullptr, &splashState);
+      break;
+    case ERR_PROVISION:
+      showSetupNeeded(putScreenPixel, nullptr);
+      break;
+    case ERR_WIFI:
+      showWifiError(putScreenPixel, nullptr);
+      break;
+    case ERR_SERVER:
+      showServerError(putScreenPixel, nullptr);
+      break;
+    case ERR_AGENCY:
+      showAgencyError(putScreenPixel, nullptr);
+      break;
+    case ERR_NOMAP:
+      showNoMapError(putScreenPixel, nullptr, provAgency());
+      break;
+    case ERR_NONE:
+    default:
+      if (curBackdrop) {
+        screen.drawBackdrop(*curBackdrop);
+      } else {
+        screen.clear();
+      }
+      // Dots from before the error screen are gone; forget them so the
+      // next merge re-adds vehicles at their current positions.
+      activeCount = 0;
+      break;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(200);
@@ -269,9 +380,14 @@ void setup() {
     while (true) delay(1000);
   }
   screen.setBrightness(DISPLAY_BRIGHTNESS);
+
+  // Splash while we figure out what to show: the roundel bouncing DVD-style
+  // around the panel while the wall loads. Replaced by the map or an error
+  // screen below. Seed from the SoC RNG so every boot takes a different
+  // path (initial diagonal and corner bounces both derive from this).
   screen.clear();
-  decodeBackdropIndices();
-  screen.drawBackdrop();  // painted once; animate() only touches dot pixels
+  splashState.seed = esp_random();
+  drawSplashFrame();
 
   provLoad();
   if (provNeeded()) {
@@ -280,11 +396,30 @@ void setup() {
     // the loop picks them up live — no reflash, no reboot needed.
     Serial.println("UNPROVISIONED: open the browser tool and set "
                    "ssid/pass/host, then save.");
+    showScreen(ERR_PROVISION);
     return;
+  }
+
+  // The backdrop is chosen once at boot from the provisioned agency id.
+  // Changing agency is a re-provision + reboot, not a live edit.
+  curBackdrop = backdropFor(provAgency());
+  if (curBackdrop) {
+    decodeBackdropIndices(*curBackdrop);
+  } else {
+    Serial.printf("BACKDROP none for agency '%s' — blank map; regenerate with "
+                  "tools/gen_backdrop.py --agency %s and reflash\n",
+                  provAgency(), provAgency());
   }
 
   connectWifi();
   syncTime();
+  if (WiFi.status() != WL_CONNECTED) {
+    showScreen(ERR_WIFI);
+  } else if (!curBackdrop) {
+    showScreen(ERR_NOMAP);
+  } else {
+    showScreen(ERR_NONE);  // paint the map
+  }
 }
 
 void loop() {
@@ -296,36 +431,83 @@ void loop() {
   provPumpSerial();
 
   if ((int32_t)(now - nextPollMs) >= 0) {
+    // Fallback cadence only for failed polls; a successful poll re-arms
+    // from the server's advertised "next".
     nextPollMs = now + POLL_INTERVAL_MS;
     if (provNeeded()) {
-      return;  // still waiting for set ssid/pass — backdrop stays up
+      showScreen(ERR_PROVISION);
+      return;  // still waiting for set ssid/pass
+    }
+    if (!curBackdrop) {
+      // Either boot found no backdrop for this agency, or the agency was
+      // (re)provisioned live since then: pick the backdrop for the current
+      // id before polling. A null result keeps the NO MAP screen up.
+      curBackdrop = backdropFor(provAgency());
+      if (curBackdrop) {
+        decodeBackdropIndices(*curBackdrop);
+      }
     }
     if (WiFi.status() != WL_CONNECTED) {
       connectWifi();
       if (WiFi.status() != WL_CONNECTED) {
+        showScreen(ERR_WIFI);
         return;
       }
       syncTime();  // TLS needs the wall clock; NTP only works over WiFi
     }
-    // Begin the projection on the first ready cycle — covers both the
-    // provisioned-at-boot and the provisioned-live-from-serial paths.
-    static bool projectionReady = false;
-    if (!projectionReady) {
-      projectionReady = true;
-      BBox bbox = {MAP_LAT_MIN, MAP_LAT_MAX, MAP_LON_MIN, MAP_LON_MAX};
-      projection.begin(bbox, DISPLAY_W, DISPLAY_H, MAP_STRETCH_TO_FILL);
+    if (!curBackdrop) {
+      showScreen(ERR_NOMAP);
+      return;
     }
-    float upstreamAge = 0.0f;
-    int n = fetchVehicles(provPollHost(), provPort(), vehicles, MAX_VEHICLES,
-                          &upstreamAge);
-    if (n >= 0) {
-      vehicleCount = n;
-      pollFailures = 0;
-      mergeVehicles(now, upstreamAge);
-    } else {
+    PollResult poll = fetchVehicles(provScheme(), provPollHost(), provPort(),
+                                    provAgency(), vehicles, MAX_VEHICLES);
+    if (!poll.ok) {
       pollFailures = min<uint8_t>(pollFailures + 1, 200);
-      Serial.printf("[poll] fetch failed (%u consecutive)\n", pollFailures);
+      if (poll.agencyUnknown) {
+        Serial.println("[poll] server 400: agency id not served — "
+                       "check `get agency` against the server's /agencies");
+        showScreen(ERR_AGENCY);
+      } else {
+        Serial.printf("[poll] fetch failed (%u consecutive)\n", pollFailures);
+        showScreen(ERR_SERVER);
+      }
+      return;
     }
+    pollFailures = 0;
+    showScreen(ERR_NONE);  // no-op while the map is up; repaints after an error
+    vehicleCount = poll.count;
+    // next == 0 means the server's refresh is due now: re-poll promptly.
+    // Clamp the top end so a misconfigured server can't overflow the
+    // uint32 math (and wrap into a poll hammer) or set an absurd wait.
+    uint32_t waitS = poll.next > 0 ? poll.next : 1;
+    if (waitS > 3600) {
+      waitS = 3600;
+    }
+    // Re-arm from the post-fetch clock: `now` predates a fetch that can
+    // take seconds, and scheduling from it would make the wall re-poll
+    // faster than the server refreshes.
+    nextPollMs = millis() + waitS * 1000UL;
+
+    // The payload's bbox is the projection's source of truth. Re-init when
+    // it changes (agency re-provision, or a registry edit server-side);
+    // pixel positions under the old bbox are no longer meaningful.
+    static float curBbox[4] = {0, 0, 0, 0};
+    bool bboxChanged = memcmp(curBbox, poll.bbox, sizeof(curBbox)) != 0;
+    if (bboxChanged) {
+      memcpy(curBbox, poll.bbox, sizeof(curBbox));
+      BBox bbox = {poll.bbox[0], poll.bbox[1], poll.bbox[2], poll.bbox[3]};
+      projection.begin(bbox, DISPLAY_W, DISPLAY_H, MAP_STRETCH_TO_FILL);
+      if (activeCount > 0) {
+        // Old dots sit at pixels from the previous bbox: wipe them all.
+        for (int i = 0; i < activeCount; i++) {
+          paintBg(actives[i].dx, actives[i].dy);
+        }
+        activeCount = 0;
+      }
+      Serial.printf("[map] bbox %.4f,%.4f,%.4f,%.4f\n", poll.bbox[0],
+                    poll.bbox[1], poll.bbox[2], poll.bbox[3]);
+    }
+    mergeVehicles(now, poll.age, poll.next);
   }
 
   static uint32_t nextFrameMs = 0;

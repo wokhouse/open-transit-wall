@@ -2,9 +2,12 @@
 // will draw (same map_project.h projection, same backdrop.h RLE blit, same
 // palette) to a BMP you can inspect, plus an ASCII view for quick checks.
 //
-// Usage: sim <vehicles.csv> <out.bmp> <W> <H> [scale] [dot] [--ascii]
+// Usage: sim <vehicles.csv> <out.bmp> <W> <H> [scale] [dot] [--agency id] [--ascii]
 //   vehicles.csv rows: lat,lon,r,g,b   (see tools/vehicles_to_csv.py)
 //   W/H must match the compiled backdrop.h (BACKDROP_W/BACKDROP_H).
+//   --agency picks the backdrop entry and its bbox (default: the first one).
+//   --screen splash|setup|wifi|server|agency|nomap renders a status screen
+//   instead of the map (same status_screen.cpp the firmware runs).
 
 #include <stdint.h>
 #include <stdio.h>
@@ -16,6 +19,7 @@
 
 #include "backdrop.h"
 #include "map_project.h"
+#include "status_screen.h"
 
 static const uint8_t LAND[3] = {2, 2, 2};
 static const uint8_t WATER[3] = {0, 0, 0};
@@ -63,8 +67,9 @@ static void writeBmp(const char *path, int w, int h, int scale) {
 
 int main(int argc, char **argv) {
   if (argc < 5) {
-    fprintf(stderr, "usage: %s <vehicles.csv> <out.bmp> <W> <H> [scale] [dot] [--ascii]\n",
-            argv[0]);
+    fprintf(stderr, "usage: %s <vehicles.csv> <out.bmp> <W> <H> [scale] [dot] "
+                    "[--agency id] [--screen splash|setup|wifi|server|agency|nomap] "
+                    "[--ascii]\n", argv[0]);
     return 2;
   }
   const char *csvPath = argv[1];
@@ -72,9 +77,13 @@ int main(int argc, char **argv) {
   int w = atoi(argv[3]), h = atoi(argv[4]);
   int scale = argc > 5 && argv[5][0] != '-' ? atoi(argv[5]) : 8;
   int dot = argc > 6 && argv[6][0] != '-' ? atoi(argv[6]) : 1;
+  const char *agency = nullptr;
+  const char *screen = nullptr;
   bool ascii = false;
   for (int i = 5; i < argc; i++) {
     if (strcmp(argv[i], "--ascii") == 0) ascii = true;
+    if (strcmp(argv[i], "--agency") == 0 && i + 1 < argc) agency = argv[++i];
+    if (strcmp(argv[i], "--screen") == 0 && i + 1 < argc) screen = argv[++i];
   }
 
   if (w != BACKDROP_W || h != BACKDROP_H) {
@@ -83,20 +92,82 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  const BackdropDef *bd = nullptr;
+  for (unsigned int i = 0; i < backdrop_count; i++) {
+    if (!agency || strcmp(backdrops[i].agency, agency) == 0) { bd = &backdrops[i]; break; }
+  }
+  if (!bd) {
+    fprintf(stderr, "backdrop.h has no entry for agency '%s' — generate it with "
+                    "tools/gen_backdrop.py --agency %s\n", agency, agency);
+    return 1;
+  }
+
+  // 0) status screens: same status_screen.cpp the firmware runs, rendered
+  // straight into the framebuffer (no vehicles, no backdrop).
+  if (screen) {
+    fb.assign((size_t)w * h * 3, 0);
+    struct SimCtx { int w, h; };
+    SimCtx ctx = {w, h};
+    auto putCb = +[](void *vctx, int x, int y, uint8_t r, uint8_t g,
+                     uint8_t b) {
+      SimCtx *c = (SimCtx *)vctx;
+      if (x < 0 || y < 0 || x >= c->w || y >= c->h) return;
+      uint8_t rgb[3] = {r, g, b};
+      memcpy(&fb[((size_t)y * c->w + x) * 3], rgb, 3);
+    };
+    if (!strcmp(screen, "splash")) {
+      // The splash is an animation; render one frame after N steps so the
+      // BMP shows the roundel mid-bounce (same state machine as firmware).
+      SplashState st = {};
+      for (int frame = 0; frame < 37; frame++) {
+        fb.assign((size_t)w * h * 3, 0);  // the caller clears each frame
+        showSplashFrame(putCb, &ctx, &st);
+      }
+    } else if (!strcmp(screen, "setup")) {
+      showSetupNeeded(putCb, &ctx);
+    } else if (!strcmp(screen, "wifi")) {
+      showWifiError(putCb, &ctx);
+    } else if (!strcmp(screen, "server")) {
+      showServerError(putCb, &ctx);
+    } else if (!strcmp(screen, "agency")) {
+      showAgencyError(putCb, &ctx);
+    } else if (!strcmp(screen, "nomap")) {
+      showNoMapError(putCb, &ctx, "ct");
+    } else {
+      fprintf(stderr, "unknown --screen '%s'\n", screen);
+      return 2;
+    }
+    writeBmp(bmpPath, w, h, scale);
+    printf("sim: screen '%s' -> %s (%dx%d, scale %d)\n", screen, bmpPath, w,
+           h, scale);
+    if (ascii) {
+      for (int ay = 0; ay < h; ay++) {
+        for (int ax = 0; ax < w; ax++) {
+          const uint8_t *p = &fb[((size_t)ay * w + ax) * 3];
+          if (p[0] > 128 && p[1] > 128 && p[2] > 128) putchar('#');  // QR light
+          else if (p[0] | p[1] | p[2]) putchar('+');                 // text
+          else putchar('.');                                          // dark
+        }
+        putchar('\n');
+      }
+    }
+    return 0;
+  }
+
   // 1) backdrop via the same RLE decode the firmware runs
   fb.assign((size_t)w * h * 3, 0);
   int x = 0, y = 0;
-  for (unsigned int i = 0; i + 1 < backdrop_rle_len; i += 2) {
-    const uint8_t *rgb = backdrop_rle[i + 1] == 1 ? WATER : LAND;
-    for (uint8_t n = backdrop_rle[i]; n > 0; n--) {
+  for (unsigned int i = 0; i + 1 < bd->rle_len; i += 2) {
+    const uint8_t *rgb = bd->rle[i + 1] == 1 ? WATER : LAND;
+    for (uint8_t n = bd->rle[i]; n > 0; n--) {
       put(x, y, rgb, w, h);
       if (++x >= w) { x = 0; y++; }
     }
   }
 
-  // 2) vehicles — bbox mirrors server/geo.py BBOX; stretch mirrors
-  // MAP_STRETCH_TO_FILL in config.h
-  BBox bbox = {37.705, 37.810, -122.512, -122.385};
+  // 2) vehicles — the bbox baked into the backdrop entry is the same one
+  // the server ships on the wire; stretch mirrors MAP_STRETCH_TO_FILL
+  BBox bbox = {bd->bbox[0], bd->bbox[1], bd->bbox[2], bd->bbox[3]};
   MapProjection proj;
   proj.begin(bbox, w, h, /*stretchToFill=*/false);
 
@@ -123,8 +194,8 @@ int main(int argc, char **argv) {
   fclose(csv);
 
   writeBmp(bmpPath, w, h, scale);
-  printf("sim: %d vehicles drawn, %d outside bbox -> %s (%dx%d, scale %d)\n",
-         count, clipped, bmpPath, w, h, scale);
+  printf("sim: agency %s, %d vehicles drawn, %d outside bbox -> %s (%dx%d, scale %d)\n",
+         bd->agency, count, clipped, bmpPath, w, h, scale);
 
   if (ascii) {
     for (int ay = 0; ay < h; ay++) {

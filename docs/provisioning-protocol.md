@@ -3,7 +3,7 @@
 See also `docs/provisioning-implementation.md` (the implementation behind this
 spec) and `docs/plan.md` (the browser tool that will drive it).
 
-One firmware binary is flashed to every wall (`pio run -e esp32dev -t
+One firmware binary is flashed to every wall (`pio run -e s3rgbmatrix -t
 upload`). The WiFi network name, WiFi password, and proxy host are written to
 the device afterwards, from the browser tool, over WebSerial — this is the
 ONLY provisioning path: the binary carries no secrets, no endpoint, no
@@ -18,14 +18,15 @@ compiled defaults. The firmware implementation is
 - The browser tool uses the Web Serial API: `navigator.serial.requestPort()`
   on a user click, `readable`/`writable` streams, one `TextEncoder` line
   writer. Web Serial needs Chrome/Edge over HTTPS or localhost.
-- Every command produces exactly one reply line on stdout. Replies start with
+- Commands produce one or more reply lines on stdout (`get all`, `status`,
+  and `help` are multi-line). Replies start with
   `OK`, `ERR`, `VAL`, `STATUS`, `CMD`, or the banner prefixes below.
 
 ## Banner (firmware → tool, first thing after any serial activity)
 
 ```
 OTW-FW <version>
-STORED ssid=<s> pass=set|empty host=<h> scheme=<s> port=<p>
+STORED ssid=<s> pass=set|empty host=<h> scheme=<s> port=<p> agency=<a>
 ```
 
 or, when no SSID is stored in NVS:
@@ -47,12 +48,13 @@ The tool uses `OTW-FW` to recognize the device and `UNPROVISIONED` /
 | `set host=<proxy host>` | `OK host=<h> ...` | host only — no scheme, no port, no spaces |
 | `set scheme=https://` \| `http://` | `OK scheme=...` | optional; empty means `https://` |
 | `set port=<1-65535>` | `OK port=...` | optional; empty means `443` |
-| `get ssid` / `host` / `scheme` / `port` | `VAL <key>=<value>` | current live value |
-| `get pass` | `VAL pass SET len=<n>` or `VAL pass EMPTY` | the password is never echoed back |
-| `get all` | five `VAL` lines | |
+| `set agency=<registry id>` | `OK agency=<a> ...` | lowercase `[a-z0-9]{1,8}`; the id from the server's `/agencies` list. Empty is rejected — clearing requires `erase` |
+| `get ssid` / `host` / `scheme` / `port` / `agency` | `VAL <key>=<value>` | current live value (`ssid` replies `VAL ssid EMPTY` when unset; `port` replies `VAL port=0`, and 0 is never a valid port) |
+| `get pass` | `VAL pass SET len=<n>` or `VAL pass EMPTY len=0` | the password is never echoed back |
+| `get all` | six `VAL` lines | |
 | `status` | several `STATUS ...` lines | fw version, provisioned flag, proxy URL, WiFi state + IP, free heap |
 | `save` | `OK saved` | persist the live values to NVS (survives power loss) |
-| `erase` | `OK erased ...` | wipe the NVS copy (live values stay until reboot) |
+| `erase` | `OK erased ...` | wipe the NVS copy; `ssid`/`pass` also clear in the live session (back to provisioning mode), `host`/`scheme`/`port`/`agency` stay until reboot |
 | `reboot` | `OK rebooting` | `esp_restart()` |
 | `help` | `CMD ...` lines | command list |
 
@@ -69,7 +71,7 @@ unknown key ...`. Bad value → `ERR <key> must be ...`.
   `WiFi: connecting…` / `connected, ip=` lines from the firmware log as the
   success signal.
 - Storage: NVS namespace `otw`, keys `ssid`, `pass`, `host`, `scheme`,
-  `port`. An empty stored `ssid` means unprovisioned.
+  `port`, `agency`. An empty stored `ssid` means unprovisioned.
 
 ## Readiness — no compiled defaults
 
@@ -94,4 +96,4 @@ device itself knows no endpoints.
 ## Versioning
 
 `OTW-FW <version>` is a single integer, bumped only on breaking protocol
-changes. Current: 1.
+changes. Current: 2.

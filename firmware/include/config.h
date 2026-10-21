@@ -3,10 +3,10 @@
 // open-transit-wall configuration — this file is the only thing you should
 // need to touch to retarget the display (size, area, look).
 //
-// SCALE TO A BIGGER WALL: set PANEL_CHAIN_W / PANEL_CHAIN_H to the number of
-// panels tiled horizontally / vertically, then regenerate the backdrop:
-//     python3 tools/gen_backdrop.py --w <DISPLAY_W> --h <DISPLAY_H>
-// Everything else (projection, blitting, clipping) derives from those numbers.
+// The project targets a single 64x64 panel (PANEL_RES_X/Y below, chain 1x1).
+// The code derives everything from those numbers, so a tiled wall is
+// possible but untested; if you try one, regenerate the backdrop:
+//     python3 tools/gen_backdrop.py --agency <id> --w <DISPLAY_W> --h <DISPLAY_H>
 // ============================================================================
 
 // --- Panel hardware ---------------------------------------------------------
@@ -24,27 +24,63 @@
 //   SERPENTINE_TOP_RIGHT_DOWN ... starting right->left
 #define TILE_LAYOUT LINE_TOP_LEFT_DOWN
 
-// Display data pins follow the library defaults (R1=25 G1=26 B1=27 R2=14
-// G2=12 B2=13 A=23 B=19 C=5 D=17 CLK=16 LAT=4 OE=15; verified against
-// esp32-default-pins.hpp in the library). The E address line is only needed
-// for 1/32-scan panels (64x64); the library default is -1 (unused), which is
-// correct for 1/16-scan 64x32 panels. 64x64 panels are 1/32-scan and need E
-// wired to the HUB75 connector's pin 8:
-#define E_PIN_OVERRIDE 32
+// --- Board pinout -----------------------------------------------------------
+// Full HUB75 GPIO map per board; the platformio.ini env selects the board
+// with -DOTW_BOARD_MATRIXPORTAL_S3 (default: Waveshare). Every line is set
+// explicitly — do not rely on the library's per-chip defaults.
+#if defined(OTW_BOARD_MATRIXPORTAL_S3)
+// Adafruit MatrixPortal S3 (https://www.adafruit.com/product/5778).
+// Map from Adafruit's CircuitPython board module (pins.c). The panel lines
+// include GPIO35-37, which the module's octal PSRAM would claim: this
+// target must build with PSRAM off (the board def's qio_qspi memory type
+// does that). 64x64 panels also need the board's E-line solder jumper
+// closed (toward the pad marked 8).
+#define HUB75_PIN_R1 42
+#define HUB75_PIN_G1 41
+#define HUB75_PIN_B1 40
+#define HUB75_PIN_R2 38
+#define HUB75_PIN_G2 39
+#define HUB75_PIN_B2 37
+#define HUB75_PIN_A  45
+#define HUB75_PIN_B  36
+#define HUB75_PIN_C  48
+#define HUB75_PIN_D  35
+#define HUB75_PIN_E  21
+#define HUB75_PIN_CLK 2
+#define HUB75_PIN_LAT 47
+#define HUB75_PIN_OE 14
+#else
+// Waveshare ESP32-S3-RGB-Matrix (https://www.waveshare.com/esp32-s3-rgb-matrix.htm).
+// Matches the library's ESP32-S3 defaults (verified against
+// esp32s3-default-pins.hpp) plus E on GPIO9 — 64x64 panels are 1/32-scan
+// and need E wired to the HUB75 connector's pin 8 (the library default
+// -1 is only correct for 1/16-scan 64x32 panels).
+#define HUB75_PIN_R1 4
+#define HUB75_PIN_G1 5
+#define HUB75_PIN_B1 6
+#define HUB75_PIN_R2 7
+#define HUB75_PIN_G2 15
+#define HUB75_PIN_B2 16
+#define HUB75_PIN_A  18
+#define HUB75_PIN_B  8
+#define HUB75_PIN_C  3
+#define HUB75_PIN_D  42
+#define HUB75_PIN_E  9
+#define HUB75_PIN_CLK 41
+#define HUB75_PIN_LAT 40
+#define HUB75_PIN_OE 2
+#endif
 
 // --- Display look -----------------------------------------------------------
 #define DISPLAY_BRIGHTNESS 48     // 0-255; panels are very bright indoors
 #define STATUS_PIXEL_ENABLED 1    // corner pixel: green=fresh, amber=aging, red=error
 
 // --- Map area ---------------------------------------------------------------
-// Bounding box around the SFMTA metro service area (must match server/geo.py
-// BBOX — padded ~2px around the live fleet's extents). Vehicles outside are
-// clipped. If you re-enable buses (proxy TYPES), widen lon_max for GG Bridge
-// and East Bay routes.
-#define MAP_LAT_MIN 37.705
-#define MAP_LAT_MAX 37.810
-#define MAP_LON_MIN (-122.512)
-#define MAP_LON_MAX (-122.385)
+// The bounding box is NOT compiled: the proxy ships it per agency in the
+// /vehicles payload ("bbox", from server/agencies.json), and the projection
+// initializes from it. Vehicles outside are clipped. The backdrop bitmap is
+// the one per-agency artifact that stays compiled — regenerate it with
+// tools/gen_backdrop.py --agency <id> and reflash to add an agency.
 
 // 0 = preserve true geographic aspect, centered (leaves margins on panels
 // wider/narrower than the map's aspect). 1 = stretch the bounding box to fill
@@ -65,11 +101,11 @@
 #define MAX_VEHICLES 800          // live SFMTA feed observed ~676 vehicles
 
 // --- Per-vehicle motion ------------------------------------------------------
-// 511 only publishes positions every ~65s (POLL_SECONDS in server/.env —
-// keep UPSTREAM_REFRESH_S in sync). Each vehicle whose position changed
-// picks a random moment inside the *remaining* refresh cycle and glides to
-// its new pixel over MOTION_GLIDE_MS — so glides tile the whole cycle
-// instead of bursting right after each snapshot.
-#define UPSTREAM_REFRESH_S 65UL  // must match POLL_SECONDS in server/.env
+// The proxy publishes positions every POLL_SECONDS and advertises the exact
+// seconds until its next upstream fetch in the payload ("next"). Each vehicle
+// whose position changed picks a random moment inside the *remaining* refresh
+// cycle and glides to its new pixel over MOTION_GLIDE_MS — so glides tile
+// the whole cycle instead of bursting right after each snapshot. There is no
+// compiled refresh constant: `next` is authoritative per response.
 #define MOTION_GLIDE_MS  5000     // how long a single glide takes
 #define RENDER_FPS       20       // continuous re-render rate

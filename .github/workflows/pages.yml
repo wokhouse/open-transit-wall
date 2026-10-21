@@ -1,0 +1,64 @@
+name: Pages
+
+# Builds the firmware and deploys the web flasher (flasher/) to GitHub
+# Pages. The firmware images are staged into the Pages artifact, so the
+# page and the binaries it offers always come from the same commit.
+# One-time repo setting (Settings → Pages → Source: GitHub Actions), or:
+#   gh api repos/wokhouse/open-transit-wall/pages -X POST -f build_type=workflow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "firmware/**"
+      - "flasher/**"
+      - "tools/build_firmware.py"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build firmware + stage flasher
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PlatformIO Core
+        # intelhex: tool-esptoolpy 2.41100 (pulled by espressif32 7.1.3-dev)
+        # imports it but declares no Python dependencies, so PlatformIO
+        # never installs it.
+        run: pip install -U platformio intelhex
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-v2-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+      - name: Stage firmware images into flasher/firmware/
+        run: python3 tools/build_firmware.py --version "main-${GITHUB_SHA::7}"
+      - name: Show manifest
+        run: cat flasher/firmware/manifest.json
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: flasher
+
+  deploy:
+    name: Deploy flasher to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -17,6 +17,10 @@ server/.env
 build/
 *.ppm
 *.bmp
+firmware/include/secrets.h
+
+# Staged by tools/build_firmware.py for the Pages artifact
+flasher/firmware/
 
 # macOS
 .DS_Store

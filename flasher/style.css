@@ -1,0 +1,38 @@
+/* Plain-document look, matching the repo README's aesthetic. */
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body {
+  font: 15px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #1a1a1a; background: #fdfdfb; margin: 0;
+}
+main { max-width: 46rem; margin: 2rem auto 4rem; padding: 0 1.25rem; }
+.logo { display: block; margin-bottom: .8rem; }
+h1 { font-size: 1.35rem; margin-bottom: .2rem; }
+h2 { font-size: 1.05rem; margin: 0 0 .3rem; }
+.sub { color: #444; margin-top: 0; }
+section { border: 1px solid #d8d8d2; border-radius: 6px; padding: 1rem 1.25rem; margin: 1.25rem 0; }
+p { margin: .3rem 0 .8rem; }
+label { display: block; margin: .6rem 0 .15rem; font-weight: 600; }
+input, select, button {
+  font: inherit; padding: .35rem .5rem; border: 1px solid #b9b9b2;
+  border-radius: 4px; background: #fff;
+}
+input[type="text"], input[type="url"], input[type="password"], input[type="number"] {
+  width: 100%; max-width: 26rem;
+}
+button { cursor: pointer; background: #1a1a1a; color: #fdfdfb; border-color: #1a1a1a; }
+button:disabled { opacity: .4; cursor: default; }
+.row { display: flex; gap: 1rem; align-items: end; flex-wrap: wrap; }
+.row > div { flex: 1; min-width: 10rem; }
+.row input, .row select { max-width: 12rem; }
+button + button { margin-left: .5rem; }
+.log {
+  background: #101010; color: #d8e8d0; padding: .6rem .8rem; border-radius: 4px;
+  overflow-x: auto; max-height: 22rem; white-space: pre-wrap; margin: .8rem 0;
+}
+.warn { color: #8a1f1f; background: #fbeaea; border: 1px solid #e0b4b4;
+        padding: .6rem .8rem; border-radius: 4px; }
+.muted { color: #666; }
+.small { font-size: .85em; }
+code { background: #eee; padding: 0 .25em; border-radius: 3px; }
+a { color: #0b5cad; }
