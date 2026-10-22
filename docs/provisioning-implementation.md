@@ -32,6 +32,7 @@ implementation behind it.
 | Effect of `set` | Immediate. No reboot and no reflash. |
 | Banner | `OTW-FW <n>` plus `UNPROVISIONED` or `STORED ...` |
 | Commands | `set k=v`, `save`, `get`, `status`, `erase`, `reboot` |
+| Broker host | An empty `mhost` with `muser` set makes `ha_link.cpp` ask `ha_discover.cpp` for the broker over mDNS (`_mqtt._tcp`, then `_home-assistant._tcp`). A non-empty `mhost` skips discovery. |
 
 ## Readiness
 

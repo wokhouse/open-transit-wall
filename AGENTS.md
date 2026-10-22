@@ -83,7 +83,7 @@ python3 tools/gen_backdrop.py --w 128 --h 64    # writes firmware/src/backdrop.h
 | `server/routes.json` | Cached GTFS route types and colors. |
 | `firmware/` | PlatformIO + Arduino ESP32. `include/config.h` holds map and panel constants. |
 | `firmware/src/provisioner.cpp` | WebSerial provisioning. NVS namespace `otw`. |
-| `firmware/src/ha_link.*` | Optional Home Assistant link: MQTT light entity + NVS-persisted brightness. Off unless a broker is provisioned. |
+| `firmware/src/ha_link.*` | Optional Home Assistant link: MQTT light entity + NVS-persisted brightness. Off unless MQTT credentials or a broker host are provisioned; `ha_discover.*` finds the broker via mDNS when no host is set. |
 | `firmware/src/map_project.h` | lat/lon -> pixel projection. |
 | `sim/`, `tools/run_sim.sh` | Native simulator: same projection and backdrop, no hardware. It compiles no firmware `main`, so it is unaffected by a firmware change. |
 | `tools/gen_backdrop.py` | Shoreline -> RLE bitmap at the matrix size. |

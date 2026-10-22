@@ -2,8 +2,12 @@
 // Optional Home Assistant link: the wall speaks MQTT on the LAN it is
 // already connected to and registers itself as a native light entity via
 // Home Assistant MQTT auto-discovery (brightness slider, scenes,
-// automations — no HA YAML). The broker comes from provisioning
-// (`set mhost=...`); with no broker set this module does nothing at all.
+// automations — no HA YAML). The broker is found by itself: with no
+// `mhost` provisioned the wall browses mDNS for the Home Assistant host
+// (ha_discover.h) and uses its MQTT port; `set mhost=...` overrides that
+// for brokers elsewhere. Credentials (`muser`/`mpass`) stay required by
+// the HA Mosquitto add-on. With neither a broker hint nor credentials set,
+// this module does nothing at all.
 //
 // The wall publishes retained state (ON/OFF + brightness 0-255), an LWT
 // availability topic, and one retained discovery config. Commands arrive on
@@ -29,3 +33,7 @@ void haService();
 
 // True while the broker connection is up (for `status`).
 bool haConnected();
+
+// The broker this module is using or last tried: the provisioned host, or
+// the mDNS-discovered one when none was provisioned. Empty = unknown yet.
+const char *haBroker();

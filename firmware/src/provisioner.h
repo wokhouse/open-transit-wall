@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-#define OTW_FW_VERSION 4
+#define OTW_FW_VERSION 5
 
 // Load the stored values into RAM (call once, before any WiFi use).
 void provLoad();

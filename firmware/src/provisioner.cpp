@@ -111,9 +111,9 @@ static void printHelp() {
   Serial.println("CMD set scheme=<https://|http://>");
   Serial.println("CMD set port=<proxy port>");
   Serial.println("CMD set agency=<registry id, lowercase a-z0-9 up to 8>");
-  Serial.println("CMD set mhost=<mqtt broker host, empty disables HA link>");
+  Serial.println("CMD set mhost=<mqtt broker host, empty = find it via mDNS>");
   Serial.println("CMD set mport=<mqtt broker port, empty means 1883>");
-  Serial.println("CMD set muser=<mqtt username>");
+  Serial.println("CMD set muser=<mqtt username, enables the HA link>");
   Serial.println("CMD set mpass=<mqtt password>");
   Serial.println("CMD set bmin=<brightness floor 0-255, empty means 0>");
   Serial.println("CMD set bmax=<brightness ceiling 0-255, empty means 255>");
@@ -138,6 +138,11 @@ static void printStatus() {
   Serial.printf("STATUS agency=%s\n", curAgency[0] ? curAgency : "(unset)");
   if (curMhost[0]) {
     Serial.printf("STATUS mqtt=%s:%u %s\n", curMhost, mqttPortOf(curMport),
+                  haConnected() ? "connected" : "down");
+  } else if (curMuser[0]) {
+    const char *found = haBroker();
+    Serial.printf("STATUS mqtt=auto(%s) %s\n",
+                  found[0] ? found : "not-found",
                   haConnected() ? "connected" : "down");
   } else {
     Serial.println("STATUS mqtt=(unset)");

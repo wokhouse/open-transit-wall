@@ -49,8 +49,8 @@ The tool uses `OTW-FW` to recognize the device and `UNPROVISIONED` /
 | `set scheme=https://` \| `http://` | `OK scheme=...` | optional; empty means `https://` |
 | `set port=<1-65535>` | `OK port=...` | optional; empty means `443` |
 | `set agency=<registry id>` | `OK agency=<a> ...` | lowercase `[a-z0-9]{1,8}`; the id from the server's `/agencies` list. Empty is rejected — clearing requires `erase` |
-| `set mhost=<broker host>` | `OK mhost=<h> ...` | optional Home Assistant MQTT broker (see `docs/brightness-plan.md`); same host rules as `host`. Empty clears it — the HA link is off |
-| `set mport=<1-65535>` | `OK mport=...` | optional; empty means `1883` |
+| `set mhost=<broker host>` | `OK mhost=<h> ...` | optional manual MQTT broker override (see `docs/brightness-plan.md`); same host rules as `host`. Empty (the default) means find the broker via mDNS when credentials are set |
+| `set mport=<1-65535>` | `OK mport=...` | optional; only used with a manual `mhost`; empty means `1883` |
 | `set muser=<username>` | `OK muser=<u> ...` | optional; 0–63 chars |
 | `set mpass=<password>` | `OK mpass set ...` | optional; 0–63 chars, never echoed back |
 | `set bmin=<0-255>` | `OK bmin=<i> ...` | optional brightness floor; empty means 0. See the brightness window below |
@@ -106,10 +106,14 @@ device itself knows no endpoints.
   (`scheme=http://`, `port=8000`). The tool UI only needs the three core
   fields; leave the extras at their defaults.
 - `mhost`/`mport`/`muser`/`mpass` are never required for readiness. With
-  no broker the wall behaves exactly as before; with one it also keeps an
-  MQTT connection to the LAN broker for Home Assistant (see
-  `docs/brightness-plan.md`). A live `set mhost=...` connects without a
-  reboot; clearing it disconnects.
+  no credentials and no host the wall behaves exactly as before. With an
+  MQTT username (or a host) it also keeps an MQTT connection for Home
+  Assistant (see `docs/brightness-plan.md`). The broker host is found by
+  itself: the wall browses mDNS for `_mqtt._tcp` (a broker that
+  advertises itself, real port) and falls back to `_home-assistant._tcp`
+  (the Mosquitto add-on shares the HA host; port 1883). `set mhost=...`
+  overrides discovery for brokers elsewhere. A live `set muser=...`
+  connects without a reboot; clearing both disconnects.
 - `bmin`/`bmax` bound the brightness the panel actually applies to any
   Home Assistant level: HA 0% lands on `bmin`, HA 100% on `bmax`, linearly
   between. The HA slider and the state topics keep the raw 0–255 level;
@@ -120,7 +124,14 @@ device itself knows no endpoints.
 ## Versioning
 
 `OTW-FW <version>` is a single integer, bumped only on breaking protocol
-changes. Current: 4.
+changes. Current: 5.
+
+Version 5 changes the meaning of an empty `mhost`: with credentials set
+the wall now finds the broker via mDNS instead of leaving the link off,
+and `status` reports `mqtt=auto(<found host>)`. The wire commands and
+fields are unchanged from v4; the tool should present credentials-only
+setup when the banner reports `OTW-FW >= 5` and keep the manual broker
+fields as an advanced override.
 
 Version 4 added the optional `bmin`/`bmax` keys and the matching
 `STORED`/`get all` fields. Older firmware (v3) answers `ERR unknown key`

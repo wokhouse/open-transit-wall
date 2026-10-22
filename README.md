@@ -139,7 +139,7 @@ The protocol is line-based text over the USB serial bridge (115200):
 | you send | the wall answers |
 |---|---|
 | `set ssid=…` / `set pass=…` / `set host=…` / `set agency=…` | `OK …` — takes effect immediately |
-| `set mhost=…` (optional) | `OK …` — a Home Assistant MQTT broker on your LAN; see [Brightness from Home Assistant](#brightness-from-home-assistant) |
+| `set muser=…` / `set mpass=…` (optional) | `OK …` — Home Assistant MQTT credentials; the wall finds the broker itself; see [Brightness from Home Assistant](#brightness-from-home-assistant) |
 | `set bmin=…` / `set bmax=…` (optional) | `OK …` — brightness floor/ceiling: the HA slider's 0% dims only to `bmin`, its 100% reaches only `bmax` |
 | `save` | `OK saved` — persists to NVS, survives power loss |
 | `get all` / `status` | current values / live health |
@@ -154,15 +154,18 @@ for the exact grammar, limits, and error replies.
 
 ### Brightness from Home Assistant
 
-If your home runs an MQTT broker (the Home Assistant add-on is fine),
-provision it on the wall: `set mhost=<broker host>` (plus `mport`/`muser`/
-`mpass` if needed). The wall then connects to the broker over the LAN it is
-already on and announces itself through Home Assistant MQTT auto-discovery:
-a real **light entity** with a brightness slider, usable in scenes and
-automations, with no HA YAML. The wall keeps its own brightness in NVS, so
-it comes back at the last setting after a power cut. With no broker
-provisioned this whole path stays off — nothing changes. The proxy is not
-involved: it serves many walls, and brightness belongs to the room.
+If your home runs Home Assistant with its Mosquitto add-on, just give the
+wall an MQTT username and password (`set muser=…` / `set mpass=…` — create
+a dedicated HA user). The wall finds the broker itself by browsing mDNS for
+the Home Assistant host, connects over the LAN it is already on, and
+announces itself through Home Assistant MQTT auto-discovery: a real
+**light entity** with a brightness slider, usable in scenes and
+automations, with no HA YAML. A broker elsewhere still works: `set mhost=`
+/ `mport=` override the discovery. The wall keeps its own brightness in
+NVS, so it comes back at the last setting after a power cut. With no
+credentials provisioned this whole path stays off — nothing changes. The
+proxy is not involved: it serves many walls, and brightness belongs to the
+room.
 `set bmin=<0-255>` / `set bmax=<0-255>` (the web flasher shows them as
 percent) squeeze what the panel physically does: the slider's 0% lands on
 the floor, its 100% on the ceiling, so the wall never goes fully dark or

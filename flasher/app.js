@@ -345,8 +345,10 @@ els.btnSave.onclick = async () => {
     }
     cmds.push(`set agency=${agency}`);
   }
-  // Optional Home Assistant broker (protocol v3). Only send what differs
-  // from what the board reported; an empty mhost clears a stored one.
+  // Optional Home Assistant link (protocol v3+; v5 finds the broker via
+  // mDNS when mhost is empty). Only send what differs from what the
+  // board reported; an empty mhost clears a stored one and re-enables
+  // auto-discovery.
   if (board && board.fw >= 3) {
     const mhost = els.mhost.value.trim();
     if (mhost) {

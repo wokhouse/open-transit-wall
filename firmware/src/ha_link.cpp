@@ -4,7 +4,8 @@
 // espressif32@7.1.3 platform ships arduino core 2.0.17, which has no
 // built-in esp-mqtt (MQTT.h arrived in core 3.x). The broker is a LAN
 // address on the network the wall already joined, so plain TCP/1883 is
-// correct; no TLS, no credentials unless the broker asks for them.
+// correct; no TLS. The host is found via mDNS (ha_discover.h) unless
+// provisioning overrides it; credentials are used when set.
 //
 // Home Assistant needs zero configuration: the wall publishes one retained
 // MQTT-discovery config (light, default schema, brightness 0-255) under
@@ -35,6 +36,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "ha_discover.h"
 #include "provisioner.h"
 
 #define HA_BRIGHT_KEY   "bright"
@@ -76,6 +78,19 @@ static bool idsBuilt = false;
 
 static char lastBroker[128];  // broker we are (or last tried) connected to
 static uint32_t nextTryMs = 0;
+
+// When no mhost is provisioned, this holds the host found via mDNS.
+static char discHost[192];
+static uint16_t discPort = 1883;
+
+static const char *brokerHost() {
+  const char *m = provMqttHost();
+  return m[0] ? m : discHost;
+}
+
+static uint16_t brokerPort() {
+  return provMqttHost()[0] ? provMqttPort() : discPort;
+}
 
 // Build the per-wall id and all six topics. The MAC is fixed, so this runs
 // once; WiFi.mode() has already run by the time we are called.
@@ -155,12 +170,11 @@ static void mqttMsg(char *topic, byte *payload, unsigned int len) {
 }
 
 static bool connectBroker() {
-  const char *broker = provMqttHost();
   const char *user = provMqttUser();
   const char *pass = provMqttPass();
   char clientId[16];
   snprintf(clientId, sizeof(clientId), "otw-%s", idHex);
-  mqtt.setServer(broker, provMqttPort());
+  mqtt.setServer(brokerHost(), brokerPort());
   mqtt.setKeepAlive(30);
   // LWT: HA marks the wall unavailable the moment it drops off the broker.
   if (user[0]) {
@@ -183,40 +197,55 @@ void haBegin(void (*apply)(uint8_t)) {
 // Already window-mapped: main.cpp can hand this straight to the panel.
 uint8_t haBrightness() { return mapBrightness(curBrightness); }
 bool haConnected() { return mqtt.connected(); }
+const char *haBroker() { return provMqttHost()[0] ? lastBroker : discHost; }
 
 void haService() {
-  const char *broker = provMqttHost();
-  if (!broker[0] || WiFi.status() != WL_CONNECTED) {
+  // The link is on when a broker host or credentials are provisioned.
+  if ((!provMqttHost()[0] && !provMqttUser()[0]) ||
+      WiFi.status() != WL_CONNECTED) {
     if (mqtt.connected()) {
       mqtt.disconnect();
     }
     lastBroker[0] = '\0';
+    discHost[0] = '\0';
     return;
   }
   if (!idsBuilt) {
     buildIds();
     idsBuilt = true;
   }
-  if (!mqtt.connected() || strcmp(lastBroker, broker) != 0) {
+  if (!mqtt.connected() || strcmp(lastBroker, brokerHost()) != 0) {
     if ((int32_t)(millis() - nextTryMs) < 0) {
       return;  // backoff between attempts
     }
     nextTryMs = millis() + HA_RETRY_MS;
+    if (!provMqttHost()[0] && !discHost[0]) {
+      // No broker given: ask the LAN. HA advertises itself via mDNS and
+      // the add-on broker shares its host; a broker advertising _mqtt._tcp
+      // itself wins with its real port.
+      uint16_t p = 0;
+      if (!haDiscover(discHost, sizeof(discHost), &p)) {
+        Serial.println("[ha] no mqtt broker found via mDNS (set mhost= to override)");
+        return;
+      }
+      discPort = p;
+      Serial.printf("[ha] mDNS found broker %s:%u\n", discHost, p);
+    }
     if (!connectBroker()) {
       // PubSubClient state(): -1 no TCP, -2 connect fail, 4/5/6 broker
       // refused (unauth / id / credentials).
-      Serial.printf("[ha] broker %s:%u unreachable rc=%d\n", broker,
-                    provMqttPort(), mqtt.state());
+      Serial.printf("[ha] broker %s:%u unreachable rc=%d\n", brokerHost(),
+                    brokerPort(), mqtt.state());
       return;
     }
-    snprintf(lastBroker, sizeof(lastBroker), "%s", broker);
+    snprintf(lastBroker, sizeof(lastBroker), "%s", brokerHost());
     mqtt.subscribe(topicSet);
     mqtt.subscribe(topicSetBright);
     mqtt.publish(topicAvail, "online", true);
     publishDiscovery();
     publishState();
     Serial.printf("[ha] mqtt broker %s:%u — light entity announced\n",
-                  broker, provMqttPort());
+                  brokerHost(), brokerPort());
     return;
   }
   mqtt.loop();  // keepalive + command delivery

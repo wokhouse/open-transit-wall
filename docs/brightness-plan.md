@@ -19,8 +19,14 @@ transit data only.
 ## Design
 
 `firmware/src/ha_link.{h,cpp}` is an optional module. It is inert unless
-an MQTT broker is provisioned (`set mhost=...` over WebSerial — see
-`docs/provisioning-protocol.md`). With a broker configured:
+an MQTT username or a broker host is provisioned over WebSerial (see
+`docs/provisioning-protocol.md`). Once enabled:
+
+- Broker discovery: with no `mhost`, `firmware/src/ha_discover.{h,cpp}`
+  browses mDNS — first `_mqtt._tcp` (a broker advertising itself, using
+  its real SRV port), then `_home-assistant._tcp` (HA Core advertises
+  itself; the Mosquitto add-on shares that host, port 1883). `set
+  mhost=...` skips discovery for brokers elsewhere.
 
 - Transport: PubSubClient over plain TCP/1883. The pinned
   `espressif32@7.1.3` platform ships arduino core 2.0.17, which has no
@@ -57,8 +63,8 @@ ones (`docs/provisioning-protocol.md` is the spec):
 
 | key | meaning |
 |---|---|
-| `mhost` | broker host; empty = HA link off |
-| `mport` | broker port; empty = 1883 |
+| `mhost` | manual broker override; empty = find it via mDNS |
+| `mport` | broker port with a manual `mhost`; empty = 1883 |
 | `muser` | MQTT username (optional) |
 | `mpass` | MQTT password (never echoed back, like the WiFi password) |
 | `bmin` | brightness floor, 0–255; empty = 0 |
@@ -100,10 +106,13 @@ frame.
 
 ## Home Assistant side
 
-Nothing to configure beyond having an MQTT broker (the add-on is fine).
-Once the wall connects, HA shows "Transit Wall <id>" as a light with a
-brightness slider. Availability comes from the LWT, so the entity goes
-unavailable the moment the wall drops off the broker.
+Nothing to configure beyond having an MQTT broker (the add-on is fine)
+and giving the wall an MQTT username and password — the add-on requires
+authentication, so create a dedicated HA user for it. The wall finds the
+add-on broker itself via mDNS; no host to type. Once it connects, HA
+shows "Transit Wall <id>" as a light with a brightness slider.
+Availability comes from the LWT, so the entity goes unavailable the
+moment the wall drops off the broker.
 
 ## Out of scope
 

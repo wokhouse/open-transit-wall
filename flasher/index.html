@@ -63,19 +63,25 @@
 
     <details id="mqtt-section" hidden>
     <summary>Home Assistant (optional)</summary>
-    <p class="muted small">Give the wall an MQTT broker on the same network
-    and it appears in Home Assistant as a light — brightness slider, scenes,
-    automations, no HA YAML. Leave empty to leave this off. Clearing the
-    host and sending turns an existing broker off.</p>
+    <p class="muted small">Give the wall an MQTT username and password from
+    Home Assistant (a dedicated user under Settings → People works) and it
+    finds the broker on its own — Home Assistant advertises itself on the
+    LAN — then appears as a light: brightness slider, scenes, automations,
+    no HA YAML. Leave both empty to keep this off.</p>
+    <label for="muser">Username</label>
+    <input id="muser" type="text" maxlength="63" autocomplete="off">
+    <label for="mpass">Password</label>
+    <input id="mpass" type="password" maxlength="63" autocomplete="off">
+    <details id="mqtt-manual">
+    <summary>Manual broker (advanced)</summary>
+    <p class="muted small">Only needed when the broker is not the Home
+    Assistant Mosquitto add-on. A host here skips the auto-discovery.</p>
     <label for="mhost">Broker host</label>
     <input id="mhost" type="text" maxlength="127"
            placeholder="e.g. 192.168.1.10 or core.local">
     <label for="mport">Broker port</label>
     <input id="mport" type="text" maxlength="5" placeholder="1883 (default)">
-    <label for="muser">Username</label>
-    <input id="muser" type="text" maxlength="63" autocomplete="off">
-    <label for="mpass">Password</label>
-    <input id="mpass" type="password" maxlength="63" autocomplete="off">
+    </details>
     <div id="bwindow">
     <p class="muted small">The Home Assistant slider is always 0–100%. A
     floor and ceiling squeeze what the panel actually does: the slider's 0%
