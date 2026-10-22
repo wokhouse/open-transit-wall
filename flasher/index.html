@@ -76,6 +76,23 @@
     <input id="muser" type="text" maxlength="63" autocomplete="off">
     <label for="mpass">Password</label>
     <input id="mpass" type="password" maxlength="63" autocomplete="off">
+    <div id="bwindow">
+    <p class="muted small">The Home Assistant slider is always 0–100%. A
+    floor and ceiling squeeze what the panel actually does: the slider's 0%
+    dims only to the floor and its 100% reaches only the ceiling — keep the
+    wall from going fully dark at night or blazing bright at noon. Leave
+    both empty for the full range.</p>
+    <div class="row">
+      <div>
+        <label for="bmin">Brightness floor %</label>
+        <input id="bmin" type="text" maxlength="3" placeholder="0 (default)">
+      </div>
+      <div>
+        <label for="bmax">Brightness ceiling %</label>
+        <input id="bmax" type="text" maxlength="3" placeholder="100 (default)">
+      </div>
+    </div>
+    </div>
     </details>
 
     <button id="btn-save" disabled>Send to board</button>

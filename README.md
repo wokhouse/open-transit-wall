@@ -123,7 +123,7 @@ save
 provisioned agency, and its compiled backdrop must contain that agency's
 entry (see `tools/gen_backdrop.py`).
 
-The firmware prints a banner on connect (`OTW-FW 3` + `UNPROVISIONED` or
+The firmware prints a banner on connect (`OTW-FW 4` + `UNPROVISIONED` or
 `STORED ...`), applies each `set` live, and `save` persists to NVS. The
 full command set is specified in [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
 — the web flasher in `flasher/` is built against exactly that spec.
@@ -140,6 +140,7 @@ The protocol is line-based text over the USB serial bridge (115200):
 |---|---|
 | `set ssid=…` / `set pass=…` / `set host=…` / `set agency=…` | `OK …` — takes effect immediately |
 | `set mhost=…` (optional) | `OK …` — a Home Assistant MQTT broker on your LAN; see [Brightness from Home Assistant](#brightness-from-home-assistant) |
+| `set bmin=…` / `set bmax=…` (optional) | `OK …` — brightness floor/ceiling: the HA slider's 0% dims only to `bmin`, its 100% reaches only `bmax` |
 | `save` | `OK saved` — persists to NVS, survives power loss |
 | `get all` / `status` | current values / live health |
 | `erase` / `reboot` | wipe NVS copy / restart |
@@ -162,6 +163,10 @@ automations, with no HA YAML. The wall keeps its own brightness in NVS, so
 it comes back at the last setting after a power cut. With no broker
 provisioned this whole path stays off — nothing changes. The proxy is not
 involved: it serves many walls, and brightness belongs to the room.
+`set bmin=<0-255>` / `set bmax=<0-255>` (the web flasher shows them as
+percent) squeeze what the panel physically does: the slider's 0% lands on
+the floor, its 100% on the ceiling, so the wall never goes fully dark or
+blazing bright no matter what an automation asks for.
 Design and topics: [`docs/brightness-plan.md`](docs/brightness-plan.md).
 
 ### 3. Simulator (no hardware)

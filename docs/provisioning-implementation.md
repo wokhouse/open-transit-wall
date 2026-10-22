@@ -27,7 +27,7 @@ implementation behind it.
 | Item | Detail |
 |---|---|
 | Code | `firmware/src/provisioner.cpp` (interface: `provisioner.h`) |
-| Storage | NVS namespace `otw`, keys `ssid`, `pass`, `host`, `scheme`, `port`, `agency`, `mhost`, `mport`, `muser`, `mpass` (plus `bright`, the last Home Assistant brightness, owned by `ha_link.cpp` — see `docs/brightness-plan.md`) |
+| Storage | NVS namespace `otw`, keys `ssid`, `pass`, `host`, `scheme`, `port`, `agency`, `mhost`, `mport`, `muser`, `mpass`, `bmin`, `bmax` (plus `bright`, the last Home Assistant brightness, owned by `ha_link.cpp` — see `docs/brightness-plan.md`) |
 | Live values | RAM copies in the running session. `save` writes them to NVS. |
 | Effect of `set` | Immediate. No reboot and no reflash. |
 | Banner | `OTW-FW <n>` plus `UNPROVISIONED` or `STORED ...` |

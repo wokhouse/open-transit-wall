@@ -25,6 +25,10 @@ button:disabled { opacity: .4; cursor: default; }
 .row { display: flex; gap: 1rem; align-items: end; flex-wrap: wrap; }
 .row > div { flex: 1; min-width: 10rem; }
 .row input, .row select { max-width: 12rem; }
+details { margin: 1rem 0 .4rem; border: 1px solid #e2e2dc; border-radius: 6px;
+          padding: .45rem .9rem; }
+summary { cursor: pointer; font-weight: 600; }
+details[open] { padding-bottom: .8rem; }
 button + button { margin-left: .5rem; }
 .log {
   background: #101010; color: #d8e8d0; padding: .6rem .8rem; border-radius: 4px;

@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-#define OTW_FW_VERSION 3
+#define OTW_FW_VERSION 4
 
 // Load the stored values into RAM (call once, before any WiFi use).
 void provLoad();
@@ -33,3 +33,8 @@ const char *provMqttHost();
 uint16_t provMqttPort();  // 1883 when unset
 const char *provMqttUser();
 const char *provMqttPass();
+// Brightness floor/ceiling the panel applies to any Home Assistant level:
+// HA 0% lands on provBmin(), HA 100% on provBmax(). Defaults 0/255 = full
+// range. See docs/brightness-plan.md.
+uint8_t provBmin();
+uint8_t provBmax();

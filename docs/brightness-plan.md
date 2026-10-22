@@ -52,7 +52,7 @@ an MQTT broker is provisioned (`set mhost=...` over WebSerial — see
 
 ## Provisioning additions
 
-Four optional keys, same `set`/`get`/`save` semantics as the existing
+Six optional keys, same `set`/`get`/`save` semantics as the existing
 ones (`docs/provisioning-protocol.md` is the spec):
 
 | key | meaning |
@@ -61,9 +61,28 @@ ones (`docs/provisioning-protocol.md` is the spec):
 | `mport` | broker port; empty = 1883 |
 | `muser` | MQTT username (optional) |
 | `mpass` | MQTT password (never echoed back, like the WiFi password) |
+| `bmin` | brightness floor, 0–255; empty = 0 |
+| `bmax` | brightness ceiling, 0–255; empty = 255 |
 
-`fw_version` is 3 from this change. Walls on older firmware reject the
-unknown keys (`ERR unknown key`) and keep working unchanged.
+`fw_version` is 4 from the brightness-window change (3 introduced the
+`m*` keys). Walls on older firmware reject the unknown keys
+(`ERR unknown key`) and keep working unchanged.
+
+## Brightness window (floor and ceiling)
+
+Panels differ, and a living room at 2 a.m. does not want the same floor a
+kitchen gets at noon. `bmin`/`bmax` squeeze what the panel physically
+does under any Home Assistant level: the slider's 0% lands on `bmin`,
+its 100% on `bmax`, linearly between. The mapping lives in
+`ha_link.cpp::mapBrightness()` and is applied only on the way to the
+panel — the state topics and the NVS `bright` key keep the raw HA level,
+so the HA slider never lies about where it is. Unset bounds (0/255) make
+the mapping the identity, which is the pre-v4 behaviour.
+
+The web flasher exposes this as "Brightness floor %"/"Brightness ceiling
+%" inside the Home Assistant box and converts percent to 0–255 on the
+wire, so the units match what HA shows. The web UI always offers the
+full 0–100% slider; the window is a wall-side limit, not an HA limit.
 
 ## Home Assistant side
 

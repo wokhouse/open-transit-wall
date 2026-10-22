@@ -1,5 +1,5 @@
 // open-transit-wall web flasher.
-// Speaks the line protocol in docs/provisioning-protocol.md (OTW-FW 3) and
+// Speaks the line protocol in docs/provisioning-protocol.md (OTW-FW 4) and
 // flashes via the vendored esptool-js bundle. No framework, no build step.
 
 import { ESPLoader, Transport } from './vendor/esptool-js/bundle.js';
@@ -15,6 +15,7 @@ const els = {
   ssid: $('ssid'), pass: $('pass'),
   mqttSection: $('mqtt-section'),
   mhost: $('mhost'), mport: $('mport'), muser: $('muser'), mpass: $('mpass'),
+  bmin: $('bmin'), bmax: $('bmax'), bwindow: $('bwindow'),
   btnSave: $('btn-save'), btnErase: $('btn-erase'), provLog: $('prov-log'),
   console: $('console'), cmd: $('cmd'), btnSendCmd: $('btn-send-cmd'),
   btnClearConsole: $('btn-clear-console'),
@@ -160,13 +161,14 @@ async function readBanner() {
     if (m) { board.fw = Number(m[1]); sawBanner = true; }
     if (line.startsWith('UNPROVISIONED') || line === 'STORED none') board.stored = null;
     // scheme/port/agency can be empty strings in the firmware's printf.
-    // The m* tail only appears on protocol v3 boards.
-    m = line.match(/^STORED ssid=(.*?) pass=(set|empty) host=(\S*) scheme=(\S*) port=(\d*) agency=(\S*)(?: mhost=(\S*) mport=(\d*) muser=(\S*) mpass=(set|empty))?$/);
+    // The m*/b* tail only appears on protocol v3+ boards (bmin/bmax on v4).
+    m = line.match(/^STORED ssid=(.*?) pass=(set|empty) host=(\S*) scheme=(\S*) port=(\d*) agency=(\S*)(?: mhost=(\S*) mport=(\d*) muser=(\S*) mpass=(set|empty)(?: bmin=(\d*) bmax=(\d*))?)?$/);
     if (m) {
       board.stored = {
         ssid: m[1], passSet: m[2] === 'set', host: m[3],
         scheme: m[4], port: Number(m[5]), agency: m[6],
         mhost: m[7] ?? '', mport: Number(m[8] || 0), muser: m[9] ?? '',
+        bmin: m[11] ?? '', bmax: m[12] ?? '',
       };
     }
   }
@@ -224,13 +226,22 @@ async function readBanner() {
       if (board.stored.mport && board.stored.mport !== 1883) els.mport.value = String(board.stored.mport);
       els.muser.value = board.stored.muser || '';
     }
+    // Stored bounds are 0-255; the form speaks percent like Home Assistant.
+    if (board.stored.bmin && Number(board.stored.bmin) !== 0) {
+      els.bmin.value = String(Math.round((Number(board.stored.bmin) * 100) / 255));
+    }
+    if (board.stored.bmax && Number(board.stored.bmax) !== 255) {
+      els.bmax.value = String(Math.round((Number(board.stored.bmax) * 100) / 255));
+    }
     provLog('prefilled from the board — change anything and send.');
   } else {
     provLog('board is unprovisioned — fill the form and send.');
   }
-  // The MQTT fields only exist on protocol v3 boards; older firmware would
-  // answer ERR unknown key, so keep the section closed for them.
+  // The MQTT fields only exist on protocol v3+ boards; older firmware would
+  // answer ERR unknown key, so keep the section closed for them. The
+  // brightness window needs v4.
   els.mqttSection.hidden = board.fw < 3;
+  els.bwindow.hidden = board.fw < 4;
   enableProvisioning();
 }
 
@@ -357,6 +368,28 @@ els.btnSave.onclick = async () => {
     }
     if (els.muser.value) cmds.push(`set muser=${els.muser.value}`);
     if (els.mpass.value) cmds.push(`set mpass=${els.mpass.value}`);
+    // Brightness window (protocol v4). The form speaks percent like the
+    // Home Assistant slider; the wire carries 0-255 like every other
+    // brightness value on the wall. Reset the window to defaults first so
+    // the firmware's cross-bound checks cannot be tripped by command order.
+    const bmin = els.bmin.value.trim(), bmax = els.bmax.value.trim();
+    if (board.fw >= 4 && (bmin || bmax || board.stored?.bmin || board.stored?.bmax)) {
+      if (bmin && (!/^\d{1,3}$/.test(bmin) || Number(bmin) > 100)) {
+        provLog(`brightness floor "${bmin}" is not 0-100 — leave it empty for 0.`);
+        setBusy(false); return;
+      }
+      if (bmax && (!/^\d{1,3}$/.test(bmax) || Number(bmax) > 100)) {
+        provLog(`brightness ceiling "${bmax}" is not 0-100 — leave it empty for 100.`);
+        setBusy(false); return;
+      }
+      if (bmin && bmax && Number(bmin) > Number(bmax)) {
+        provLog(`brightness floor ${bmin}% is above the ceiling ${bmax}% — fix it before sending.`);
+        setBusy(false); return;
+      }
+      cmds.push('set bmin=', 'set bmax=');
+      if (bmin) cmds.push(`set bmin=${Math.round((Number(bmin) * 255) / 100)}`);
+      if (bmax) cmds.push(`set bmax=${Math.round((Number(bmax) * 255) / 100)}`);
+    }
   }
   try {
     for (const c of cmds) {

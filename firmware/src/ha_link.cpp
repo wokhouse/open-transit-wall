@@ -50,6 +50,21 @@ static void (*applyBrightness)(uint8_t) = nullptr;
 static uint8_t curBrightness = DISPLAY_BRIGHTNESS;
 static bool powered = true;
 
+// Home Assistant levels (0-255) are remapped into the provisioned
+// brightness window before touching the panel: HA 0% lands on bmin, HA
+// 100% on bmax. The state topics keep the raw HA level, so the slider in
+// HA always shows what HA sent. Unset bounds (0/255) = identity.
+static uint8_t mapBrightness(uint8_t v) {
+  uint8_t lo = provBmin(), hi = provBmax();
+  if (lo == 0 && hi == 255) {
+    return v;
+  }
+  if (hi < lo) {
+    hi = lo;  // defensive: a broken window collapses to the floor
+  }
+  return (uint8_t)(lo + (uint32_t)v * (hi - lo) / 255);
+}
+
 static char idHex[HA_ID_HEX + 1];
 static char topicState[48];
 static char topicBright[48];
@@ -113,7 +128,9 @@ static void mqttMsg(char *topic, byte *payload, unsigned int len) {
   if (strcmp(topic, topicSet) == 0) {
     // PubSubClient does not NUL-terminate; compare against the length.
     powered = len == 2 && memcmp(payload, "ON", 2) == 0;
-    applyBrightness(powered ? (curBrightness ? curBrightness : DISPLAY_BRIGHTNESS) : 0);
+    applyBrightness(powered ? mapBrightness(curBrightness ? curBrightness
+                                                         : DISPLAY_BRIGHTNESS)
+                            : 0);
     publishState();
   } else if (strcmp(topic, topicSetBright) == 0) {
     char num[8];
@@ -131,7 +148,7 @@ static void mqttMsg(char *topic, byte *payload, unsigned int len) {
     if (v > 0) {
       powered = true;  // a brightness command is also a turn-on
     }
-    applyBrightness((uint8_t)v);
+    applyBrightness(mapBrightness((uint8_t)v));
     haPrefs.putInt(HA_BRIGHT_KEY, v);  // survive the next boot without HA
     publishState();
   }
@@ -163,7 +180,8 @@ void haBegin(void (*apply)(uint8_t)) {
   mqtt.setCallback(mqttMsg);
 }
 
-uint8_t haBrightness() { return curBrightness; }
+// Already window-mapped: main.cpp can hand this straight to the panel.
+uint8_t haBrightness() { return mapBrightness(curBrightness); }
 bool haConnected() { return mqtt.connected(); }
 
 void haService() {
