@@ -185,6 +185,10 @@ void haService() {
     }
     nextTryMs = millis() + HA_RETRY_MS;
     if (!connectBroker()) {
+      // PubSubClient state(): -1 no TCP, -2 connect fail, 4/5/6 broker
+      // refused (unauth / id / credentials).
+      Serial.printf("[ha] broker %s:%u unreachable rc=%d\n", broker,
+                    provMqttPort(), mqtt.state());
       return;
     }
     snprintf(lastBroker, sizeof(lastBroker), "%s", broker);
