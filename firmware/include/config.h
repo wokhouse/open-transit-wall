@@ -72,7 +72,11 @@
 #endif
 
 // --- Display look -----------------------------------------------------------
-#define DISPLAY_BRIGHTNESS 48     // 0-255; panels are very bright indoors
+// Boot brightness (0-255; panels are very bright indoors). If a Home
+// Assistant MQTT broker is provisioned, the wall's real brightness is the
+// last value HA set — persisted in NVS (see src/ha_link.h) — and this is
+// only the fallback for walls that never had one.
+#define DISPLAY_BRIGHTNESS 48
 #define STATUS_PIXEL_ENABLED 1    // corner pixel: green=fresh, amber=aging, red=error
 
 // --- Map area ---------------------------------------------------------------

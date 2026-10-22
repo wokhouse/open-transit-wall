@@ -18,6 +18,11 @@
 // ("bbox", "palette"): nothing about the agency is compiled except the
 // backdrop bitmap, which is looked up by agency id below.
 //
+// Optionally the wall also speaks MQTT on the LAN (src/ha_link.h): with a
+// broker provisioned (`set mhost=...`) it announces itself to Home
+// Assistant as a native light entity and keeps its brightness there. With
+// no broker configured this changes nothing.
+//
 // Rendering is strictly incremental: the backdrop is painted once at boot
 // and the loop only rewrites the individual pixels that change as dots
 // glide. Full-frame redraws would tear against the DMA scan-out and show
@@ -30,6 +35,7 @@
 
 #include "backdrop.h"
 #include "config.h"
+#include "ha_link.h"
 #include "map_project.h"
 #include "provisioner.h"
 #include "screen.h"
@@ -61,6 +67,9 @@ static bool seen[MAX_VEHICLES];
 static int16_t slotOrder[MAX_VEHICLES];  // shuffled glide-slot assignment
 
 static void drawStatusPixel();
+
+// Brightness setter handed to ha_link: MQTT commands land here.
+static void applyPanelBrightness(uint8_t v) { screen.setBrightness(v); }
 
 // What the panel is currently showing. The map is the normal state
 // (ERR_NONE); splash, setup-needed, and error screens replace it until the
@@ -423,7 +432,7 @@ void setup() {
     Serial.println("HUB75 init failed — halting");
     while (true) delay(1000);
   }
-  screen.setBrightness(DISPLAY_BRIGHTNESS);
+  screen.setBrightness(DISPLAY_BRIGHTNESS);  // boot default; NVS value applied after provLoad
 
   // Splash while we figure out what to show: the roundel bouncing DVD-style
   // around the panel while the wall loads. Replaced by the map or an error
@@ -434,6 +443,12 @@ void setup() {
   drawSplashFrame();
 
   provLoad();
+  // The panel brightness the user last set from Home Assistant (if ever)
+  // lives in NVS; restore it before anything is drawn. With no stored
+  // value this is DISPLAY_BRIGHTNESS again — no behavior change for walls
+  // that never see an MQTT broker.
+  haBegin(applyPanelBrightness);
+  screen.setBrightness(haBrightness());
   if (provNeeded()) {
     // No complete config in NVS yet (needs ssid + host). Stay up on the
     // serial console: the browser tool (or any terminal) can `set` values;
@@ -473,6 +488,10 @@ void loop() {
   // while the wall runs (a corrected password takes effect on the next
   // connect attempt without a reboot).
   provPumpSerial();
+
+  // Home Assistant link: no-op unless a broker was provisioned. Runs every
+  // loop so keepalive and brightness commands land between polls.
+  haService();
 
   if ((int32_t)(now - nextPollMs) >= 0) {
     // Fallback cadence only for failed polls; a successful poll re-arms

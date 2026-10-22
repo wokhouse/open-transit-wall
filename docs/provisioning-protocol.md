@@ -26,7 +26,7 @@ compiled defaults. The firmware implementation is
 
 ```
 OTW-FW <version>
-STORED ssid=<s> pass=set|empty host=<h> scheme=<s> port=<p> agency=<a>
+STORED ssid=<s> pass=set|empty host=<h> scheme=<s> port=<p> agency=<a> mhost=<m> mport=<p> muser=<u> mpass=set|empty
 ```
 
 or, when no SSID is stored in NVS:
@@ -49,12 +49,16 @@ The tool uses `OTW-FW` to recognize the device and `UNPROVISIONED` /
 | `set scheme=https://` \| `http://` | `OK scheme=...` | optional; empty means `https://` |
 | `set port=<1-65535>` | `OK port=...` | optional; empty means `443` |
 | `set agency=<registry id>` | `OK agency=<a> ...` | lowercase `[a-z0-9]{1,8}`; the id from the server's `/agencies` list. Empty is rejected — clearing requires `erase` |
-| `get ssid` / `host` / `scheme` / `port` / `agency` | `VAL <key>=<value>` | current live value (`ssid` replies `VAL ssid EMPTY` when unset; `port` replies `VAL port=0`, and 0 is never a valid port) |
-| `get pass` | `VAL pass SET len=<n>` or `VAL pass EMPTY len=0` | the password is never echoed back |
-| `get all` | six `VAL` lines | |
-| `status` | several `STATUS ...` lines | fw version, provisioned flag, proxy URL, WiFi state + IP, free heap |
+| `set mhost=<broker host>` | `OK mhost=<h> ...` | optional Home Assistant MQTT broker (see `docs/brightness-plan.md`); same host rules as `host`. Empty clears it — the HA link is off |
+| `set mport=<1-65535>` | `OK mport=...` | optional; empty means `1883` |
+| `set muser=<username>` | `OK muser=<u> ...` | optional; 0–63 chars |
+| `set mpass=<password>` | `OK mpass set ...` | optional; 0–63 chars, never echoed back |
+| `get ssid` / `host` / `scheme` / `port` / `agency` / `mhost` / `mport` / `muser` | `VAL <key>=<value>` | current live value (`ssid` replies `VAL ssid EMPTY` when unset; `port` replies `VAL port=0`, and 0 is never a valid port; `mport` replies `VAL mport=0` when unset — 0 means the 1883 default) |
+| `get pass` / `get mpass` | `VAL pass SET len=<n>` or `VAL pass EMPTY len=0` | the password is never echoed back |
+| `get all` | ten `VAL` lines | |
+| `status` | several `STATUS ...` lines | fw version, provisioned flag, proxy URL, MQTT broker + link state, WiFi state + IP, free heap |
 | `save` | `OK saved` | persist the live values to NVS (survives power loss) |
-| `erase` | `OK erased ...` | wipe the NVS copy; `ssid`/`pass` also clear in the live session (back to provisioning mode), `host`/`scheme`/`port`/`agency` stay until reboot |
+| `erase` | `OK erased ...` | wipe the NVS copy; `ssid`/`pass` also clear in the live session (back to provisioning mode), `host`/`scheme`/`port`/`agency`/`mhost`/`mport`/`muser`/`mpass` stay until reboot |
 | `reboot` | `OK rebooting` | `esp_restart()` |
 | `help` | `CMD ...` lines | command list |
 
@@ -64,14 +68,19 @@ unknown key ...`. Bad value → `ERR <key> must be ...`.
 ## Value rules
 
 - `ssid`: 1–32 chars. `pass`: 0–63 chars (open networks take an empty
-  value). `host`: 1–127 chars, no `/`, `:`, or spaces. Line length ≤ 256.
+  value). `host`: 1–127 chars, no `/`, `:`, or spaces. `mhost`: same
+  rules as `host`, but empty is allowed and turns the HA link off.
+  `muser`/`mpass`: 0–63 chars. Line length ≤ 256.
 - Values run to end of line; no quoting. A `set` takes effect immediately in
   the running session; `save` is what persists it. The tool's flow is:
   `set ssid=…`, `set pass=…`, `set host=…`, `save`, then read the next
   `WiFi: connecting…` / `connected, ip=` lines from the firmware log as the
   success signal.
 - Storage: NVS namespace `otw`, keys `ssid`, `pass`, `host`, `scheme`,
-  `port`, `agency`. An empty stored `ssid` means unprovisioned.
+  `port`, `agency`, `mhost`, `mport`, `muser`, `mpass`. An empty stored
+  `ssid` means unprovisioned. The brightness the wall last applied from
+  HA is also in namespace `otw` (key `bright`) — see
+  `docs/brightness-plan.md`; `erase` clears it too.
 
 ## Readiness — no compiled defaults
 
@@ -92,8 +101,18 @@ device itself knows no endpoints.
 - `scheme`/`port` exist for LAN dev against `server/proxy.py`
   (`scheme=http://`, `port=8000`). The tool UI only needs the three core
   fields; leave the extras at their defaults.
+- `mhost`/`mport`/`muser`/`mpass` are never required for readiness. With
+  no broker the wall behaves exactly as before; with one it also keeps an
+  MQTT connection to the LAN broker for Home Assistant (see
+  `docs/brightness-plan.md`). A live `set mhost=...` connects without a
+  reboot; clearing it disconnects.
 
 ## Versioning
 
 `OTW-FW <version>` is a single integer, bumped only on breaking protocol
-changes. Current: 2.
+changes. Current: 3.
+
+Version 3 added the optional `mhost`/`mport`/`muser`/`mpass` keys and the
+matching `STORED`/`get all`/`status` fields. Older firmware (v2) answers
+`ERR unknown key` for them, so the tool should only show the MQTT fields
+when the banner reports `OTW-FW >= 3`.

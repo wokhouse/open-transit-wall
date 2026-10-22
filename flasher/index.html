@@ -61,6 +61,23 @@
     <p class="muted small">Leave the password empty to keep what the board
     already has — it is never read back over the wire.</p>
 
+    <details id="mqtt-section" hidden>
+    <summary>Home Assistant (optional)</summary>
+    <p class="muted small">Give the wall an MQTT broker on the same network
+    and it appears in Home Assistant as a light — brightness slider, scenes,
+    automations, no HA YAML. Leave empty to leave this off. Clearing the
+    host and sending turns an existing broker off.</p>
+    <label for="mhost">Broker host</label>
+    <input id="mhost" type="text" maxlength="127"
+           placeholder="e.g. 192.168.1.10 or core.local">
+    <label for="mport">Broker port</label>
+    <input id="mport" type="text" maxlength="5" placeholder="1883 (default)">
+    <label for="muser">Username</label>
+    <input id="muser" type="text" maxlength="63" autocomplete="off">
+    <label for="mpass">Password</label>
+    <input id="mpass" type="password" maxlength="63" autocomplete="off">
+    </details>
+
     <button id="btn-save" disabled>Send to board</button>
     <button id="btn-erase" disabled>Erase board</button>
     <pre id="prov-log" class="log" hidden></pre>

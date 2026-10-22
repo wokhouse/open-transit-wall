@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-#define OTW_FW_VERSION 2
+#define OTW_FW_VERSION 3
 
 // Load the stored values into RAM (call once, before any WiFi use).
 void provLoad();
@@ -27,3 +27,9 @@ uint16_t provPort();
 // Registry id of the agency this wall displays ("" = no agency param, which
 // works against single-agency servers).
 const char *provAgency();
+// Optional Home Assistant MQTT broker (see ha_link.h). Empty host means the
+// HA link is off — the wall works exactly as before without one.
+const char *provMqttHost();
+uint16_t provMqttPort();  // 1883 when unset
+const char *provMqttUser();
+const char *provMqttPass();

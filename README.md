@@ -123,14 +123,14 @@ save
 provisioned agency, and its compiled backdrop must contain that agency's
 entry (see `tools/gen_backdrop.py`).
 
-The firmware prints a banner on connect (`OTW-FW 2` + `UNPROVISIONED` or
+The firmware prints a banner on connect (`OTW-FW 3` + `UNPROVISIONED` or
 `STORED ...`), applies each `set` live, and `save` persists to NVS. The
 full command set is specified in [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
 — the web flasher in `flasher/` is built against exactly that spec.
 
 Libraries (auto-installed by PlatformIO):
-[ESP32-HUB75-MatrixPanel-I2S-DMA](https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-I2S-DMA)
-and ArduinoJson.
+[ESP32-HUB75-MatrixPanel-I2S-DMA](https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-I2S-DMA),
+ArduinoJson, and PubSubClient (only used when an MQTT broker is provisioned).
 
 ### Provisioning over WebSerial
 
@@ -139,6 +139,7 @@ The protocol is line-based text over the USB serial bridge (115200):
 | you send | the wall answers |
 |---|---|
 | `set ssid=…` / `set pass=…` / `set host=…` / `set agency=…` | `OK …` — takes effect immediately |
+| `set mhost=…` (optional) | `OK …` — a Home Assistant MQTT broker on your LAN; see [Brightness from Home Assistant](#brightness-from-home-assistant) |
 | `save` | `OK saved` — persists to NVS, survives power loss |
 | `get all` / `status` | current values / live health |
 | `erase` / `reboot` | wipe NVS copy / restart |
@@ -149,6 +150,19 @@ no reflash, no reboot. `scheme`/`port` are optional extras for LAN dev
 against `server/proxy.py` (empty means HTTPS/443). See
 [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
 for the exact grammar, limits, and error replies.
+
+### Brightness from Home Assistant
+
+If your home runs an MQTT broker (the Home Assistant add-on is fine),
+provision it on the wall: `set mhost=<broker host>` (plus `mport`/`muser`/
+`mpass` if needed). The wall then connects to the broker over the LAN it is
+already on and announces itself through Home Assistant MQTT auto-discovery:
+a real **light entity** with a brightness slider, usable in scenes and
+automations, with no HA YAML. The wall keeps its own brightness in NVS, so
+it comes back at the last setting after a power cut. With no broker
+provisioned this whole path stays off — nothing changes. The proxy is not
+involved: it serves many walls, and brightness belongs to the room.
+Design and topics: [`docs/brightness-plan.md`](docs/brightness-plan.md).
 
 ### 3. Simulator (no hardware)
 
@@ -228,6 +242,9 @@ the same pin map (`firmware/include/config.h`).
   grounds are tied.
 - Set `DISPLAY_BRIGHTNESS` in `config.h` — full-white full-brightness is far
   beyond spec; the dot map only needs modest brightness (default 48/255).
+  With an MQTT broker provisioned, the live value comes from Home Assistant
+  instead and this constant is only the boot fallback (see
+  [Brightness from Home Assistant](#brightness-from-home-assistant)).
 
 ### USB serial
 

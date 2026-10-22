@@ -83,6 +83,7 @@ python3 tools/gen_backdrop.py --w 128 --h 64    # writes firmware/src/backdrop.h
 | `server/routes.json` | Cached GTFS route types and colors. |
 | `firmware/` | PlatformIO + Arduino ESP32. `include/config.h` holds map and panel constants. |
 | `firmware/src/provisioner.cpp` | WebSerial provisioning. NVS namespace `otw`. |
+| `firmware/src/ha_link.*` | Optional Home Assistant link: MQTT light entity + NVS-persisted brightness. Off unless a broker is provisioned. |
 | `firmware/src/map_project.h` | lat/lon -> pixel projection. |
 | `sim/`, `tools/run_sim.sh` | Native simulator: same projection and backdrop, no hardware. It compiles no firmware `main`, so it is unaffected by a firmware change. |
 | `tools/gen_backdrop.py` | Shoreline -> RLE bitmap at the matrix size. |
@@ -130,6 +131,7 @@ python3 tools/gen_backdrop.py --w 128 --h 64    # writes firmware/src/backdrop.h
 
 - `docs/provisioning-protocol.md` — the WebSerial contract (the spec).
 - `docs/provisioning-implementation.md` — how the one-binary model works.
+- `docs/brightness-plan.md` — the Home Assistant MQTT light link.
 - `docs/adr/0001-backend-frontend-split.md` — API-only server split, status
   Proposed.
 - `docs/plan.md` — the browser provisioning tool. Not built yet.
