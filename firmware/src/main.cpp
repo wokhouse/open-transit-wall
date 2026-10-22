@@ -69,7 +69,25 @@ static int16_t slotOrder[MAX_VEHICLES];  // shuffled glide-slot assignment
 static void drawStatusPixel();
 
 // Brightness setter handed to ha_link: MQTT commands land here.
-static void applyPanelBrightness(uint8_t v) { screen.setBrightness(v); }
+// Brightness last commanded to the panel. 0 means "off": the map goes dark
+// but the frame branch in loop() keeps the status pixels lit at
+// STATUS_PIXEL_FLOOR, so the wall still shows it is alive and MQTT-linked.
+static uint8_t panelBrightness = DISPLAY_BRIGHTNESS;
+static bool mapDirty = false;  // frame was cleared while off; repaint on return
+
+static void applyPanelBrightness(uint8_t v) {
+  if (v == panelBrightness) {
+    return;
+  }
+  if (v > 0) {
+    if (panelBrightness == 0) {
+      mapDirty = true;  // the off frame wiped the map; repaint before animating
+    }
+    screen.setBrightness(v);
+  }
+  // v == 0: the floor brightness is applied by the off-frame branch instead.
+  panelBrightness = v;
+}
 
 // What the panel is currently showing. The map is the normal state
 // (ERR_NONE); splash, setup-needed, and error screens replace it until the
@@ -105,8 +123,8 @@ static void paintBg(int x, int y) {
   }
   const uint8_t *rgb = bgIndex[y * DISPLAY_W + x] ? BACKDROP_WATER : BACKDROP_LAND;
   screen.drawPixel(x, y, rgb[0], rgb[1], rgb[2]);
-  if (x == 0 && y == 0) {
-    drawStatusPixel();  // the status pixel lives at (0,0)
+  if (x == 1 && y == 0) {
+    drawStatusPixel();  // the data status pixel lives at (1,0)
   }
 }
 
@@ -355,6 +373,7 @@ static void animate(uint32_t now) {
 
 static void drawStatusPixel() {
 #if STATUS_PIXEL_ENABLED
+  static bool mqttPixelOn = false;
   uint8_t r, g, b;
   if (pollFailures == 0) {
     r = 0; g = 160; b = 0;      // fresh
@@ -363,7 +382,21 @@ static void drawStatusPixel() {
   } else {
     r = 200; g = 0; b = 0;      // error
   }
-  screen.drawPixel(0, 0, r, g, b);
+  screen.drawPixel(1, 0, r, g, b);
+  // Second status pixel: purple while the Home Assistant link is up. When
+  // the link drops, restore what was under it so no stale purple lingers.
+  if (haConnected()) {
+    mqttPixelOn = true;
+    screen.drawPixel(2, 0, 150, 0, 200);
+  } else if (mqttPixelOn) {
+    mqttPixelOn = false;
+    if (panelBrightness == 0 || shownError != ERR_NONE) {
+      screen.drawPixel(2, 0, 0, 0, 0);  // off-frame / status screen bg is black
+    } else {
+      paintBg(2, 0);
+      redrawOccupants(2, 0, -1);  // a dot may have been parked under the pixel
+    }
+  }
 #endif
 }
 
@@ -448,7 +481,7 @@ void setup() {
   // value this is DISPLAY_BRIGHTNESS again — no behavior change for walls
   // that never see an MQTT broker.
   haBegin(applyPanelBrightness);
-  screen.setBrightness(haBrightness());
+  applyPanelBrightness(haBrightness());
   if (provNeeded()) {
     // No complete config in NVS yet (needs ssid + host). Stay up on the
     // serial console: the browser tool (or any terminal) can `set` values;
@@ -576,7 +609,31 @@ void loop() {
   static uint32_t nextFrameMs = 0;
   if ((int32_t)(now - nextFrameMs) >= 0) {
     nextFrameMs = now + 1000 / RENDER_FPS;
-    animate(now);
+    if (panelBrightness == 0) {
+      // "Off" is not fully dark: the map is out, but the status pixels
+      // stay lit at ~1% so the wall still reports alive/MQTT state.
+      screen.setBrightness(STATUS_PIXEL_FLOOR);
+      screen.clear();
+      drawStatusPixel();
+    } else {
+      if (mapDirty) {
+        // Back from the off frame: the frame was wiped, so repaint the map
+        // wholesale (same as showScreen(ERR_NONE), but forced) and re-merge
+        // the current snapshot so vehicles are back at once, not next poll.
+        // With activeCount reset to 0 every vehicle re-adds in place, so
+        // the glide-stagger arguments never apply.
+        mapDirty = false;
+        shownError = ERR_NONE;
+        if (curBackdrop) {
+          screen.drawBackdrop(*curBackdrop);
+        } else {
+          screen.clear();
+        }
+        activeCount = 0;
+        mergeVehicles(now, 0.0f, 60);
+      }
+      animate(now);
+    }
   }
 
   delay(2);

@@ -84,6 +84,20 @@ The web flasher exposes this as "Brightness floor %"/"Brightness ceiling
 wire, so the units match what HA shows. The web UI always offers the
 full 0–100% slider; the window is a wall-side limit, not an HA limit.
 
+## Status pixels when the panel is "off"
+
+The status pixels (`main.cpp::drawStatusPixel()`) report state along the
+top edge: (1,0) green=fresh data, amber=aging, red=error; (2,0) purple
+while the MQTT link to Home Assistant is up (and nothing when the broker
+is unset or down). Turning the light OFF — or 0% with no floor — blanks
+the map, but the frame keeps only those pixels lit at
+`STATUS_PIXEL_FLOOR` (~1% panel brightness) so a dark wall still shows
+it is alive and linked. Turning it back on repaints the map wholesale and
+re-merges the current snapshot (`mapDirty` in `main.cpp`), so vehicles
+are back immediately — no wait for the next poll. The window (`bmin`)
+constrains the slider, not the OFF command: OFF always reaches the floor
+frame.
+
 ## Home Assistant side
 
 Nothing to configure beyond having an MQTT broker (the add-on is fine).

@@ -77,7 +77,12 @@
 // last value HA set — persisted in NVS (see src/ha_link.h) — and this is
 // only the fallback for walls that never had one.
 #define DISPLAY_BRIGHTNESS 48
-#define STATUS_PIXEL_ENABLED 1    // corner pixel: green=fresh, amber=aging, red=error
+// Status pixels along the top edge: (1,0) green=fresh, amber=aging,
+// red=error; (2,0) purple while the Home Assistant MQTT link is up. Even
+// when the panel is "off" (HA OFF or 0%), the frame keeps only these
+// pixels lit at STATUS_PIXEL_FLOOR (~1%) so the wall still reports state.
+#define STATUS_PIXEL_ENABLED 1
+#define STATUS_PIXEL_FLOOR   3
 
 // --- Map area ---------------------------------------------------------------
 // The bounding box is NOT compiled: the proxy ships it per agency in the
