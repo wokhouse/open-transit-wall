@@ -33,6 +33,10 @@ void haService();
 
 // True while the broker connection is up (for `status`).
 bool haConnected();
+// True when the link is configured (broker host or MQTT credentials
+// provisioned). Combined with haConnected() a caller can tell "up" from
+// "configured but broken" from "not configured".
+bool haEnabled();
 
 // The broker this module is using or last tried: the provisioned host, or
 // the mDNS-discovered one when none was provisioned. Empty = unknown yet.

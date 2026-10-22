@@ -383,11 +383,17 @@ static void drawStatusPixel() {
     r = 200; g = 0; b = 0;      // error
   }
   screen.drawPixel(1, 0, r, g, b);
-  // Second status pixel: purple while the Home Assistant link is up. When
-  // the link drops, restore what was under it so no stale purple lingers.
-  if (haConnected()) {
+  // Second status pixel: purple while the Home Assistant link is up, red
+  // when the link is configured but down (broker not found, auth refused,
+  // WiFi lost), and absent when the link is not configured at all. When
+  // the pixel goes dark, restore what was under it so no color lingers.
+  if (haEnabled()) {
     mqttPixelOn = true;
-    screen.drawPixel(2, 0, 110, 0, 150);  // deep violet, kept below the data pixel's punch
+    if (haConnected()) {
+      screen.drawPixel(2, 0, 110, 0, 150);  // deep violet, kept below the data pixel's punch
+    } else {
+      screen.drawPixel(2, 0, 200, 0, 0);  // same red as the data pixel's error state
+    }
   } else if (mqttPixelOn) {
     mqttPixelOn = false;
     if (panelBrightness == 0 || shownError != ERR_NONE) {

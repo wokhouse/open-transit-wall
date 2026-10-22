@@ -197,6 +197,7 @@ void haBegin(void (*apply)(uint8_t)) {
 // Already window-mapped: main.cpp can hand this straight to the panel.
 uint8_t haBrightness() { return mapBrightness(curBrightness); }
 bool haConnected() { return mqtt.connected(); }
+bool haEnabled() { return provMqttHost()[0] || provMqttUser()[0]; }
 const char *haBroker() { return provMqttHost()[0] ? lastBroker : discHost; }
 
 void haService() {

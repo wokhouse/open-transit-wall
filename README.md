@@ -170,9 +170,10 @@ room.
 percent) squeeze what the panel physically does: the slider's 0% lands on
 the floor, its 100% on the ceiling, so the wall never goes fully dark or
 blazing bright no matter what an automation asks for. Turning the light
-off blanks the map, but the status pixels — green/amber/red for
-data freshness, purple while the Home Assistant link is up — stay lit at
-about 1% so a dark wall still shows it is alive.
+off blanks the map, but the status pixels — green/amber/red for data
+freshness, purple while the Home Assistant link is up and red when it is
+configured but down — stay lit at about 1% so a dark wall still shows it
+is alive.
 Design and topics: [`docs/brightness-plan.md`](docs/brightness-plan.md).
 
 ### 3. Simulator (no hardware)

@@ -94,8 +94,10 @@ full 0–100% slider; the window is a wall-side limit, not an HA limit.
 
 The status pixels (`main.cpp::drawStatusPixel()`) report state along the
 top edge: (1,0) green=fresh data, amber=aging, red=error; (2,0) purple
-while the MQTT link to Home Assistant is up (and nothing when the broker
-is unset or down). Turning the light OFF — or 0% with no floor — blanks
+while the MQTT link to Home Assistant is up, red when the link is
+configured but down (broker not found, auth refused, WiFi lost), and
+nothing when the link is not configured. Turning the light OFF — or 0%
+with no floor — blanks
 the map, but the frame keeps only those pixels lit at
 `STATUS_PIXEL_FLOOR` (~1% panel brightness) so a dark wall still shows
 it is alive and linked. Turning it back on repaints the map wholesale and
