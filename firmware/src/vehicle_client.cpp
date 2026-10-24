@@ -48,8 +48,10 @@ static bool readBbox(JsonObject root, float *bbox) {
   return bbox[0] < bbox[1] && bbox[2] < bbox[3];
 }
 
-// palette: { "B": [r,g,b], ... }. Every entry must be a 3-int array of
-// bytes; an empty palette is fine (no vehicle can reference it then).
+// palette: { "B": [r,g,b], "M:J": [r,g,b], ... }. Keys are opaque style
+// keys (see the server's classify.style_key). Every entry must be a 3-int
+// array of bytes; an empty palette is fine (no vehicle can reference it
+// then).
 static bool readPalette(JsonObject root, JsonObject &palette) {
   palette = root["palette"].as<JsonObject>();
   if (palette.isNull()) {
@@ -140,8 +142,9 @@ PollResult fetchVehicles(const char *scheme, const char *host, uint16_t port,
   res.age = root["age"].as<float>();
   res.next = (uint32_t)root["next"].as<int>();
 
-  // v rows: [lat, lon, "TYPE", id]. A row whose type key is not in the
-  // palette is skipped — never invent a color.
+  // v rows: [lat, lon, "STYLE KEY", id] (a type code or an "M:<LINE>"
+  // per-line key). A row whose key is not in the palette is skipped —
+  // never invent a color.
   JsonArray vehicles = root["v"].as<JsonArray>();
   int n = 0;
   for (JsonArray row : vehicles) {

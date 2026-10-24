@@ -49,8 +49,9 @@ def test_compact_drops_no_line_but_keeps_all_types():
     ]
     out = proxy.compact_vehicles(raw, routes={}, fallback=proxy.MUNI_FALLBACK)
     assert [v["r"] for v in out] == ["N", "38", "PH"]  # only no-line dropped
-    assert out[0]["t"] == "M"
-    assert "c" not in out[0]  # colors live in the payload palette, not per vehicle
+    assert out[0]["t"] == "M:N"  # metro carries a per-line style key
+    assert out[0]["c"] == [0, 87, 184]  # classified color is server-side palette material
+    assert out[1]["t"] == "B" and out[2]["t"] == "C"  # non-metro keys stay generic
 
 
 def test_compact_without_fallback_is_agency_safe():
@@ -61,30 +62,62 @@ def test_compact_without_fallback_is_agency_safe():
     assert out[0]["t"] == "B"
 
 
-def test_to_wire_carries_type_code_not_rgb():
-    v = {"r": "N", "la": 37.76, "lo": -122.47, "t": "M", "i": 65501}
-    assert proxy.to_wire([v]) == [[37.76, -122.47, "M", 65501]]
+def test_to_wire_carries_style_key_not_rgb():
+    v = {"r": "N", "la": 37.76, "lo": -122.47, "t": "M:N", "c": [0, 87, 184], "i": 65501}
+    assert proxy.to_wire([v]) == [[37.76, -122.47, "M:N", 65501]]
 
 
 def test_payload_carries_bbox_next_and_only_present_palette_codes():
     state = proxy.AgencyState("sf", TEST_CFG)
     state.arm_next_poll(125)
     state.update([
-        {"r": "38", "la": 1.5, "lo": 3.5, "t": "B", "i": 1},
-        {"r": "N", "la": 1.5, "lo": 3.5, "t": "M", "i": 2},
+        {"r": "38", "la": 1.5, "lo": 3.5, "t": "B", "c": [0, 64, 255], "i": 1},
+        {"r": "N", "la": 1.5, "lo": 3.5, "t": "M:N", "c": [0, 87, 184], "i": 2},
+        {"r": "L", "la": 1.5, "lo": 3.5, "t": "M:L", "c": [160, 93, 165], "i": 3},
     ])
     payload = state.payload()
     assert payload["bbox"] == [1.0, 2.0, 3.0, 4.0]
     assert 0 <= payload["next"] <= 125
-    assert set(payload["palette"]) == {"B", "M"}
+    assert set(payload["palette"]) == {"B", "M:N", "M:L"}
     assert payload["palette"]["B"] == proxy.DEFAULT_PALETTE["B"]
+
+
+def test_each_metro_line_gets_its_own_palette_entry():
+    # The actual feature: two metro lines must not share one color.
+    state = proxy.AgencyState("sf", TEST_CFG)
+    raw = [
+        {"line": "J", "lat": 1.5, "lon": 3.5, "bearing": 0, "direction": "0", "id": "1"},
+        {"line": "T", "lat": 1.5, "lon": 3.5, "bearing": 0, "direction": "0", "id": "2"},
+        {"line": "38", "lat": 1.5, "lon": 3.5, "bearing": 0, "direction": "0", "id": "3"},
+    ]
+    state.update(proxy.compact_vehicles(raw, routes={}, fallback=proxy.MUNI_FALLBACK))
+    palette = state.payload()["palette"]
+    assert set(palette) == {"M:J", "M:T", "B"}
+    assert palette["M:J"] == [0xFF, 0xC7, 0x2C]  # J Church yellow
+    assert palette["M:T"] == [0x00, 0xA9, 0x5C]  # T Third green
+    assert palette["M:J"] != palette["M:T"]
+    rows = proxy.to_wire(state.payload()["v"])
+    assert {"M:J", "M:T"} <= {row[2] for row in rows}
 
 
 def test_registry_palette_override():
     cfg = {**TEST_CFG, "palette": {"B": [1, 2, 3]}}
     state = proxy.AgencyState("xx", cfg)
-    state.update([{"r": "1", "la": 0.5, "lo": 0.5, "t": "B", "i": 1}])
+    state.update([{"r": "1", "la": 0.5, "lo": 0.5, "t": "B", "c": [0, 64, 255], "i": 1}])
     assert state.payload()["palette"] == {"B": [1, 2, 3]}
+
+
+def test_registry_can_override_a_single_metro_line():
+    cfg = {**TEST_CFG, "palette": {"M:N": [9, 9, 9]}}
+    state = proxy.AgencyState("sf", cfg)
+    raw = [
+        {"line": "N", "lat": 1.5, "lon": 3.5, "bearing": 0, "direction": "0", "id": "1"},
+        {"line": "J", "lat": 1.5, "lon": 3.5, "bearing": 0, "direction": "0", "id": "2"},
+    ]
+    state.update(proxy.compact_vehicles(raw, routes={}, fallback=proxy.MUNI_FALLBACK))
+    palette = state.payload()["palette"]
+    assert palette["M:N"] == [9, 9, 9]  # override wins over the classified color
+    assert palette["M:J"] != [9, 9, 9]  # and only that line
 
 
 def test_resolve_agency_single_vs_multi(monkeypatch):

@@ -20,10 +20,12 @@ vehicle colors from the wire — nothing agency-specific is compiled into the
 firmware except the backdrop bitmap. See
 [`docs/multi-agency-plan.md`](docs/multi-agency-plan.md).
 
-**Colors:** the server ships a type→RGB `palette` per payload; the firmware
-resolves it at parse time. One color per type code — buses **blue** ·
-rapid/express **red** · metro **blue** · cable cars dim amber. Override an
-agency's palette with a `"palette"` key in `server/agencies.json`.
+**Colors:** the server ships a `palette` per payload keyed by an opaque
+style key; the firmware resolves it at parse time. Buses **blue** ·
+rapid/express **red** · cable cars dim amber · every metro line its
+**real line color** (from GTFS `route_color`, under an `M:<LINE>` key).
+Override any color with a `"palette"` key in `server/agencies.json` —
+`"B"` recolors all local buses, `"M:J"` just the J Church line.
 
 **Scales to any wall:** everything derives from `PANEL_CHAIN_W ×
 PANEL_CHAIN_H` in `firmware/include/config.h`. The project targets a single

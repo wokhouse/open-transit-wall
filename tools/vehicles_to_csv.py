@@ -2,7 +2,7 @@
 """Convert the mini-proxy's compact /vehicles payload to sim CSV rows.
 
 Rows: lat,lon,r,g,b — colors resolved through the payload's "palette" map,
-exactly like the firmware does. Rows whose type key is missing from the
+exactly like the firmware does. Rows whose style key is missing from the
 palette are skipped, also like the firmware.
 
 Usage: curl -s localhost:8000/vehicles | python3 tools/vehicles_to_csv.py > /tmp/v.csv
@@ -12,8 +12,8 @@ import sys
 
 data = json.load(sys.stdin)
 palette = data.get("palette", {})
-for lat, lon, type_key, _vid in data["v"]:
-    rgb = palette.get(type_key)
+for lat, lon, style_key, _vid in data["v"]:
+    rgb = palette.get(style_key)
     if rgb is None:
         continue
     print(f"{lat},{lon},{rgb[0]},{rgb[1]},{rgb[2]}")

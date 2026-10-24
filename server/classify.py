@@ -19,10 +19,11 @@ from pathlib import Path
 COLOR_BUS = (0, 64, 255)        # local bus: blue
 COLOR_RAPID = (255, 32, 16)     # rapid / express bus: red
 COLOR_CABLE = (180, 120, 20)    # cable car: dim amber
-# The wire palette has one color per type code (rows carry only the code),
-# so metro lines share this generic blue on the wall. The per-line GTFS
-# route_color below is still resolved internally but cannot reach the wire.
-METRO_DEFAULT = "0089D0"        # the generic metro blue shipped on the wire
+# Metro lines reach the wire under per-line style keys (see style_key) with
+# their GTFS route_color (or the MUNI_FALLBACK color below). This generic
+# blue is only the last-resort color for a metro line with no color in
+# either source.
+METRO_DEFAULT = "0089D0"        # generic metro blue, used only as a fallback
 
 
 def hex_to_rgb(value: str) -> list[int]:
@@ -61,6 +62,19 @@ def normalize_line(line_ref: str) -> str:
     return ref
 
 
+def style_key(code: str, line: str) -> str:
+    """The palette key a vehicle's wire row carries.
+
+    Base codes (B/R/C) stay generic: one color per type. Metro lines get an
+    "M:<LINE>" key so each line can carry its own color in the payload's
+    palette. normalize_line strips everything before a colon, so a line
+    reference can never produce a colliding key. Nothing here is
+    SFMTA-specific: any agency's metro lines key off their own line refs,
+    and registry palette overrides may target any key ("M:J", "B", ...).
+    """
+    return f"M:{line}" if code == "M" else code
+
+
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     value = (hex_color or "").lstrip("#")
     if not re.fullmatch(r"[0-9A-Fa-f]{6}", value):
@@ -83,7 +97,8 @@ def classify(line_ref: str, routes: dict[str, dict] | None = None,
 
     `fallback` is an agency-specific table of {line: {type, color}} used when
     GTFS metadata is missing (pass MUNI_FALLBACK for SFMTA, nothing else).
-    Returns {"code": "B"|"R"|"M"|"C", "rgb": (r, g, b), "line": "14R"}.
+    Returns {"code": "B"|"R"|"M"|"C", "key": <palette key>, "rgb": (r, g, b),
+    "line": "14R"}.
     """
     line = normalize_line(line_ref)
     info = None
@@ -109,11 +124,18 @@ def classify(line_ref: str, routes: dict[str, dict] | None = None,
         color_hex = fallback_entry["color"]
 
     if route_type in METRO_TYPES:
-        return {"code": "M", "rgb": _hex_to_rgb(color_hex or "FFFFFF"), "line": line}
-    if route_type in CABLE_TYPES:
-        return {"code": "C", "rgb": COLOR_CABLE, "line": line}
-
-    long_name = str(info.get("long", "")) if info else ""
-    if RAPID_PATTERN.match(line) or "RAPID" in long_name.upper() or "EXPRESS" in long_name.upper():
-        return {"code": "R", "rgb": COLOR_RAPID, "line": line}
-    return {"code": "B", "rgb": COLOR_BUS, "line": line}
+        code = "M"
+        rgb = _hex_to_rgb(color_hex or METRO_DEFAULT)
+    elif route_type in CABLE_TYPES:
+        code = "C"
+        rgb = COLOR_CABLE
+    else:
+        long_name = str(info.get("long", "")).upper() if info else ""
+        if (RAPID_PATTERN.match(line) or "RAPID" in long_name
+                or "EXPRESS" in long_name):
+            code = "R"
+            rgb = COLOR_RAPID
+        else:
+            code = "B"
+            rgb = COLOR_BUS
+    return {"code": code, "key": style_key(code, line), "rgb": rgb, "line": line}
