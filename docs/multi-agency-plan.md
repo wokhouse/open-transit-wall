@@ -73,19 +73,25 @@ Static discovery for the flasher:
 ```json
 {"ts": "...", "age": 41.2, "next": 79, "count": 312,
  "bbox": [lat_min, lat_max, lon_min, lon_max],
- "palette": {"B": [0, 64, 255], "R": [255, 32, 16],
-             "M": [0, 137, 208], "C": [180, 120, 20]},
- "v": [[37.77, -122.42, "B", 123456789], ...]}
+ "palette": {"B": [0, 64, 255], "R": [255, 32, 16], "C": [180, 120, 20],
+             "M:J": [169, 102, 20], "M:T": [191, 43, 69]},
+ "v": [[37.77, -122.42, "B", 123456789],
+       [37.76, -122.43, "M:J", 123456788], ...]}
 ```
 
 - `bbox` kills the `config.h` ↔ `geo.py` sync hazard: the server that knows
   the fleet's extents tells the wall how to project it.
-- `palette` maps vehicle type codes to RGB. The server classifies and owns
-  all color; the client treats type codes as opaque keys into a map it
+- `palette` maps style keys to RGB. Base codes (`B`/`R`/`C`) are generic
+  one-color-per-type; metro rows carry per-line keys `M:<LINE>` colored
+  from GTFS `route_color` (the first shipping version shared one generic
+  metro blue — the client's palette lookup is opaque, so per-line colors
+  needed no firmware change). The server classifies and owns
+  all color; the client treats style keys as opaque keys into a map it
   reads fresh from each response — nothing preprogrammed client-side, and
   the palette mirroring in `config.h`/sim comments goes away. Registry
-  entries may override the palette per agency (Caltrain ships its own
-  colors with no client change). Vehicle rows carry the type code instead
+  entries may override the palette per agency at any key — base code or
+  single line (`"M:J"`) — so Caltrain ships its own colors with no client
+  change. Vehicle rows carry the style key instead
   of three color ints: smaller payload, less parse-time heap.
 - `next` = whole seconds until this agency's next upstream fetch, computed
   from the poll thread's own schedule at response time. It lives in the data
@@ -95,7 +101,7 @@ Static discovery for the flasher:
 ### No type filtering
 
 The `TYPES` env var goes away. Every active vehicle the agency reports is
-served; the `palette` map is generated from the type codes actually present
+served; the `palette` map is generated from the style keys actually present
 in the payload, not a fixed set. The one filter that stays is dropping
 vehicles with no line reference at all (yards / deadheading, ~20% of the
 feed): they can't be classified and would cluster as dots at depots.
@@ -148,7 +154,7 @@ follows on its next poll without a reflash.
    `bbox`, and `palette` from the payload. Resolve palette→RGB at parse
    time into the existing `Vehicle` struct (no render-path change; the
    palette is a handful of entries). Missing/invalid palette → poll failed,
-   red pixel, same strictness as `next`. A vehicle row whose type key is
+   red pixel, same strictness as `next`. A vehicle row whose style key is
    absent from the palette → skip that row; never invent a color.
 3. **Cadence** — the glide scheduler uses the advertised `next`;
    `UPSTREAM_REFRESH_S` is deleted from `config.h`. `next` is authoritative

@@ -3,8 +3,10 @@
 #include <Arduino.h>
 
 // A vehicle as parsed from the proxy payload. Colors are resolved at parse
-// time from the payload's "palette" map (type code -> RGB), so the renderer
-// never sees type codes and carries no compiled color table.
+// time from the payload's "palette" map (style key -> RGB; a style key is a
+// type code like "B" or a per-line metro key like "M:J"), so the renderer
+// never sees style keys and carries no compiled color table. Keys are
+// opaque: the firmware works for any agency without a reflash.
 struct Vehicle {
   float lat;
   float lon;

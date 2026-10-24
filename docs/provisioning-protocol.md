@@ -1,5 +1,8 @@
 # Provisioning protocol (WebSerial contract)
 
+See also `docs/provisioning-implementation.md` (the implementation behind this
+spec) and `docs/plan.md` (the browser tool that will drive it).
+
 One firmware binary is flashed to every wall (`pio run -e s3rgbmatrix -t
 upload`). The WiFi network name, WiFi password, and proxy host are written to
 the device afterwards, from the browser tool, over WebSerial — this is the

@@ -5,7 +5,8 @@ Each served agency is polled from the 511 SIRI VehicleMonitoring feed on its
 own timer (POLL_SECONDS per agency) and served as a compact vehicle list for
 the ESP32 display. Which agencies a deployment runs is set by
 SERVED_AGENCIES; the payload carries the agency's bbox, refresh cadence, and
-type->color palette so clients are configured entirely from the wire.
+vehicle-color palette (per-line for metro) so clients are configured
+entirely from the wire.
 
 Usage:
   python proxy.py --fixture ../fixtures/sample_vehiclemonitor.json   # offline
@@ -44,10 +45,8 @@ from classify import (
     COLOR_BUS,
     COLOR_CABLE,
     COLOR_RAPID,
-    METRO_DEFAULT,
     MUNI_FALLBACK,
     classify,
-    hex_to_rgb,
     load_routes,
 )
 from dotenv import load_dotenv
@@ -69,13 +68,15 @@ OPERATORS_URL = "https://api.511.org/transit/operators"
 # 511's default token allowance; only used to warn at startup, never enforced.
 DEFAULT_TOKEN_RPH = 60
 
-# Default type -> RGB palette shipped on the wire, built from classify's
-# color constants so the two can't drift. Registry entries may override per
-# agency ("palette": {"M": [r, g, b], ...} in agencies.json).
+# Default generic per-type colors shipped on the wire, built from classify's
+# color constants so the two can't drift. Metro is NOT here: each metro line
+# carries its own color under an "M:<LINE>" style key (classify.style_key),
+# resolved from GTFS route_color per agency. Registry entries may override
+# any key per agency ("palette": {"B": [...], "M:J": [...]} in
+# agencies.json) — e.g. Caltrain ships its own colors.
 DEFAULT_PALETTE = {
     "B": list(COLOR_BUS),
     "R": list(COLOR_RAPID),
-    "M": hex_to_rgb(METRO_DEFAULT),
     "C": list(COLOR_CABLE),
 }
 
@@ -106,6 +107,16 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
         for key in ("lat_min", "lat_max", "lon_min", "lon_max"):
             if not isinstance(cfg["bbox"].get(key), (int, float)):
                 raise ValueError(f"registry entry {agency_id!r} bbox.{key} missing or not a number")
+        palette = cfg.get("palette")
+        if palette is not None:
+            if not isinstance(palette, dict):
+                raise ValueError(f"registry entry {agency_id!r} 'palette' must be an object")
+            for style_key, rgb in palette.items():
+                if (not isinstance(rgb, list) or len(rgb) != 3
+                        or not all(isinstance(c, int) and 0 <= c <= 255 for c in rgb)):
+                    raise ValueError(
+                        f"registry entry {agency_id!r} palette[{style_key!r}] "
+                        "must be a list of 3 ints in 0-255")
     return registry
 
 
@@ -157,9 +168,20 @@ class AgencyState:
     def payload(self) -> dict:
         with self._lock:
             now = time.time()
-            palette = {code: self.palette[code]
-                       for code in {v["t"] for v in self._vehicles}
-                       if code in self.palette}
+            # Palette keys are exactly the style keys the current rows
+            # carry: generic type codes plus "M:<LINE>" per-line metro
+            # colors. A registry override wins; otherwise the classified
+            # color rides on the cached vehicle. A key with neither ships
+            # no entry — the firmware then drops those rows rather than
+            # inventing a color.
+            palette: dict[str, list] = {}
+            for v in self._vehicles:
+                key = v["t"]
+                if key in palette:
+                    continue
+                rgb = self.palette.get(key) or v.get("c")
+                if rgb:
+                    palette[key] = rgb
             return {
                 "ts": datetime.fromtimestamp(self._fetched_at, tz=UTC).isoformat(),
                 "age": round(now - self._fetched_at, 1),
@@ -198,6 +220,8 @@ def compact_vehicles(raw_vehicles: list[dict], routes: dict[str, dict],
 
     Vehicles without a route reference (yards / deadheading, ~20% of the feed)
     are dropped — they'd plot as misclassified dots clustered at the depots.
+    Refs that normalize away to nothing (e.g. 'SF:') are dropped by the same
+    rule: they would produce a degenerate 'M:' palette key.
     No type filtering: every active vehicle the agency reports is served.
     """
     out = []
@@ -205,11 +229,18 @@ def compact_vehicles(raw_vehicles: list[dict], routes: dict[str, dict],
         if not vehicle["line"]:
             continue
         info = classify(vehicle["line"], routes, fallback)
+        if not info["line"]:
+            continue
         out.append({
             "r": info["line"],
             "la": round(vehicle["lat"], 5),
             "lo": round(vehicle["lon"], 5),
-            "t": info["code"],
+            # Style key, not the raw type code: metro rows carry an
+            # "M:<LINE>" key so each line gets its own palette entry.
+            "t": info["key"],
+            # Classified color, server-side only — palette material. The
+            # wire never carries per-vehicle color (see to_wire).
+            "c": list(info["rgb"]),
             # Stable id so the ESP32 can match vehicles across polls and
             # animate each one's movement individually. 31 bits keeps the
             # collision rate negligible at this fleet size (~2^-6 per day).
@@ -220,11 +251,12 @@ def compact_vehicles(raw_vehicles: list[dict], routes: dict[str, dict],
 
 def to_wire(vehicles: list[dict]) -> list[list]:
     """Project cached vehicles to the ESP32 wire format: flat
-    [lat, lon, type_code, id] arrays. Keyed objects overflowed the ESP32's
+    [lat, lon, style_key, id] arrays. Keyed objects overflowed the ESP32's
     heap at rush-hour fleet sizes — every JSON key costs ~16 bytes of
     parse-time heap next to the display framebuffer, so /vehicles ships
-    arrays only. Colors are not per-vehicle: the payload's palette maps type
-    codes to RGB, so a row carries one short string instead of three ints."""
+    arrays only. Colors are not per-vehicle: the payload's palette maps
+    style keys (type codes, plus "M:<LINE>" per metro line) to RGB, so a
+    row carries one short string instead of three ints."""
     return [[v["la"], v["lo"], v["t"], v["i"]] for v in vehicles]
 
 

@@ -20,10 +20,12 @@ vehicle colors from the wire — nothing agency-specific is compiled into the
 firmware except the backdrop bitmap. See
 [`docs/multi-agency-plan.md`](docs/multi-agency-plan.md).
 
-**Colors:** the server ships a type→RGB `palette` per payload; the firmware
-resolves it at parse time. One color per type code — buses **blue** ·
-rapid/express **red** · metro **blue** · cable cars dim amber. Override an
-agency's palette with a `"palette"` key in `server/agencies.json`.
+**Colors:** the server ships a `palette` per payload keyed by an opaque
+style key; the firmware resolves it at parse time. Buses **blue** ·
+rapid/express **red** · cable cars dim amber · every metro line its
+**real line color** (from GTFS `route_color`, under an `M:<LINE>` key).
+Override any color with a `"palette"` key in `server/agencies.json` —
+`"B"` recolors all local buses, `"M:J"` just the J Church line.
 
 **Scales to any wall:** everything derives from `PANEL_CHAIN_W ×
 PANEL_CHAIN_H` in `firmware/include/config.h`. The project targets a single
@@ -39,7 +41,7 @@ backdrop at the new size.
 | `server/agencies.json` | The agency registry: id, display name, 511 SIRI agency code, bounding box, optional per-agency palette overrides. Agency codes come from `GET https://api.511.org/transit/operators` — never guessed. |
 | `server/proxy.py` | Polls 511's SIRI VehicleMonitoring feed for each served agency (`SERVED_AGENCIES`, one shared `POLL_SECONDS`), classifies vehicles, and serves compact JSON at `GET /vehicles?agency=<id>` — plus `GET /agencies` for discovery and `/health`. The payload carries the agency's `bbox`, `next` (seconds until the server's next upstream fetch), and `palette`, so clients are configured entirely from the wire. Yard/deadhead vehicles (no route assigned) are filtered out; everything else the agency reports is served. |
 | `server/classify.py` | Route → type/color logic. Standalone-importable so it can be reused elsewhere (e.g. a Pi Zero build). |
-| `firmware/` | PlatformIO + Arduino ESP32 firmware. One binary for every wall: WiFi credentials, the proxy endpoint, and the agency id are provisioned at runtime over WebSerial and kept in NVS (see [Provisioning](#provisioning-over-webserial)). Fetches the proxy over HTTPS (roots pinned in `firmware/include/proxy_ca.h`), projects lat/lon → pixels using the bbox from the payload, and plots dots in the payload's palette colors. Each vehicle glides to its next known position at a random moment inside the server's advertised refresh cycle, so the wall reads as independent movement rather than one synchronized jump. |
+| `firmware/` | PlatformIO + Arduino ESP32 firmware. One binary for every wall: WiFi credentials, the proxy endpoint, and the agency id are provisioned at runtime over WebSerial and kept in NVS (see [Provisioning](#provisioning-over-webserial)). Fetches the proxy over HTTPS (roots pinned in `firmware/include/proxy_ca.h`), projects lat/lon → pixels using the bbox from the payload, and plots dots in the payload's palette colors. Each vehicle glides to its next known position at a random moment inside an equal slot of the server's advertised refresh cycle, so the wall reads as independent movement spread evenly over the cycle rather than one synchronized jump or chance clumps. |
 | `tools/gen_backdrop.py` | Rasterizes the coarse shoreline for one or more agencies (`--agency sf --agency ct`) to your exact matrix size into an RLE bitmap compiled into the firmware — dark land on a black sea. The wall picks its provisioned agency's entry at boot. |
 | `sim/` + `tools/run_sim.sh` | Native simulator: renders exactly what the ESP32 will draw (same projection + backdrop code) to a BMP — no hardware needed. |
 | `flasher/` | The [web flasher](https://wokhouse.github.io/open-transit-wall/): a static page (no framework, vendored esptool-js) that flashes the CI-built firmware over WebSerial, then walks the provisioning protocol — discovers agencies from your server URL and writes WiFi/proxy/agency to the board. `.github/workflows/pages.yml` builds the firmware with `tools/build_firmware.py` and ships the images alongside the page, so they always match. |
