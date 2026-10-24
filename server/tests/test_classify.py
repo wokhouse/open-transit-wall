@@ -10,10 +10,9 @@ from classify import (
     COLOR_BUS,
     COLOR_CABLE,
     COLOR_RAPID,
-    METRO_DEFAULT,
+    MAX_LINE_CHARS,
     MUNI_FALLBACK,
     classify,
-    hex_to_rgb,
     normalize_line,
     style_key,
 )
@@ -73,7 +72,7 @@ def test_metro_without_any_color_uses_generic_blue():
     routes = {"ZZ": {"type": 2, "long": "Colorless Line"}}
     result = classify("ZZ", routes)
     assert result["key"] == "M:ZZ"
-    assert result["rgb"] == tuple(hex_to_rgb(METRO_DEFAULT))
+    assert result["rgb"] == (0x00, 0x89, 0xD0)  # METRO_DEFAULT
 
 
 def test_style_keys_are_agency_safe_and_collision_free():
@@ -84,6 +83,9 @@ def test_style_keys_are_agency_safe_and_collision_free():
     # with the base codes.
     assert style_key("M", normalize_line("LA:J")) == "M:J"
     assert style_key("M", "B") != "B"
+    # Feed-derived LineRefs are untrusted: the key (repeated in every row
+    # of that line) is length-bounded before it reaches the ESP32 heap.
+    assert style_key("M", "Q" * 200) == "M:" + "Q" * MAX_LINE_CHARS
 
 
 def test_kt_throughrun_is_metro():

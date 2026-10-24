@@ -154,7 +154,7 @@ follows on its next poll without a reflash.
    `bbox`, and `palette` from the payload. Resolve palette→RGB at parse
    time into the existing `Vehicle` struct (no render-path change; the
    palette is a handful of entries). Missing/invalid palette → poll failed,
-   red pixel, same strictness as `next`. A vehicle row whose type key is
+   red pixel, same strictness as `next`. A vehicle row whose style key is
    absent from the palette → skip that row; never invent a color.
 3. **Cadence** — the glide scheduler uses the advertised `next`;
    `UPSTREAM_REFRESH_S` is deleted from `config.h`. `next` is authoritative

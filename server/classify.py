@@ -25,10 +25,8 @@ COLOR_CABLE = (180, 120, 20)    # cable car: dim amber
 # either source.
 METRO_DEFAULT = "0089D0"        # generic metro blue, used only as a fallback
 
+MAX_LINE_CHARS = 32            # bound on the feed-derived line in a style key
 
-def hex_to_rgb(value: str) -> list[int]:
-    """'0089D0' -> [0, 137, 208]."""
-    return [int(value[i:i + 2], 16) for i in (0, 2, 4)]
 
 # Approximate Muni metro/heritage line colors (hex, no #). GTFS route_color
 # overrides these when available.
@@ -67,15 +65,22 @@ def style_key(code: str, line: str) -> str:
 
     Base codes (B/R/C) stay generic: one color per type. Metro lines get an
     "M:<LINE>" key so each line can carry its own color in the payload's
-    palette. normalize_line strips everything before a colon, so a line
-    reference can never produce a colliding key. Nothing here is
+    palette. Collision-free: the "M:" prefix is disjoint from the base
+    codes, and normalize_line folds agency-prefixed refs to one canonical
+    line, so each line maps to exactly one key. The line part is capped —
+    the key is an untrusted feed string that also repeats in every row of
+    that line, and it lands in the ESP32's heap-tight JSON document, so
+    its length must be bounded. Aliasing two absurdly long names onto one
+    key (shared dot color) is the benign failure mode. Nothing here is
     SFMTA-specific: any agency's metro lines key off their own line refs,
     and registry palette overrides may target any key ("M:J", "B", ...).
     """
-    return f"M:{line}" if code == "M" else code
+    return f"M:{line[:MAX_LINE_CHARS]}" if code == "M" else code
 
 
-def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    """'0089D0' -> (0, 137, 208); '#0089d0' accepted. Anything that isn't
+    six hex digits becomes COLOR_BUS."""
     value = (hex_color or "").lstrip("#")
     if not re.fullmatch(r"[0-9A-Fa-f]{6}", value):
         return COLOR_BUS
@@ -125,7 +130,7 @@ def classify(line_ref: str, routes: dict[str, dict] | None = None,
 
     if route_type in METRO_TYPES:
         code = "M"
-        rgb = _hex_to_rgb(color_hex or METRO_DEFAULT)
+        rgb = hex_to_rgb(color_hex or METRO_DEFAULT)
     elif route_type in CABLE_TYPES:
         code = "C"
         rgb = COLOR_CABLE

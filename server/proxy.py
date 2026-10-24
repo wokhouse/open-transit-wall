@@ -107,6 +107,16 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
         for key in ("lat_min", "lat_max", "lon_min", "lon_max"):
             if not isinstance(cfg["bbox"].get(key), (int, float)):
                 raise ValueError(f"registry entry {agency_id!r} bbox.{key} missing or not a number")
+        palette = cfg.get("palette")
+        if palette is not None:
+            if not isinstance(palette, dict):
+                raise ValueError(f"registry entry {agency_id!r} 'palette' must be an object")
+            for style_key, rgb in palette.items():
+                if (not isinstance(rgb, list) or len(rgb) != 3
+                        or not all(isinstance(c, int) and 0 <= c <= 255 for c in rgb)):
+                    raise ValueError(
+                        f"registry entry {agency_id!r} palette[{style_key!r}] "
+                        "must be a list of 3 ints in 0-255")
     return registry
 
 
@@ -210,6 +220,8 @@ def compact_vehicles(raw_vehicles: list[dict], routes: dict[str, dict],
 
     Vehicles without a route reference (yards / deadheading, ~20% of the feed)
     are dropped — they'd plot as misclassified dots clustered at the depots.
+    Refs that normalize away to nothing (e.g. 'SF:') are dropped by the same
+    rule: they would produce a degenerate 'M:' palette key.
     No type filtering: every active vehicle the agency reports is served.
     """
     out = []
@@ -217,6 +229,8 @@ def compact_vehicles(raw_vehicles: list[dict], routes: dict[str, dict],
         if not vehicle["line"]:
             continue
         info = classify(vehicle["line"], routes, fallback)
+        if not info["line"]:
+            continue
         out.append({
             "r": info["line"],
             "la": round(vehicle["lat"], 5),

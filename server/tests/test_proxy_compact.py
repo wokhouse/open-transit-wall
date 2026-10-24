@@ -31,6 +31,13 @@ def test_load_registry_rejects_bad_entries(tmp_path):
     with pytest.raises(ValueError):
         proxy.load_registry(path)
 
+    # A malformed palette override would blank the whole wall at parse time
+    # on the ESP32 — fail fast at startup instead.
+    for bad in ("red", [300, 0, 0], [0, 0], [0, 0, 0, 0]):
+        path.write_text(json.dumps({"ok": {**TEST_CFG, "palette": {"B": bad}}}))
+        with pytest.raises(ValueError):
+            proxy.load_registry(path)
+
 
 def test_parse_served_defaults_and_validates():
     registry = {"sf": {}, "ct": {}}
@@ -46,6 +53,8 @@ def test_compact_drops_no_line_but_keeps_all_types():
         {"line": "38", "lat": 37.78, "lon": -122.46, "bearing": 0, "direction": "0", "id": "2"},
         {"line": "PH", "lat": 37.79, "lon": -122.41, "bearing": 0, "direction": "", "id": "3"},
         {"line": "", "lat": 37.70, "lon": -122.40, "bearing": 0, "direction": "", "id": "4"},
+        # a ref that normalizes to nothing would make a degenerate 'M:' key
+        {"line": "SF:", "lat": 37.71, "lon": -122.41, "bearing": 0, "direction": "", "id": "5"},
     ]
     out = proxy.compact_vehicles(raw, routes={}, fallback=proxy.MUNI_FALLBACK)
     assert [v["r"] for v in out] == ["N", "38", "PH"]  # only no-line dropped
@@ -67,7 +76,7 @@ def test_to_wire_carries_style_key_not_rgb():
     assert proxy.to_wire([v]) == [[37.76, -122.47, "M:N", 65501]]
 
 
-def test_payload_carries_bbox_next_and_only_present_palette_codes():
+def test_payload_carries_bbox_next_and_only_present_palette_keys():
     state = proxy.AgencyState("sf", TEST_CFG)
     state.arm_next_poll(125)
     state.update([
