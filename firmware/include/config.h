@@ -72,8 +72,18 @@
 #endif
 
 // --- Display look -----------------------------------------------------------
-#define DISPLAY_BRIGHTNESS 48     // 0-255; panels are very bright indoors
-#define STATUS_PIXEL_ENABLED 1    // corner pixel: green=fresh, amber=aging, red=error
+// Boot brightness (0-255; panels are very bright indoors). If a Home
+// Assistant MQTT broker is provisioned, the wall's real brightness is the
+// last value HA set — persisted in NVS (see src/ha_link.h) — and this is
+// only the fallback for walls that never had one.
+#define DISPLAY_BRIGHTNESS 48
+// Status pixels along the top edge: (1,0) green=fresh, amber=aging,
+// red=error; (2,0) purple while the Home Assistant MQTT link is up, red
+// when the link is configured but down, absent when it is not configured.
+// Even when the panel is "off" (HA OFF or 0%), the frame keeps only these
+// pixels lit at STATUS_PIXEL_FLOOR (~1%) so the wall still reports state.
+#define STATUS_PIXEL_ENABLED 1
+#define STATUS_PIXEL_FLOOR   3
 
 // --- Map area ---------------------------------------------------------------
 // The bounding box is NOT compiled: the proxy ships it per agency in the

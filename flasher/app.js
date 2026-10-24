@@ -1,5 +1,5 @@
 // open-transit-wall web flasher.
-// Speaks the line protocol in docs/provisioning-protocol.md (OTW-FW 2) and
+// Speaks the line protocol in docs/provisioning-protocol.md (OTW-FW 4) and
 // flashes via the vendored esptool-js bundle. No framework, no build step.
 
 import { ESPLoader, Transport } from './vendor/esptool-js/bundle.js';
@@ -13,6 +13,9 @@ const els = {
   btnDiscover: $('btn-discover'), discoverState: $('discover-state'),
   agency: $('agency'), agencyManual: $('agency-manual'),
   ssid: $('ssid'), pass: $('pass'),
+  mqttSection: $('mqtt-section'),
+  mhost: $('mhost'), mport: $('mport'), muser: $('muser'), mpass: $('mpass'),
+  bmin: $('bmin'), bmax: $('bmax'), bwindow: $('bwindow'),
   btnSave: $('btn-save'), btnErase: $('btn-erase'), provLog: $('prov-log'),
   console: $('console'), cmd: $('cmd'), btnSendCmd: $('btn-send-cmd'),
   btnClearConsole: $('btn-clear-console'),
@@ -146,7 +149,7 @@ async function ask(cmd, idleMs, maxMs) {
 
 // ---------- banner / board state ----------
 
-let board = null;  // { fw, stored: {ssid, passSet, host, scheme, port, agency} | null }
+let board = null;  // { fw, stored: {ssid, passSet, host, scheme, port, agency, mhost, mport, muser} | null }
 
 async function readBanner() {
   await sendLine('');  // any serial activity makes the firmware print the banner
@@ -158,11 +161,14 @@ async function readBanner() {
     if (m) { board.fw = Number(m[1]); sawBanner = true; }
     if (line.startsWith('UNPROVISIONED') || line === 'STORED none') board.stored = null;
     // scheme/port/agency can be empty strings in the firmware's printf.
-    m = line.match(/^STORED ssid=(.*?) pass=(set|empty) host=(\S*) scheme=(\S*) port=(\d*) agency=(\S*)$/);
+    // The m*/b* tail only appears on protocol v3+ boards (bmin/bmax on v4).
+    m = line.match(/^STORED ssid=(.*?) pass=(set|empty) host=(\S*) scheme=(\S*) port=(\d*) agency=(\S*)(?: mhost=(\S*) mport=(\d*) muser=(\S*) mpass=(set|empty)(?: bmin=(\d*) bmax=(\d*))?)?$/);
     if (m) {
       board.stored = {
         ssid: m[1], passSet: m[2] === 'set', host: m[3],
         scheme: m[4], port: Number(m[5]), agency: m[6],
+        mhost: m[7] ?? '', mport: Number(m[8] || 0), muser: m[9] ?? '',
+        bmin: m[11] ?? '', bmax: m[12] ?? '',
       };
     }
   }
@@ -187,6 +193,12 @@ async function readBanner() {
       }
       m = line.match(/^STATUS agency=([a-z0-9]+|\(unset\))$/);
       if (m && board.stored) board.stored.agency = m[1] === '(unset)' ? '' : m[1];
+      m = line.match(/^STATUS mqtt=(\S+):(\d+) (connected|down)$/);
+      if (m && board.stored) {
+        board.stored.mhost = m[1];
+        board.stored.mport = Number(m[2]);
+        board.stored.muser = board.stored.muser ?? '';
+      }
     }
     if (board.stored && !board.stored.ssid) board.stored = null;
   }
@@ -209,10 +221,27 @@ async function readBanner() {
       els.serverUrl.value = `${scheme}${board.stored.host}${portPart}`;
       syncServerPreset();
     }
+    if (board.stored.mhost) {
+      els.mhost.value = board.stored.mhost;
+      if (board.stored.mport && board.stored.mport !== 1883) els.mport.value = String(board.stored.mport);
+      els.muser.value = board.stored.muser || '';
+    }
+    // Stored bounds are 0-255; the form speaks percent like Home Assistant.
+    if (board.stored.bmin && Number(board.stored.bmin) !== 0) {
+      els.bmin.value = String(Math.round((Number(board.stored.bmin) * 100) / 255));
+    }
+    if (board.stored.bmax && Number(board.stored.bmax) !== 255) {
+      els.bmax.value = String(Math.round((Number(board.stored.bmax) * 100) / 255));
+    }
     provLog('prefilled from the board — change anything and send.');
   } else {
     provLog('board is unprovisioned — fill the form and send.');
   }
+  // The MQTT fields only exist on protocol v3+ boards; older firmware would
+  // answer ERR unknown key, so keep the section closed for them. The
+  // brightness window needs v4.
+  els.mqttSection.hidden = board.fw < 3;
+  els.bwindow.hidden = board.fw < 4;
   enableProvisioning();
 }
 
@@ -316,6 +345,54 @@ els.btnSave.onclick = async () => {
     }
     cmds.push(`set agency=${agency}`);
   }
+  // Optional Home Assistant link (protocol v3+; v5 finds the broker via
+  // mDNS when mhost is empty). Only send what differs from what the
+  // board reported; an empty mhost clears a stored one and re-enables
+  // auto-discovery.
+  if (board && board.fw >= 3) {
+    const mhost = els.mhost.value.trim();
+    if (mhost) {
+      if (!/^[^\s/:]{1,127}$/.test(mhost)) {
+        provLog(`broker host "${mhost}" has a space, ':' or '/' — host only, no port.`);
+        setBusy(false); return;
+      }
+      cmds.push(`set mhost=${mhost}`);
+    } else if (board.stored?.mhost) {
+      cmds.push('set mhost=');
+    }
+    const mport = els.mport.value.trim();
+    if (mport) {
+      if (!/^\d{1,5}$/.test(mport) || Number(mport) < 1 || Number(mport) > 65535) {
+        provLog(`broker port "${mport}" is not 1-65535 — leave it empty for 1883.`);
+        setBusy(false); return;
+      }
+      cmds.push(`set mport=${mport}`);
+    }
+    if (els.muser.value) cmds.push(`set muser=${els.muser.value}`);
+    if (els.mpass.value) cmds.push(`set mpass=${els.mpass.value}`);
+    // Brightness window (protocol v4). The form speaks percent like the
+    // Home Assistant slider; the wire carries 0-255 like every other
+    // brightness value on the wall. Reset the window to defaults first so
+    // the firmware's cross-bound checks cannot be tripped by command order.
+    const bmin = els.bmin.value.trim(), bmax = els.bmax.value.trim();
+    if (board.fw >= 4 && (bmin || bmax || board.stored?.bmin || board.stored?.bmax)) {
+      if (bmin && (!/^\d{1,3}$/.test(bmin) || Number(bmin) > 100)) {
+        provLog(`brightness floor "${bmin}" is not 0-100 — leave it empty for 0.`);
+        setBusy(false); return;
+      }
+      if (bmax && (!/^\d{1,3}$/.test(bmax) || Number(bmax) > 100)) {
+        provLog(`brightness ceiling "${bmax}" is not 0-100 — leave it empty for 100.`);
+        setBusy(false); return;
+      }
+      if (bmin && bmax && Number(bmin) > Number(bmax)) {
+        provLog(`brightness floor ${bmin}% is above the ceiling ${bmax}% — fix it before sending.`);
+        setBusy(false); return;
+      }
+      cmds.push('set bmin=', 'set bmax=');
+      if (bmin) cmds.push(`set bmin=${Math.round((Number(bmin) * 255) / 100)}`);
+      if (bmax) cmds.push(`set bmax=${Math.round((Number(bmax) * 255) / 100)}`);
+    }
+  }
   try {
     for (const c of cmds) {
       const replies = await ask(c);
@@ -327,6 +404,7 @@ els.btnSave.onclick = async () => {
     }
     for (const r of await ask('save')) provLog(`  ${r}`);
     els.pass.value = '';
+    els.mpass.value = '';
     provLog('saved. rebooting; watch the console for the connection attempt.');
     for (const r of await ask('reboot')) provLog(`  ${r}`);
   } catch (e) {
@@ -337,7 +415,7 @@ els.btnSave.onclick = async () => {
 
 els.btnErase.onclick = async () => {
   if (!session || session.dead) return;
-  if (!confirm('Erase wipes the stored WiFi/proxy/agency settings and drops the board back to provisioning mode. Continue?')) return;
+  if (!confirm('Erase wipes the stored WiFi/proxy/agency/MQTT settings and drops the board back to provisioning mode. Continue?')) return;
   for (const r of await ask('erase')) provLog(`  ${r}`);
   board = null;
 };

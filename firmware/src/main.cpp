@@ -18,6 +18,11 @@
 // ("bbox", "palette"): nothing about the agency is compiled except the
 // backdrop bitmap, which is looked up by agency id below.
 //
+// Optionally the wall also speaks MQTT on the LAN (src/ha_link.h): with a
+// broker provisioned (`set mhost=...`) it announces itself to Home
+// Assistant as a native light entity and keeps its brightness there. With
+// no broker configured this changes nothing.
+//
 // Rendering is strictly incremental: the backdrop is painted once at boot
 // and the loop only rewrites the individual pixels that change as dots
 // glide. Full-frame redraws would tear against the DMA scan-out and show
@@ -30,6 +35,7 @@
 
 #include "backdrop.h"
 #include "config.h"
+#include "ha_link.h"
 #include "map_project.h"
 #include "provisioner.h"
 #include "screen.h"
@@ -61,6 +67,27 @@ static bool seen[MAX_VEHICLES];
 static int16_t slotOrder[MAX_VEHICLES];  // shuffled glide-slot assignment
 
 static void drawStatusPixel();
+
+// Brightness setter handed to ha_link: MQTT commands land here.
+// Brightness last commanded to the panel. 0 means "off": the map goes dark
+// but the frame branch in loop() keeps the status pixels lit at
+// STATUS_PIXEL_FLOOR, so the wall still shows it is alive and MQTT-linked.
+static uint8_t panelBrightness = DISPLAY_BRIGHTNESS;
+static bool mapDirty = false;  // frame was cleared while off; repaint on return
+
+static void applyPanelBrightness(uint8_t v) {
+  if (v == panelBrightness) {
+    return;
+  }
+  if (v > 0) {
+    if (panelBrightness == 0) {
+      mapDirty = true;  // the off frame wiped the map; repaint before animating
+    }
+    screen.setBrightness(v);
+  }
+  // v == 0: the floor brightness is applied by the off-frame branch instead.
+  panelBrightness = v;
+}
 
 // What the panel is currently showing. The map is the normal state
 // (ERR_NONE); splash, setup-needed, and error screens replace it until the
@@ -96,8 +123,8 @@ static void paintBg(int x, int y) {
   }
   const uint8_t *rgb = bgIndex[y * DISPLAY_W + x] ? BACKDROP_WATER : BACKDROP_LAND;
   screen.drawPixel(x, y, rgb[0], rgb[1], rgb[2]);
-  if (x == 0 && y == 0) {
-    drawStatusPixel();  // the status pixel lives at (0,0)
+  if (x == 1 && y == 0) {
+    drawStatusPixel();  // the data status pixel lives at (1,0)
   }
 }
 
@@ -346,6 +373,7 @@ static void animate(uint32_t now) {
 
 static void drawStatusPixel() {
 #if STATUS_PIXEL_ENABLED
+  static bool mqttPixelOn = false;
   uint8_t r, g, b;
   if (pollFailures == 0) {
     r = 0; g = 160; b = 0;      // fresh
@@ -354,7 +382,27 @@ static void drawStatusPixel() {
   } else {
     r = 200; g = 0; b = 0;      // error
   }
-  screen.drawPixel(0, 0, r, g, b);
+  screen.drawPixel(1, 0, r, g, b);
+  // Second status pixel: purple while the Home Assistant link is up, red
+  // when the link is configured but down (broker not found, auth refused,
+  // WiFi lost), and absent when the link is not configured at all. When
+  // the pixel goes dark, restore what was under it so no color lingers.
+  if (haEnabled()) {
+    mqttPixelOn = true;
+    if (haConnected()) {
+      screen.drawPixel(2, 0, 110, 0, 150);  // deep violet, kept below the data pixel's punch
+    } else {
+      screen.drawPixel(2, 0, 200, 0, 0);  // same red as the data pixel's error state
+    }
+  } else if (mqttPixelOn) {
+    mqttPixelOn = false;
+    if (panelBrightness == 0 || shownError != ERR_NONE) {
+      screen.drawPixel(2, 0, 0, 0, 0);  // off-frame / status screen bg is black
+    } else {
+      paintBg(2, 0);
+      redrawOccupants(2, 0, -1);  // a dot may have been parked under the pixel
+    }
+  }
 #endif
 }
 
@@ -423,7 +471,7 @@ void setup() {
     Serial.println("HUB75 init failed — halting");
     while (true) delay(1000);
   }
-  screen.setBrightness(DISPLAY_BRIGHTNESS);
+  screen.setBrightness(DISPLAY_BRIGHTNESS);  // boot default; NVS value applied after provLoad
 
   // Splash while we figure out what to show: the roundel bouncing DVD-style
   // around the panel while the wall loads. Replaced by the map or an error
@@ -434,6 +482,12 @@ void setup() {
   drawSplashFrame();
 
   provLoad();
+  // The panel brightness the user last set from Home Assistant (if ever)
+  // lives in NVS; restore it before anything is drawn. With no stored
+  // value this is DISPLAY_BRIGHTNESS again — no behavior change for walls
+  // that never see an MQTT broker.
+  haBegin(applyPanelBrightness);
+  applyPanelBrightness(haBrightness());
   if (provNeeded()) {
     // No complete config in NVS yet (needs ssid + host). Stay up on the
     // serial console: the browser tool (or any terminal) can `set` values;
@@ -473,6 +527,10 @@ void loop() {
   // while the wall runs (a corrected password takes effect on the next
   // connect attempt without a reboot).
   provPumpSerial();
+
+  // Home Assistant link: no-op unless a broker was provisioned. Runs every
+  // loop so keepalive and brightness commands land between polls.
+  haService();
 
   if ((int32_t)(now - nextPollMs) >= 0) {
     // Fallback cadence only for failed polls; a successful poll re-arms
@@ -557,7 +615,31 @@ void loop() {
   static uint32_t nextFrameMs = 0;
   if ((int32_t)(now - nextFrameMs) >= 0) {
     nextFrameMs = now + 1000 / RENDER_FPS;
-    animate(now);
+    if (panelBrightness == 0) {
+      // "Off" is not fully dark: the map is out, but the status pixels
+      // stay lit at ~1% so the wall still reports alive/MQTT state.
+      screen.setBrightness(STATUS_PIXEL_FLOOR);
+      screen.clear();
+      drawStatusPixel();
+    } else {
+      if (mapDirty) {
+        // Back from the off frame: the frame was wiped, so repaint the map
+        // wholesale (same as showScreen(ERR_NONE), but forced) and re-merge
+        // the current snapshot so vehicles are back at once, not next poll.
+        // With activeCount reset to 0 every vehicle re-adds in place, so
+        // the glide-stagger arguments never apply.
+        mapDirty = false;
+        shownError = ERR_NONE;
+        if (curBackdrop) {
+          screen.drawBackdrop(*curBackdrop);
+        } else {
+          screen.clear();
+        }
+        activeCount = 0;
+        mergeVehicles(now, 0.0f, 60);
+      }
+      animate(now);
+    }
   }
 
   delay(2);
