@@ -275,7 +275,33 @@ unpolled land.
 
 Trade-off accepted: a ~24 px black band at the lower-left where Staten
 Island is (no feed), and the Lefferts branch tip sits 1.5 px from the
-east border. Polling SIR is the obvious follow-up to fill that band.
+east border. Polling SIR was the obvious follow-up; it shipped the same
+day — see the next section.
+
+## SIR feed added (2026-10-31)
+
+The lower-left black band asked for it. The feed is
+`nyct%2Fgtfs-si`, keyless, same update cadence. The guessed
+`mta/gtfs-sir` path does not exist: api-endpoint answers unknown
+paths with HTTP 200 + an XML `NoSuchKey` body, which surfaces as a
+corrupt protobuf wire format — a trap worth remembering for any
+MTA feed URL edit.
+
+Measured on a Sunday morning: 6 SIR vehicles, route_id `SI`, colored
+from the static routes.txt (#08179C) like every other subway route —
+zero code. SIR station ids in RT carry direction suffixes (`S21N`),
+same as the subway's, and all resolve against the station table. 14 of
+24 unique SIR stations fall inside the box; the outer tail
+(Tottenville..Prince's Bay side, S20 and south) clips at the bottom
+edge like the Riverdale tips clip at the top. Recorded as
+`fixtures/mta_subway_si.pb`; the viewport test now asserts the south
+clip as a documented edge.
+
+Live `--once` after wiring it in: 439 rows, 6 SIR, 3 drawing pixels
+in the old black band (rows px (11,57) and (14,46)); the rest clip
+south as designed. The frame's only off-frame rows are the documented
+north and south crops. The band is filled — on a weekend the SIR
+fleet is small, so it is sparse dots, not a mass.
 
 ## Still open
 
