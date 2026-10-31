@@ -303,6 +303,18 @@ south as designed. The frame's only off-frame rows are the documented
 north and south crops. The band is filled — on a weekend the SIR
 fleet is small, so it is sparse dots, not a mass.
 
+## Viewport update (2026-10-31, fourth crop: picture 5% left)
+
+Jade: "move it to the left like 5%" after seeing the SIR-inclusive
+frame. Picture left = bbox east: lon shifts +0.0212° (5% of span) to
+-74.1485/-73.7243; lat edges unchanged. Measured on one live payload
+(439 rows): dot-mass center moves px 34.2 → 31.0 (panel center 31.5),
+traffic span 13–62 → 10–58, left margin grows to 10 px of SI land,
+right margin 1 → 5 px. Off-frame rows unchanged at 6: nothing drops
+at the east edge (the edge simply extends the slack beyond the
+Lefferts/179 St tips; their margin grows 1.5/5 px → ~14/17 px). The
+south and north crop behavior is untouched.
+
 ## Still open
 
 Weekday ET peak fleet count (next weekday morning), the heap

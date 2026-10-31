@@ -63,7 +63,7 @@ def test_feed_reports_resolve_into_the_viewport(stations):
     and 238 St branch tips at the north edge, and the south edge clips
     the outer-SI tail of the Staten Island Railway (records below the
     S21N/S22S pair, e.g. Tottenville). The other two edges contain the
-    system: the east edge sits ~2 px beyond the Lefferts and 179 St
+    system: the east edge sits ~14 px beyond the Lefferts and 179 St
     branch tips, and the west edge is west of every station it serves
     (it crosses only SI land west of the S21 line, where no station
     exists). A resolved point outside any other edge would be a
