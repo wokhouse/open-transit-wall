@@ -267,6 +267,19 @@ ls /dev/cu.*        # expect something like /dev/cu.usbmodemXXXX
 pio device list
 ```
 
+### Enclosure and stand
+
+Print-ready parts for the Waveshare build live in [`hardware/`](hardware/).
+The OnShape models are [here](https://cad.onshape.com/documents/d582351647ddf168d4bf5cb3/w/b25a1e0e4552ecba56fb97f4/e/094332f4c13d955c08b0c0da?renderMode=0&uiState=6ae636c337bf8d4849b799c5).
+
+| Part | File | Size (as modeled) |
+|---|---|---|
+| Rear enclosure for the Waveshare board behind a 64×64 panel | `hardware/hub75-64x64-rear-enclosure-for-waveshare.stl` | 160 × 160 × 10.25 mm |
+| Desktop stand | `hardware/desktop-stand.stl` | 70 × 44 × 9.3 mm |
+
+Material is not critical for these parts; the wall in this repo was printed
+in black PETG-HF.
+
 ## Attribution
 
 Vehicle location data provided by [511](https://511.org/open-data/) and the

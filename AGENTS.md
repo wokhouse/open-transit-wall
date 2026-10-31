@@ -86,6 +86,7 @@ tools/run_sim.sh /tmp/v.csv      # writes /tmp/otw_wall.bmp (64x64)
 | `firmware/src/map_project.h` | lat/lon -> pixel projection. |
 | `sim/`, `tools/run_sim.sh` | Native simulator: same projection, no hardware. It compiles no firmware `main`, so it is unaffected by a firmware change. |
 | `fixtures/` | Recorded upstream responses (511 SIRI XML, MTA protobuf feeds + static text dumps) for offline work. |
+| `hardware/` | Print-ready STLs: rear enclosure for the Waveshare 64×64 wall + desktop stand. OnShape models linked from `README.md`. |
 
 ## Boundaries
 
