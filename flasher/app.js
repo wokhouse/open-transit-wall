@@ -237,9 +237,10 @@ async function readBanner() {
   } else {
     provLog('board is unprovisioned — fill the form and send.');
   }
-  // The MQTT fields only exist on protocol v3+ boards; older firmware would
-  // answer ERR unknown key, so keep the section closed for them. The
-  // brightness window needs v4.
+  // The section is open to everyone (the settings are part of the page, and
+  // Save stays disabled until a board is connected). It only closes itself
+  // for a board that speaks protocol v2 or older: that firmware answers
+  // ERR unknown key to the m* keys. The brightness window needs v4.
   els.mqttSection.hidden = board.fw < 3;
   els.bwindow.hidden = board.fw < 4;
   enableProvisioning();
