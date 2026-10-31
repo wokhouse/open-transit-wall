@@ -47,12 +47,15 @@ def test_station_table_usable(stations):
 
 def test_feed_reports_resolve_into_the_viewport(stations):
     """The station-snap contract: the overwhelming majority of recorded
-    reports resolve to a station, and every resolved one is inside the
-    served viewport. A small unresolved tail (15/261 in the recorded ACE
-    feed, two station ids missing from the static GTFS) is skipped and
-    counted at runtime — see fetch_subway_snapshot."""
+    reports resolve to a station, and every resolved one is either inside
+    the served viewport or north of its top edge — the Riverdale crop
+    deliberately clips the Van Cortlandt, Dyre Avenue, and 238 St branch
+    tips, like the sf viewport clips lines running past its edges. A
+    resolved point outside any other edge would be a viewport bug. A
+    small unresolved tail (two station ids missing from the static GTFS)
+    is skipped and counted at runtime — see fetch_subway_snapshot."""
     bbox = load_registry()["mta"]["bbox"]
-    total = resolved = 0
+    total = resolved = clipped = 0
     for feed in RT_FEEDS:
         for vp in mta_rt.parse_rt((FIXTURES / feed).read_bytes()):
             total += 1
@@ -61,10 +64,14 @@ def test_feed_reports_resolve_into_the_viewport(stations):
                 continue
             resolved += 1
             lat, lon = loc
-            assert bbox["lat_min"] <= lat <= bbox["lat_max"]
+            if lat > bbox["lat_max"]:
+                clipped += 1
+                continue
+            assert bbox["lat_min"] <= lat
             assert bbox["lon_min"] <= lon <= bbox["lon_max"]
     assert total > 250
     assert resolved / total > 0.90
+    assert 0 < clipped < 0.05 * resolved  # only the cropped branch tips
 
 
 def test_route_colors_and_style_keys(routes):
