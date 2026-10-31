@@ -11,7 +11,17 @@
   },
   "mta": {
     "name": "NYC Subway (MTA)",
-    "source": "mta-rt",
+    "source": "gtfs-rt",
+    "feeds": {
+      "1-7": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs",
+      "ACE": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace",
+      "BDFM": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-bdfm",
+      "G": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-g",
+      "JZ": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-jz",
+      "L": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-l",
+      "NQRW": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw"
+    },
+    "static_gtfs": "https://web.mta.info/developers/data/nyct/subway/google_transit.zip",
     "bbox": {
       "lat_min": 40.5701,
       "lat_max": 40.88,

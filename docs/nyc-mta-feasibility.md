@@ -174,10 +174,15 @@ Superseded by the subway-only section for phasing; totals unchanged:
 
 What landed (subway-only, per the revised phasing):
 
-- `server/mta_rt.py`: parses the seven polled division GTFS-RT feeds and
+- `server/gtfs_rt.py` (renamed from `mta_rt.py` right after the prototype:
+  the feed URLs and static-zip URL moved into the registry entry, so the
+  module is now a generic `gtfs-rt` source — a new GTFS-RT rail agency is
+  a registry edit, not new Python): parses the seven polled division
+  GTFS-RT feeds and
   the static `stops.txt` station table (SIR is deliberately not polled —
   the viewport excludes Staten Island). `proxy.py` gains a `source`
-  branch; an `mta-rt` poll fetches all seven feeds, resolves `stop_id` to
+  branch; a `gtfs-rt` poll fetches the entry's feeds, resolves `stop_id`
+  to
   coords, and
   feeds the shared compact/classify path. `routes_mta.json` and
   `stations_mta.json` are cached in-repo (same offline pattern as the

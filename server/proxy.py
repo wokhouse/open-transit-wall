@@ -3,8 +3,9 @@
 Serves one or more transit agencies from server/agencies.json (the registry).
 Each served agency is polled from its upstream on its own timer (POLL_SECONDS
 per agency): 511 member agencies from the 511 SIRI VehicleMonitoring feed,
-registry entries with `"source": "mta-rt"` (NYC subway) from MTA's public
-GTFS-RT feeds. Each agency is served as a compact vehicle list for the ESP32
+registry entries with `"source": "gtfs-rt"` (rail agencies, e.g. NYC subway)
+from the public GTFS-RT feeds + static GTFS zip named in their registry
+entry. Each agency is served as a compact vehicle list for the ESP32
 display. Which agencies a deployment runs is set by SERVED_AGENCIES; the
 payload carries the agency's bbox, refresh cadence, and vehicle-color
 palette (per-line for metro) so clients are configured entirely from the
@@ -42,8 +43,8 @@ import zlib
 from datetime import UTC, datetime
 from pathlib import Path
 
+import gtfs_rt
 import httpx
-import mta_rt
 import uvicorn
 from classify import (
     COLOR_BUS,
@@ -106,12 +107,22 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
         if not AGENCY_ID_RE.match(agency_id):
             raise ValueError(f"registry id {agency_id!r} must match {AGENCY_ID_RE.pattern}")
         source = cfg.get("source", "511")
-        if source not in ("511", "mta-rt"):
+        if source not in ("511", "gtfs-rt"):
             raise ValueError(f"registry entry {agency_id!r} has unknown source {source!r}")
         required = ("name", "bbox") if source != "511" else ("name", "siri_agency", "bbox")
         for key in required:
             if key not in cfg:
                 raise ValueError(f"registry entry {agency_id!r} missing {key!r}")
+        if source == "gtfs-rt":
+            feeds = cfg.get("feeds")
+            if (not isinstance(feeds, dict) or not feeds
+                    or not all(isinstance(url, str) and url.startswith("https://")
+                              for url in feeds.values())):
+                raise ValueError(f"registry entry {agency_id!r} needs a non-empty "
+                                 "'feeds' object of https URLs")
+            static = cfg.get("static_gtfs")
+            if not isinstance(static, str) or not static.startswith("http"):
+                raise ValueError(f"registry entry {agency_id!r} needs a 'static_gtfs' URL")
         for key in ("lat_min", "lat_max", "lon_min", "lon_max"):
             if not isinstance(cfg["bbox"].get(key), (int, float)):
                 raise ValueError(f"registry entry {agency_id!r} bbox.{key} missing or not a number")
@@ -153,13 +164,16 @@ class AgencyState:
         self.name = cfg["name"]
         self.source = cfg.get("source", "511")
         self.siri_agency = cfg.get("siri_agency", "")
+        # gtfs-rt: the per-agency upstream endpoints named by the registry.
+        self.feeds = dict(cfg.get("feeds") or {})
+        self.static_gtfs = cfg.get("static_gtfs", "")
         self.bbox = [cfg["bbox"]["lat_min"], cfg["bbox"]["lat_max"],
                      cfg["bbox"]["lon_min"], cfg["bbox"]["lon_max"]]
         self.palette = {**DEFAULT_PALETTE, **(cfg.get("palette") or {})}
         # SFMTA keeps its offline line table; other agencies rely on GTFS.
         self.fallback = MUNI_FALLBACK if agency_id == "sf" else None
         self.routes_path = SERVER_DIR / f"routes_{agency_id}.json"
-        # mta-rt: subway VehiclePositions report station ids, not coords;
+        # gtfs-rt: VehiclePositions report station ids, not coords;
         # this table (from the static GTFS stops.txt) resolves them.
         self.stations_path = SERVER_DIR / f"stations_{agency_id}.json"
         self.stations: dict[str, tuple[float, float]] = self._load_stations()
@@ -330,18 +344,19 @@ def refresh_routes(api_key: str | None, state: AgencyState, quiet: bool = False)
     """Download the agency's GTFS static feed and cache route types/colors.
 
     The upstream differs by source: 511 datafeeds (keyed) for member
-    agencies, MTA's public subway static feed for mta-rt — which also
-    supplies the station coordinate table the RT feeds lack. quiet=True
+    agencies, and for gtfs-rt agencies the public static GTFS zip named
+    by their registry entry — which also supplies the station coordinate
+    table the RT feeds lack. quiet=True
     logs to stderr so callers that print a payload on stdout (--once)
     keep their output clean.
     """
     log = (lambda msg: print(msg, file=sys.stderr)) if quiet else print
-    if state.source == "mta-rt":
-        response = httpx.get(mta_rt.STATIC_GTFS_URL, timeout=120.0, follow_redirects=True)
+    if state.source == "gtfs-rt":
+        response = httpx.get(state.static_gtfs, timeout=120.0, follow_redirects=True)
         response.raise_for_status()
         with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
             routes = parse_routes_txt(archive.read("routes.txt").decode("utf-8-sig"))
-            stations = mta_rt.parse_stops(archive.read("stops.txt").decode("utf-8-sig"))
+            stations = gtfs_rt.parse_stops(archive.read("stops.txt").decode("utf-8-sig"))
         state.routes_path.write_text(json.dumps(routes, indent=0))
         state.routes = routes
         state.stations_path.write_text(json.dumps({k: list(v) for k, v in stations.items()}))
@@ -395,11 +410,11 @@ def check_operator_codes(api_key: str) -> None:
                   file=sys.stderr)
 
 
-def fetch_subway_snapshot(state: AgencyState) -> list[dict]:
-    """Poll all eight MTA division feeds and resolve trains to station coords.
+def fetch_station_snapshot(state: AgencyState) -> list[dict]:
+    """Poll one gtfs-rt agency's feeds and resolve vehicles to station coords.
 
     Returns vehicles in the siri.parse_vehiclemonitor shape so the shared
-    compact_vehicles/classify path applies. Subway VPs carry no coordinates:
+    compact_vehicles/classify path applies. These VPs carry no coordinates:
     each is placed at its reported station (the wall's glide then animates
     the hop between polls). Reports whose station id is missing from the
     static table are skipped and counted — that mismatch means the routes
@@ -409,10 +424,10 @@ def fetch_subway_snapshot(state: AgencyState) -> list[dict]:
         raise RuntimeError(f"{state.id}: no station table (first routes refresh failed?)")
     vehicles = []
     missing = 0
-    for url in mta_rt.SUBWAY_FEEDS.values():
+    for url in state.feeds.values():
         response = httpx.get(url, timeout=20.0, follow_redirects=True)
         response.raise_for_status()
-        for vp in mta_rt.parse_rt(response.content):
+        for vp in gtfs_rt.parse_rt(response.content):
             loc = state.stations.get(vp["stop_id"])
             if loc is None:
                 missing += 1
@@ -448,8 +463,8 @@ def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
                     print(f"[routes] refresh failed ({redact(str(error))}); "
                           "using fallback")
 
-            if state.source == "mta-rt":
-                raw_vehicles = fetch_subway_snapshot(state)
+            if state.source == "gtfs-rt":
+                raw_vehicles = fetch_station_snapshot(state)
             elif fixture is not None:
                 raw_vehicles = parse_vehiclemonitor(json.loads(fixture.read_text()))
             elif api_key:
@@ -569,13 +584,13 @@ def main() -> None:
                          f"(SERVED_AGENCIES={','.join(SERVED)})")
             return
         state = STATES[agency_id]
-        if state.source == "mta-rt":
+        if state.source == "gtfs-rt":
             try:
                 refresh_routes(None, state, quiet=True)
             except Exception as error:
                 print(f"[routes] refresh failed ({redact(str(error))}); "
                       "using cached tables", file=sys.stderr)
-            raw_vehicles = fetch_subway_snapshot(state)
+            raw_vehicles = fetch_station_snapshot(state)
         elif args.fixture:
             payload = json.loads(args.fixture.read_text())
             raw_vehicles = parse_vehiclemonitor(payload)

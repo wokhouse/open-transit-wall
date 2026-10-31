@@ -1,4 +1,4 @@
-"""Tests for the mta-rt upstream (NYC subway GTFS-RT + static GTFS).
+"""Tests for the gtfs-rt upstream (MTA NYCT: GTFS-RT + static GTFS).
 
 Fixtures are recorded live responses: two division feeds (raw protobuf),
 the static feed's routes.txt and stops.txt. No test touches the network.
@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import mta_rt
+import gtfs_rt
 from classify import classify
 from proxy import compact_vehicles, load_registry, parse_routes_txt, to_wire
 
@@ -21,7 +21,7 @@ RT_FEEDS = ["mta_subway_17.pb", "mta_subway_ace.pb"]
 
 @pytest.fixture(scope="module")
 def stations():
-    return mta_rt.parse_stops((FIXTURES / "mta_subway_stops.txt").read_text())
+    return gtfs_rt.parse_stops((FIXTURES / "mta_subway_stops.txt").read_text())
 
 
 @pytest.fixture(scope="module")
@@ -29,8 +29,18 @@ def routes():
     return parse_routes_txt((FIXTURES / "mta_subway_routes.txt").read_text())
 
 
+def test_registry_entry_shape():
+    """The mta entry is a generic gtfs-rt agency: everything upstream-specific
+    is registry data (load_registry would have raised at import otherwise)."""
+    cfg = load_registry()["mta"]
+    assert cfg["source"] == "gtfs-rt"
+    assert cfg["feeds"], "a gtfs-rt entry needs at least one feed"
+    assert all(url.startswith("https://api-endpoint") for url in cfg["feeds"].values())
+    assert cfg["static_gtfs"].startswith("https://")
+
+
 def test_parse_rt_fixture():
-    records = mta_rt.parse_rt((FIXTURES / RT_FEEDS[0]).read_bytes())
+    records = gtfs_rt.parse_rt((FIXTURES / RT_FEEDS[0]).read_bytes())
     assert len(records) > 100
     assert all(r["line"] and r["stop_id"] and r["id"] for r in records)
     # The 1-7 feed must carry numbered lines.
@@ -53,11 +63,11 @@ def test_feed_reports_resolve_into_the_viewport(stations):
     tips, like the sf viewport clips lines running past its edges. A
     resolved point outside any other edge would be a viewport bug. A
     small unresolved tail (two station ids missing from the static GTFS)
-    is skipped and counted at runtime — see fetch_subway_snapshot."""
+    is skipped and counted at runtime — see fetch_station_snapshot."""
     bbox = load_registry()["mta"]["bbox"]
     total = resolved = clipped = 0
     for feed in RT_FEEDS:
-        for vp in mta_rt.parse_rt((FIXTURES / feed).read_bytes()):
+        for vp in gtfs_rt.parse_rt((FIXTURES / feed).read_bytes()):
             total += 1
             loc = stations.get(vp["stop_id"])
             if loc is None:
@@ -85,7 +95,7 @@ def test_route_colors_and_style_keys(routes):
 
 def test_compact_wire_rows(stations, routes):
     raw = []
-    for vp in mta_rt.parse_rt((FIXTURES / RT_FEEDS[1]).read_bytes()):
+    for vp in gtfs_rt.parse_rt((FIXTURES / RT_FEEDS[1]).read_bytes()):
         loc = stations.get(vp["stop_id"])
         if loc is None:
             continue  # the runtime skip path
