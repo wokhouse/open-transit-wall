@@ -30,7 +30,10 @@ SUBWAY_FEEDS = {
     "JZ": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-jz",
     "L": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-l",
     "NQRW": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw",
-    "SIR": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-si",
+    # The Staten Island Railway feed is deliberately not polled: the mta
+    # viewport excludes Staten Island (few trains, huge bbox cost) — the
+    # same way the sf viewport sits south of Treasure Island. Add the key
+    # "SIR": ".../nyct%2Fgtfs-si" plus a wider bbox to bring it back.
 }
 
 STATIC_GTFS_URL = "https://web.mta.info/developers/data/nyct/subway/google_transit.zip"

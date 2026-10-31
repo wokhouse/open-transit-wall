@@ -7,7 +7,7 @@
   "mta": {
     "name": "NYC Subway (MTA)",
     "source": "mta-rt",
-    "bbox": {"lat_min": 40.5093, "lat_max": 40.9066, "lon_min": -74.2658, "lon_max": -73.7416}
+    "bbox": {"lat_min": 40.5701, "lat_max": 40.9071, "lon_min": -74.0340, "lon_max": -73.5892}
   },
   "ct": {
     "name": "Caltrain",

@@ -179,11 +179,17 @@ What landed (subway-only, per the revised phasing):
   other agencies).
 - Identity: `id = crc32(trip_id)` as scoped. Positions snap to the
   reported station; the existing glide animates the hops.
-- Viewport: the bbox is a true square in km (44.2 x 44.2 at 64x64 =
-  691 m/px) built from the static station table's own extremes plus a
-  margin. The first Coney-Island-anchored box clipped 4 Staten Island
-  Railway dots; the station-table derivation covers every snap candidate
-  by construction (verified: 508/508 rows inside on live data).
+- Viewport: a true km square (37.5 km, 586 m/px at 64x64) derived from the
+  station table's own extremes plus margins, with the composition Jade
+  asked for: Manhattan along the left, Brooklyn touching the bottom edge,
+  Queens filling the right. Staten Island is excluded from the map, the
+  same way the sf viewport sits south of Treasure Island: the west edge
+  is pinned east of the island, the south edge north of it, and the SIR
+  GTFS-RT feed is not polled at all. Every served row verified inside on
+  live data (275/275 at night; earlier full-fleet check 508/508).
+  The first two candidates were wrong and caught by measurement: the
+  Coney-Island-anchored box clipped 4 Staten Island Railway dots, and a
+  west edge at -74.045 pulled the Verrazano approach into the frame.
 - Backdrop: Natural Earth land (110m and 50m) failed NYC — it fills the
   East River, Jamaica Bay, and drops Manhattan. The shipped polygons come
   from OpenStreetMap island/borough polygons via Nominatim, minus
