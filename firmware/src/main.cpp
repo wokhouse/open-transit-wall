@@ -126,6 +126,8 @@ static void drawSplashFrame();  // defined with the screen helpers below
 // the panel shows something else; the guard in the tick makes a stray fire
 // harmless.
 static TimerHandle_t splashTimer = nullptr;
+static_assert(SPLASH_FPS >= 1 && SPLASH_FPS <= 1000,
+              "SPLASH_FPS must fit the 1 kHz FreeRTOS tick");
 static void splashTick(TimerHandle_t) {
   if (shownError == ERR_SPLASH && panelBrightness != 0) {
     drawSplashFrame();
@@ -136,8 +138,11 @@ static void splashPumpStart() {
     splashTimer = xTimerCreate("splash", pdMS_TO_TICKS(1000 / SPLASH_FPS),
                                pdTRUE, nullptr, splashTick);
   }
-  if (splashTimer != nullptr) {
-    xTimerStart(splashTimer, 0);
+  if (splashTimer == nullptr || xTimerStart(splashTimer, 0) != pdPASS) {
+    // A frozen splash is still better than black, but say so on the console:
+    // without this the field symptom is indistinguishable from the bug the
+    // pump fixes.
+    Serial.println("splash pump failed to start");
   }
 }
 static void splashPumpStop() {
@@ -413,8 +418,8 @@ static void putScreenPixel(void *, int x, int y, uint8_t r, uint8_t g,
   screen.drawPixel(x, y, r, g, b);
 }
 
-// One frame of the bouncing splash. Called from setup's blocking waits so
-// the logo moves while the wall loads.
+// One frame of the bouncing splash. Driven at SPLASH_FPS by the splashTick
+// timer callback; called directly only for the first frame (setup/showScreen).
 static void drawSplashFrame() {
   screen.clear();
   showSplashFrame(putScreenPixel, nullptr, &splashState);
@@ -426,9 +431,14 @@ static void showScreen(ErrorKind kind) {
   }
   shownError = kind;
   // The splash pump owns the panel while the splash is up; anything else
-  // takes it over, so the pump must not draw over it.
+  // takes it over, so the pump must not draw over it. A tick already in
+  // flight when stop() is queued still finishes, so wait it out: one tick
+  // guarantees nothing can repaint over the screen drawn below. showScreen
+  // only runs from setup()/loop(), where 100 ms at a screen transition is
+  // invisible.
   if (kind != ERR_SPLASH) {
     splashPumpStop();
+    delay(1000 / SPLASH_FPS + 1);
   }
   // Every status screen replaces whatever was on the panel wholesale:
   // wipe first so no pixels from the previous screen bleed through.
@@ -471,9 +481,11 @@ void setup() {
   screen.setBrightness(DISPLAY_BRIGHTNESS);  // boot default; NVS value applied after provLoad
 
   // Splash while we figure out what to show: the roundel bouncing DVD-style
-  // around the panel while the wall loads. Replaced by the map or an error
-  // screen below. Seed from the SoC RNG so every boot takes a different
-  // path (initial diagonal and corner bounces both derive from this).
+  // around the panel while the wall loads. Replaced by an error screen below,
+  // or by the map once the first poll lands in loop() (its showScreen
+  // stops the pump and takes the panel). Seed from the SoC RNG so every boot
+  // takes a different path (initial diagonal and corner bounces both derive
+  // from this).
   screen.clear();
   splashState.seed = esp_random();
   drawSplashFrame();
@@ -602,7 +614,11 @@ void loop() {
       // The splash pump owns the panel: it ticks from the timer task, which
       // keeps drawing while this loop is blocked in discovery or a TLS poll.
       // Nothing here may paint over it (the status pixels would land on the
-      // roundel).
+      // roundel). Consume any mapDirty raised by a brightness change during
+      // the splash window: the splash covers the whole panel anyway and the
+      // first showScreen(ERR_NONE) wipes and re-merges the map wholesale, so
+      // a deferred flag would only make that first map flash and re-draw.
+      mapDirty = false;
     } else {
       if (mapDirty) {
         // Back from the off frame: the frame was wiped, so repaint the map
