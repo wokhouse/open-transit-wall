@@ -144,6 +144,12 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
                                   or limit <= 0):
             raise ValueError(f"registry entry {agency_id!r} 'requests_per_day_limit' "
                              "must be a positive integer")
+        drop = cfg.get("drop_route_ids")
+        if drop is not None:
+            if (not isinstance(drop, list)
+                    or not all(isinstance(route, str) and route.strip() for route in drop)):
+                raise ValueError(f"registry entry {agency_id!r} 'drop_route_ids' must be a "
+                                 "list of non-empty route ids")
         required = ("name", "bbox") if source != "511" else ("name", "siri_agency", "bbox")
         for key in required:
             if key not in cfg:
@@ -210,6 +216,11 @@ class AgencyState:
         self.api_key_env = cfg.get("api_key_env", "")
         self.api_key = os.environ.get(self.api_key_env, "").strip() if self.api_key_env else ""
         self.feed_params = {cfg["api_key_param"]: self.api_key} if self.api_key else {}
+        # Route ids this agency's feed reports but the wall must not draw
+        # (WMATA's NR non-revenue trains). A route that is simply absent
+        # from the static GTFS is not enough to drop it — that is also how
+        # a genuinely new line shows up — so the exclusion is registry data.
+        self.drop_route_ids = frozenset(cfg.get("drop_route_ids") or ())
         self.requests_per_day_limit = cfg.get("requests_per_day_limit")
         self.bbox = [cfg["bbox"]["lat_min"], cfg["bbox"]["lat_max"],
                      cfg["bbox"]["lon_min"], cfg["bbox"]["lon_max"]]
@@ -293,21 +304,25 @@ STATES: dict[str, AgencyState] = {
 
 
 def compact_vehicles(raw_vehicles: list[dict], routes: dict[str, dict],
-                     fallback: dict[str, dict] | None = None) -> list[dict]:
+                     fallback: dict[str, dict] | None = None,
+                     drop_route_ids: frozenset[str] = frozenset()) -> list[dict]:
     """Map parsed SIRI entries to the cached vehicle dicts.
 
     Vehicles without a route reference (yards / deadheading, ~20% of the feed)
     are dropped — they'd plot as misclassified dots clustered at the depots.
     Refs that normalize away to nothing (e.g. 'SF:') are dropped by the same
     rule: they would produce a degenerate 'M:' palette key.
-    No type filtering: every active vehicle the agency reports is served.
+    No type filtering: every active vehicle the agency reports is served,
+    except the route ids a registry entry lists in `drop_route_ids` (WMATA's
+    NR non-revenue trains — real trains, no passengers, and they classify as
+    generic bus blue because the static GTFS has no such route).
     """
     out = []
     for vehicle in raw_vehicles:
         if not vehicle["line"]:
             continue
         info = classify(vehicle["line"], routes, fallback)
-        if not info["line"]:
+        if not info["line"] or info["line"] in drop_route_ids:
             continue
         out.append({
             "r": info["line"],
@@ -396,7 +411,12 @@ def refresh_routes(api_key: str | None, state: AgencyState, quiet: bool = False)
     """
     log = (lambda msg: print(msg, file=sys.stderr)) if quiet else print
     if state.source == "gtfs-rt":
-        response = httpx.get(state.static_gtfs, timeout=120.0, follow_redirects=True)
+        # Keyed agencies gate their static zip as well as their feeds
+        # (WMATA 401s on both), so the registry key rides this request too.
+        # MTA, Metro Transit, CTA and TriMet serve theirs keyless, where
+        # feed_params is empty and no parameter is sent.
+        response = httpx.get(state.static_gtfs, params=state.feed_params or None,
+                             timeout=120.0, follow_redirects=True)
         response.raise_for_status()
         with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
             routes = parse_routes_txt(archive.read("routes.txt").decode("utf-8-sig"))
@@ -548,7 +568,8 @@ def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
             else:
                 raise RuntimeError("FIVE11_API_KEY not set (use --fixture for offline dev)")
 
-            vehicles = compact_vehicles(raw_vehicles, state.routes, state.fallback)
+            vehicles = compact_vehicles(raw_vehicles, state.routes, state.fallback,
+                                       state.drop_route_ids)
             state.update(vehicles)
             print(f"[poll:{state.id}] {len(vehicles)} vehicles at {state.ts()}",
                   flush=True)
@@ -669,7 +690,8 @@ def main() -> None:
         else:
             parser.error("--once needs FIVE11_API_KEY or --fixture")
             return
-        state.update(compact_vehicles(raw_vehicles, state.routes, state.fallback))
+        state.update(compact_vehicles(raw_vehicles, state.routes, state.fallback,
+                                     state.drop_route_ids))
         print(json.dumps(wire_payload(state), indent=1))
         return
 

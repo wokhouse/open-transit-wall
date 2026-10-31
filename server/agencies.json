@@ -61,6 +61,24 @@
       "lon_max": -122.4534
     }
   },
+  "wmata": {
+    "name": "WMATA Metrorail (DC)",
+    "source": "gtfs-rt",
+    "feeds": {
+      "rail-vehicle-positions": "https://api.wmata.com/gtfs/rail-gtfsrt-vehiclepositions.pb"
+    },
+    "api_key_env": "WMATA_API_KEY",
+    "api_key_param": "api_key",
+    "requests_per_day_limit": 50000,
+    "static_gtfs": "https://api.wmata.com/gtfs/rail-gtfs-static.zip",
+    "drop_route_ids": ["NR"],
+    "bbox": {
+      "lat_min": 38.737,
+      "lat_max": 39.1494,
+      "lon_min": -77.3569,
+      "lon_max": -76.8267
+    }
+  },
   "ct": {
     "name": "Caltrain",
     "siri_agency": "CT",

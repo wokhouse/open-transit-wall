@@ -1,0 +1,127 @@
+stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,location_type,parent_station,wheelchair_boarding,level_id
+STN_N06,Wiehle-Reston East,,38.94783193,-77.34031555,91,1,,1,
+STN_N04,Spring Hill,,38.92921225,-77.24189135,90,1,,1,
+STN_N03,Greensboro,,38.9212686,-77.23416237,89,1,,1,
+STN_N02,Tysons,,38.92068462,-77.22158868,88,1,,1,
+STN_N01,McLean,,38.92433888,-77.21053,87,1,,1,
+STN_K08,Vienna,,38.87757822,-77.2724589,3,1,,1,
+STN_K07,Dunn Loring,,38.8836488,-77.22724305,3,1,,1,
+STN_K06,West Falls Church,,38.9007884,-77.18922099,2,1,,1,
+STN_K05,East Falls Church,,38.88602629,-77.15694404,1,1,,1,
+STN_K04,Ballston-MU,,38.8822602,-77.11322048,1,1,,1,
+STN_K03,Virginia Sq-GMU,,38.88343309,-77.10302399,58,1,,1,
+STN_K02,Clarendon,,38.88673936,-77.09544242,1,1,,1,
+STN_K01,Court House,,38.89015263,-77.08714356,1,1,,1,
+STN_J03,Franconia-Springfield,,38.76650549,-77.16799097,3,1,,1,
+STN_J02,Van Dorn St,,38.79929181,-77.12926966,71,1,,1,
+STN_G05,Downtown Largo,,38.90051057,-76.84465397,86,1,,1,
+STN_G04,Morgan Blvd,,38.89400109,-76.86770736,85,1,,1,
+STN_G03,Addison Rd,,38.88673121,-76.8941346,1,1,,1,
+STN_G02,Capitol Heights,,38.88942916,-76.91183314,5,1,,1,
+STN_G01,Benning Rd,,38.89106901,-76.93861946,10,1,,1,
+STN_F11,Branch Av,,38.82671771,-76.9118167,83,1,,1,
+STN_F10,Suitland,,38.84466776,-76.93286932,82,1,,1,
+STN_F09,Naylor Rd,,38.85112092,-76.95660457,81,1,,1,
+STN_F08,Southern Av,,38.84095364,-76.97521082,80,1,,1,
+STN_F07,Congress Heights,,38.84569521,-76.98843915,79,1,,1,
+STN_F06,Anacostia,,38.86328678,-76.99555939,10,1,,1,
+STN_F05,Navy Yard-Ballpark,,38.87647255,-77.0058773,10,1,,1,
+STN_F04,Waterfront,,38.87645595,-77.01755936,10,1,,1,
+STN_F02,Archives,,38.89322449,-77.02190866,10,1,,1,
+STN_E10,Greenbelt,,39.01109343,-76.91119726,8,1,,1,
+STN_E09,College Park-U of Md,,38.97830324,-76.92834004,8,1,,1,
+STN_E08,Hyattsville Crossing,,38.96529153,-76.95642247,5,1,,1,
+STN_E07,West Hyattsville,,38.95527582,-76.96949977,5,1,,1,
+STN_E05,Georgia Av-Petworth,,38.93736709,-77.02353736,78,1,,1,
+STN_E04,Columbia Heights,,38.92750233,-77.03252102,77,1,,1,
+STN_E03,U St,,38.91700896,-77.02752021,70,1,,1,
+STN_E02,Shaw-Howard U,,38.91351778,-77.02192262,69,1,,1,
+STN_E01,Mt Vernon Sq,,38.90657966,-77.02192049,66,1,,1,
+STN_D13,New Carrollton,,38.94802813,-76.8718705,8,1,,1,
+STN_D12,Landover,,38.93350374,-76.89126522,5,1,,1,
+STN_D11,Cheverly,,38.91664068,-76.91666181,5,1,,1,
+STN_D10,Deanwood,,38.9082237,-76.93516312,10,1,,1,
+STN_D09,Minnesota Av,,38.89916816,-76.94674282,10,1,,1,
+STN_D08,Stadium-Armory,,38.88692677,-76.97707387,10,1,,1,
+STN_D07,Potomac Av,,38.8812707,-76.98557963,10,1,,1,
+STN_D06,Eastern Market,,38.88463248,-76.99607485,10,1,,1,
+STN_D05,Capitol South,,38.88507317,-77.00521546,10,1,,1,
+STN_D04,Federal Center SW,,38.88507577,-77.01593741,10,1,,1,
+STN_D03_F03,L'Enfant Plaza,,38.8848935,-77.02191272,10,1,,1,
+STN_D02,Smithsonian,,38.8885055,-77.02863058,50,1,,1,
+STN_D01,Federal Triangle,,38.8938337,-77.02813189,10,1,,1,
+STN_C15,Huntington,,38.79382977,-77.07530039,2,1,,1,
+STN_C14,Eisenhower Av,,38.8003537,-77.07115634,1,1,,1,
+STN_C13,King St-Old Town,,38.80660864,-77.0609744,1,1,,1,
+STN_C12,Braddock Rd,,38.81408652,-77.05372176,7,1,,1,
+STN_C10,Ronald Reagan Washington National Airport,,38.85350503,-77.04404792,11,1,,1,
+STN_C09,Crystal City,,38.85784574,-77.05057183,11,1,,1,
+STN_C08,Pentagon City,,38.86185214,-77.05951586,43,1,,1,
+STN_C07,Pentagon,,38.86919464,-77.05411341,42,1,,1,
+STN_C06,Arlington Cemetery,,38.88458844,-77.06309959,3,1,,1,
+STN_C05,Rosslyn,,38.89603409,-77.07083752,11,1,,1,
+STN_C04,Foggy Bottom-GWU,,38.90069997,-77.05010428,10,1,,1,
+STN_C03,Farragut West,,38.90134189,-77.04046401,10,1,,1,
+STN_C02,McPherson Sq,,38.90134166,-77.03343315,10,1,,1,
+STN_B35,NoMa-Gallaudet U,,38.90661683,-77.00331114,84,1,,1,
+STN_B11,Glenmont,,39.0617673,-77.05354802,1,1,,1,
+STN_B10,Wheaton,,39.03754324,-77.0501104,7,1,,1,
+STN_B09,Forest Glen,,39.01494587,-77.04292734,4,1,,1,
+STN_B08,Silver Spring,,38.99379857,-77.03130704,4,1,,1,
+STN_B07,Takoma,,38.97602203,-77.01812559,10,1,,1,
+STN_B06_E06,Fort Totten,,38.95178626,-77.00229579,10,1,,1,
+STN_B05,Brookland-CUA,,38.93312552,-76.99454629,10,1,,1,
+STN_B04,Rhode Island Av,,38.92091636,-76.99594187,10,1,,1,
+STN_B03,Union Station,,38.89749513,-77.0074665,55,1,,1,
+STN_B02,Judiciary Sq,,38.8962183,-77.01680402,32,1,,1,
+STN_B01_F01,Gallery Place,,38.8983797,-77.02280227,10,1,,1,
+STN_A15,Shady Grove,,39.11992667,-77.16466928,7,1,,1,
+STN_A14,Rockville,,39.08427172,-77.14619289,7,1,,1,
+STN_A13,Twinbrook,,39.06269642,-77.12121591,7,1,,1,
+STN_A12,North Bethesda,,39.04853893,-77.11307619,4,1,,1,
+STN_A11,Grosvenor-Strathmore,,39.02973159,-77.10411655,7,1,,1,
+STN_A10,Medical Center,,38.99822547,-77.09675826,4,1,,1,
+STN_A09,Bethesda,,38.98327505,-77.09365421,4,1,,1,
+STN_A08,Friendship Heights,,38.95938372,-77.08502166,4,1,,1,
+STN_A07,Tenleytown-AU,,38.94888613,-77.07967233,53,1,,1,
+STN_A06,Van Ness-UDC,,38.9432111,-77.06295344,10,1,,1,
+STN_A05,Cleveland Park,,38.9349115,-77.0581274,10,1,,1,
+STN_A04,Woodley Park,,38.9255617,-77.05269219,10,1,,1,
+STN_A03,Dupont Circle,,38.90990924,-77.04359665,10,1,,1,
+STN_A02,Farragut North,,38.90314683,-77.03966844,10,1,,1,
+STN_A01_C01,Metro Center,,38.89832112,-77.02808839,10,1,,1,
+PF_N06_C,"Wiehle-Reston East, Silver Line Center Platform",Silver Line to Downtown Largo,38.9478252,-77.34031274,2,0,STN_N06,1,N06_L1
+PF_K08_C,"Vienna, Orange Line Center Platform",Orange Line to New Carrollton,38.87756961,-77.27246126,3,0,STN_K08,1,K08_L1
+PF_K02_1,"Clarendon, Orange/Silver Line Track 1 Platform",Orange/Silver Line to New Carrollton/Downtown Largo,38.88668469,-77.09540305,1,0,STN_K02,1,K02_L3
+PF_K01_C,"Court House, Orange/Silver Line Center Platform",Orange/Silver Line to New Carrollton/Downtown Largo | to Vienna/Ashburn,38.89016272,-77.08709367,1,0,STN_K01,1,K01_L3
+PF_G05_C,"Downtown Largo, Blue/Silver Line Center Platform",Blue/Silver Line to Franconia-Springfield/Ashburn,38.90050268,-76.84465183,86,0,STN_G05,1,G05_L2
+PF_G04_C,"Morgan Blvd, Blue/Silver Line Center Platform",Blue/Silver Line to Downtown Largo | to Franconia-Springfield/Ashburn,38.89399325,-76.86770515,85,0,STN_G04,1,G04_L1
+PF_F05_C,"Navy Yard-Ballpark, Green Line Center Platform",Green Line to Greenbelt | to Branch Ave,38.87646472,-77.00587504,10,0,STN_F05,1,F05_L2
+PF_E10_C,"Greenbelt, Green/Yellow Line Center Platform",Green/Yellow Line to Branch Ave/Huntington,39.0110847,-76.91119571,8,0,STN_E10,1,E10_L1
+PF_E06_C,"Fort Totten, Green/Yellow Line Center Platform",Green/Yellow Line to Greenbelt/Fort Totten | to Branch Ave/Huntington,38.95172354,-77.00315997,10,0,STN_B06_E06,1,B06_E06_L1
+PF_E02_C,"Shaw-Howard, Green/Yellow Line Center Platform",Green/Yellow Line to Greenbelt/Fort Totten | to Branch Ave/Huntington,38.91350995,-77.02192036,69,0,STN_E02,1,E02_L2
+PF_E01_C,"Mt Vernon Square, Green/Yellow Line Center Platform",Green/Yellow Line to Greenbelt/Fort Totten | to Branch Ave/Huntington,38.90657183,-77.02191823,66,0,STN_E01,1,E01_L2
+PF_D08_C,"Stadium-Armory, Blue/Orange/Silver Line Center Platform",Blue/Orange/Silver Line to Downtown Largo/New Carrollton | to Franconia-Springfield/Vienna/Ashburn,38.88691895,-76.97707162,10,0,STN_D08,1,D08_L2
+PF_D07_C,"Potomac Ave, Blue/Orange/Silver Line Center Platform",Blue/Orange/Silver Line to Downtown Largo/New Carrollton | to Franconia-Springfield/Vienna/Ashburn,38.88126287,-76.98557739,10,0,STN_D07,1,D07_L2
+PF_D06_C,"Eastern Market, Blue/Orange/Silver Line Center Platform",Blue/Orange/Silver to Downtown Largo/New Carrollton | to Franconia-Springfield/Vienna/Ashburn,38.88462465,-76.9960726,10,0,STN_D06,1,D06_L2
+PF_D02_1,"Smithsonian, Blue/Orange/Silver Line Track 1 Platform",Blue/Orange/Silver Line to Downtown Largo/New Carrollton,38.88843816,-77.02867526,50,0,STN_D02,1,D02_L2
+PF_C06_2,"Arlington Cemetery, Blue Line Track 2 Platform",Blue Line to Franconia-Springfield,38.88455824,-77.06316289,3,0,STN_C06,1,C06_L2
+PF_C06_1,"Arlington Cemetery, Blue Line Track 1 Platform",Blue Line to Downtown Largo,38.88460755,-77.06303395,3,0,STN_C06,1,C06_L2
+PF_C03_2,"Farragut West, Blue/Orange/Silver Line Track 2 Platform",Blue/Orange/Silver Line to Franconia-Springfield/Ashburn,38.90138788,-77.04046559,10,0,STN_C03,1,C03_L2
+PF_B35_C,"NoMa-Gallaudet U, Red Line Center Platform",Red Line to Glenmont | to Shady Grove,38.906609,-77.00330889,84,0,STN_B35,1,B35_L1
+PF_B08_C,"Silver Spring, Red Line Center Platform",Red Line to Glenmont | to Shady Grove,38.99369139,-77.03118006,4,0,STN_B08,1,B08_L1
+PF_B06_C,"Fort Totten, Red Line Center Platform",Red Line to Glenmont | to Shady Grove,38.9517915,-77.00215509,10,0,STN_B06_E06,1,B06_E06_L1
+PF_B04_C,"Rhode Island Ave-Brentwood, Red Line Center Platform",Red Line to Glenmont | to Shady Grove,38.9209079,-76.99593988,10,0,STN_B04,1,B04_L1
+PF_A14_C,"Rockville, Red Line Center Platform",Red Line to Glenmont | to Shady Grove,39.08426749,-77.14618148,7,0,STN_A14,1,A14_L1
+PF_A12_C,"North Bethesda, Red Line Center Platform",Red Line to Glenmont | to Shady Grove,39.04852256,-77.11307662,4,0,STN_A12,1,A12_L1
+PF_A10_C,"Medical Center, Red Line Center Platform",Red Line to Glenmont | to Shady Grove,38.99821762,-77.09675597,4,0,STN_A10,1,A10_L2
+PF_A08_C,"Friendship Heights, Red Line Center Platform",Red Line to Glenmont | to Shady Grove,38.95937588,-77.08501937,4,0,STN_A08,1,A08_L2
+PF_A04_C,"Woodley Park, Red Line Center Platform",Red Line to Glenmont | to Shady Grove,38.92555387,-77.05268991,10,0,STN_A04,1,A04_L2
+STN_N07,Reston Town Center,,38.95276485,-77.36018298,92,1,,1,
+STN_N08,Herndon,,38.952821,-77.385178,93,1,,1,
+STN_N09,Innovation Center,,38.96088128,-77.4156382,94,1,,1,
+STN_N10,Washington Dulles International Airport,,38.95578589,-77.44818941,95,1,,1,
+STN_N11,Loudoun Gateway,,38.99204,-77.460685,96,1,,1,
+STN_N12,Ashburn,,39.00519576,-77.49143447,97,1,,1,
+STN_C11,Potomac Yard,,38.83319218,-77.04641974,98,1,,1,
+PF_N12_C,"Ashburn, Silver Line Center Platform",Silver Line to Downtown Largo | Silver Line to Ashburn,39.00519162,-77.49143447,97,0,STN_N12,1,N12_L1
