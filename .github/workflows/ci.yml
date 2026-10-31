@@ -35,8 +35,11 @@ jobs:
       # Mirrors `pio check -e s3rgbmatrix` (platformio.ini: --suppress=unusedFunction,
       # firmware sources only). The -I flags replicate the include paths pio check
       # passes automatically — screen.h includes config.h from firmware/include.
+      # -DPROGMEM= since the newer cppcheck in the runner image flags
+      # PROGMEM in font5x7.h as an unknown macro (same workaround
+      # AGENTS.md documents for local runs).
       - name: cppcheck
-        run: cppcheck --quiet --error-exitcode=1 --suppress=unusedFunction -I firmware/include -I firmware/src firmware/src firmware/include
+        run: cppcheck --quiet --error-exitcode=1 --suppress=unusedFunction -DPROGMEM= -I firmware/include -I firmware/src firmware/src firmware/include
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

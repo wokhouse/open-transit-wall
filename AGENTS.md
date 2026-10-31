@@ -53,8 +53,9 @@ python3 -m venv /tmp/piovenv && /tmp/piovenv/bin/pip install platformio
 /tmp/piovenv/bin/pio run -d firmware -e s3rgbmatrix -e matrixportal-s3
 ```
 
-cppcheck (mirrors CI; the local cppcheck is newer than CI's, so it needs the
-`PROGMEM` define):
+cppcheck (the exact CI command; cppcheck 2.19+ needs the `PROGMEM`
+define — the runner image updated to 2.19 and CI started using the same
+workaround):
 
 ```bash
 cppcheck --quiet --error-exitcode=1 --suppress=unusedFunction -DPROGMEM= \
