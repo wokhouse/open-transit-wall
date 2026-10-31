@@ -139,4 +139,5 @@ tools/run_sim.sh /tmp/v.csv      # writes /tmp/otw_wall.bmp (64x64)
 - `docs/nyc-mta-feasibility.md` — MTA subway agency: feed facts, station
   snapping, viewport history.
 - `docs/cta-trimet-metro-feasibility.md` — CTA, TriMet, Metro Transit scoping: key gates, position-first feeds, fleet bounds.
+- `docs/ttc-toronto-feasibility.md` — TTC Toronto scoping: keyless surface-only RT (no subway positions anywhere), fleet already over `MAX_VEHICLES` at probe → cap phase gates it.
 - `docs/plan.md` — the browser provisioning tool. Not built yet.
