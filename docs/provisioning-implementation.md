@@ -27,11 +27,12 @@ implementation behind it.
 | Item | Detail |
 |---|---|
 | Code | `firmware/src/provisioner.cpp` (interface: `provisioner.h`) |
-| Storage | NVS namespace `otw`, keys `ssid`, `pass`, `host`, `scheme`, `port` |
+| Storage | NVS namespace `otw`, keys `ssid`, `pass`, `host`, `scheme`, `port`, `agency`, `mhost`, `mport`, `muser`, `mpass`, `bmin`, `bmax` (plus `bright`, the last Home Assistant brightness, owned by `ha_link.cpp` — see `docs/brightness-plan.md`) |
 | Live values | RAM copies in the running session. `save` writes them to NVS. |
 | Effect of `set` | Immediate. No reboot and no reflash. |
 | Banner | `OTW-FW <n>` plus `UNPROVISIONED` or `STORED ...` |
 | Commands | `set k=v`, `save`, `get`, `status`, `erase`, `reboot` |
+| Broker host | An empty `mhost` with `muser` set makes `ha_link.cpp` ask `ha_discover.cpp` for the broker over mDNS (`_mqtt._tcp`, then `_home-assistant._tcp`). A non-empty `mhost` skips discovery. |
 
 ## Readiness
 

@@ -16,6 +16,7 @@
 #include <esp_system.h>
 
 #include "config.h"
+#include "ha_link.h"
 
 #define PROV_LINE_MAX   256  // longest command line accepted
 #define PROV_SSID_MAX   32   // 802.11 SSID cap
@@ -23,6 +24,7 @@
 #define PROV_HOST_MAX   127
 #define PROV_SCHEME_MAX 9    // "https://" / "http://"
 #define PROV_AGENCY_MAX 8    // registry id: [a-z0-9]{1,8}
+#define PROV_USER_MAX   63   // MQTT username cap
 
 static Preferences prefs;
 
@@ -34,6 +36,17 @@ static char curHost[PROV_HOST_MAX + 1] = "";
 static char curScheme[PROV_SCHEME_MAX + 1] = "";
 static char curAgency[PROV_AGENCY_MAX + 1] = "";
 static char curPort[8] = "";
+// Optional Home Assistant MQTT broker. Empty host = HA link off; the wall
+// needs nothing extra to run as before.
+static char curMhost[PROV_HOST_MAX + 1] = "";
+static char curMuser[PROV_USER_MAX + 1] = "";
+static char curMpass[PROV_PASS_MAX + 1] = "";
+static char curMport[8] = "";
+// Optional brightness floor/ceiling (0-255). Empty = default full range
+// (0/255). The panel maps any Home Assistant level into this window; see
+// src/ha_link.cpp and docs/brightness-plan.md.
+static char curBmin[4] = "";
+static char curBmax[4] = "";
 
 // A line buffer with no complete line yet.
 static String partial;
@@ -51,19 +64,44 @@ static uint16_t portOf(const char *p) {
   return (uint16_t)v;
 }
 
+// Same parse as portOf, but an unset MQTT port means the IANA default.
+static uint16_t mqttPortOf(const char *p) {
+  uint16_t v = portOf(p);
+  return v ? v : 1883;
+}
+
+// Parse a stored/live brightness bound; empty or junk means the default.
+static uint8_t bvalOf(const char *b, uint8_t dflt) {
+  if (b[0] == '\0') {
+    return dflt;
+  }
+  int v = String(b).toInt();
+  if (v < 0 || v > 255) {
+    return dflt;
+  }
+  return (uint8_t)v;
+}
+
 static void printStored() {
   String ssid = prefs.getString("ssid", "");
   if (ssid.length() == 0) {
     Serial.println("STORED none");
     return;
   }
-  Serial.printf("STORED ssid=%s pass=%s host=%s scheme=%s port=%s agency=%s\n",
+  Serial.printf("STORED ssid=%s pass=%s host=%s scheme=%s port=%s agency=%s"
+                " mhost=%s mport=%s muser=%s mpass=%s bmin=%s bmax=%s\n",
                 ssid.c_str(),
                 prefs.getString("pass", "").length() ? "set" : "empty",
                 prefs.getString("host", "").c_str(),
                 prefs.getString("scheme", "").c_str(),
                 prefs.getString("port", "").c_str(),
-                prefs.getString("agency", "").c_str());
+                prefs.getString("agency", "").c_str(),
+                prefs.getString("mhost", "").c_str(),
+                prefs.getString("mport", "").c_str(),
+                prefs.getString("muser", "").c_str(),
+                prefs.getString("mpass", "").length() ? "set" : "empty",
+                prefs.getString("bmin", "").c_str(),
+                prefs.getString("bmax", "").c_str());
 }
 
 static void printHelp() {
@@ -73,7 +111,13 @@ static void printHelp() {
   Serial.println("CMD set scheme=<https://|http://>");
   Serial.println("CMD set port=<proxy port>");
   Serial.println("CMD set agency=<registry id, lowercase a-z0-9 up to 8>");
-  Serial.println("CMD get ssid|pass|host|scheme|port|agency|all");
+  Serial.println("CMD set mhost=<mqtt broker host, empty = find it via mDNS>");
+  Serial.println("CMD set mport=<mqtt broker port, empty means 1883>");
+  Serial.println("CMD set muser=<mqtt username, enables the HA link>");
+  Serial.println("CMD set mpass=<mqtt password>");
+  Serial.println("CMD set bmin=<brightness floor 0-255, empty means 0>");
+  Serial.println("CMD set bmax=<brightness ceiling 0-255, empty means 255>");
+  Serial.println("CMD get ssid|pass|host|scheme|port|agency|mhost|mport|muser|mpass|bmin|bmax|all");
   Serial.println("CMD status | save | erase | reboot | help");
 }
 
@@ -92,6 +136,17 @@ static void printStatus() {
     Serial.println("STATUS proxy=(unset)");
   }
   Serial.printf("STATUS agency=%s\n", curAgency[0] ? curAgency : "(unset)");
+  if (curMhost[0]) {
+    Serial.printf("STATUS mqtt=%s:%u %s\n", curMhost, mqttPortOf(curMport),
+                  haConnected() ? "connected" : "down");
+  } else if (curMuser[0]) {
+    const char *found = haBroker();
+    Serial.printf("STATUS mqtt=auto(%s) %s\n",
+                  found[0] ? found : "not-found",
+                  haConnected() ? "connected" : "down");
+  } else {
+    Serial.println("STATUS mqtt=(unset)");
+  }
   Serial.printf("STATUS wifi=%s ip=%s\n",
                 WiFi.status() == WL_CONNECTED ? "connected" : "down",
                 WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString().c_str()
@@ -159,8 +214,61 @@ static void cmdSet(const String &arg) {
     }
     val.toCharArray(curAgency, sizeof(curAgency));
     Serial.printf("OK agency=%s (send save to persist)\n", curAgency);
+  } else if (key == "mhost") {
+    // Empty clears the broker and turns the HA link off.
+    if (n > PROV_HOST_MAX ||
+        val.indexOf('/') >= 0 || val.indexOf(':') >= 0 ||
+        val.indexOf(' ') >= 0) {
+      Serial.println("ERR mhost: 0-127 chars, no scheme/port/spaces");
+      return;
+    }
+    val.toCharArray(curMhost, sizeof(curMhost));
+    Serial.printf("OK mhost=%s (send save to persist)\n", curMhost);
+  } else if (key == "mport") {
+    int v = val.toInt();
+    if (val[0] && (v <= 0 || v > 65535 || String(v) != val)) {
+      Serial.println("ERR mport must be 1-65535 (empty means 1883)");
+      return;
+    }
+    snprintf(curMport, sizeof(curMport), "%d", v);
+    Serial.printf("OK mport=%d (send save to persist)\n", v);
+  } else if (key == "muser") {
+    if (n > PROV_USER_MAX) {
+      Serial.println("ERR muser must be 0-63 chars");
+      return;
+    }
+    val.toCharArray(curMuser, sizeof(curMuser));
+    Serial.printf("OK muser=%s (send save to persist)\n", curMuser);
+  } else if (key == "mpass") {
+    if (n > PROV_PASS_MAX) {
+      Serial.println("ERR mpass must be 0-63 chars");
+      return;
+    }
+    val.toCharArray(curMpass, sizeof(curMpass));
+    Serial.println("OK mpass set (send save to persist)");
+  } else if (key == "bmin" || key == "bmax") {
+    const bool isMin = key == "bmin";
+    int v = val.toInt();
+    if (val[0] && (v < 0 || v > 255 || String(v) != val)) {
+      Serial.println("ERR bmin/bmax must be 0-255 (empty means the default)");
+      return;
+    }
+    // Keep the window sane against the other bound as it stands now.
+    if (isMin && val[0] && v > (int)bvalOf(curBmax, 255)) {
+      Serial.println("ERR bmin must not exceed the current bmax");
+      return;
+    }
+    if (!isMin && val[0] && v < (int)bvalOf(curBmin, 0)) {
+      Serial.println("ERR bmax must not be below the current bmin");
+      return;
+    }
+    char *dst = isMin ? curBmin : curBmax;
+    size_t cap = isMin ? sizeof(curBmin) : sizeof(curBmax);
+    val.toCharArray(dst, cap);
+    Serial.printf("OK %s=%s (send save to persist)\n", isMin ? "bmin" : "bmax",
+                  dst);
   } else {
-    Serial.println("ERR unknown key (try: ssid pass host scheme port agency)");
+    Serial.println("ERR unknown key (try: ssid pass host scheme port agency mhost mport muser mpass bmin bmax)");
   }
 }
 
@@ -181,6 +289,20 @@ static void cmdGet(const String &arg) {
     Serial.printf("VAL port=%u\n", portOf(curPort));
   } else if (arg == "agency") {
     Serial.printf("VAL agency=%s\n", curAgency);
+  } else if (arg == "mhost") {
+    Serial.printf("VAL mhost=%s\n", curMhost);
+  } else if (arg == "mport") {
+    Serial.printf("VAL mport=%u\n", portOf(curMport));
+  } else if (arg == "muser") {
+    Serial.printf("VAL muser=%s\n", curMuser);
+  } else if (arg == "mpass") {
+    // Same rule as the WiFi password: never echoed back.
+    Serial.printf("VAL mpass %s len=%u\n", curMpass[0] ? "SET" : "EMPTY",
+                  (unsigned)strlen(curMpass));
+  } else if (arg == "bmin") {
+    Serial.printf("VAL bmin=%u\n", (unsigned)bvalOf(curBmin, 0));
+  } else if (arg == "bmax") {
+    Serial.printf("VAL bmax=%u\n", (unsigned)bvalOf(curBmax, 255));
   } else if (arg == "all" || arg.length() == 0) {
     cmdGet("ssid");
     cmdGet("pass");
@@ -188,8 +310,14 @@ static void cmdGet(const String &arg) {
     cmdGet("scheme");
     cmdGet("port");
     cmdGet("agency");
+    cmdGet("mhost");
+    cmdGet("mport");
+    cmdGet("muser");
+    cmdGet("mpass");
+    cmdGet("bmin");
+    cmdGet("bmax");
   } else {
-    Serial.println("ERR unknown key (try: ssid pass host scheme port agency all)");
+    Serial.println("ERR unknown key (try: ssid pass host scheme port agency mhost mport muser mpass bmin bmax all)");
   }
 }
 
@@ -217,6 +345,12 @@ static void handleLine(String line) {
     prefs.putString("scheme", curScheme);
     prefs.putString("agency", curAgency);
     prefs.putString("port", curPort);
+    prefs.putString("mhost", curMhost);
+    prefs.putString("mport", curMport);
+    prefs.putString("muser", curMuser);
+    prefs.putString("mpass", curMpass);
+    prefs.putString("bmin", curBmin);
+    prefs.putString("bmax", curBmax);
     storedSsidSet = curSsid[0] != '\0';
     Serial.println("OK saved");
   } else if (cmd == "erase") {
@@ -252,6 +386,12 @@ void provLoad() {
   prefs.getString("scheme", "").toCharArray(curScheme, sizeof(curScheme));
   prefs.getString("port", "").toCharArray(curPort, sizeof(curPort));
   prefs.getString("agency", "").toCharArray(curAgency, sizeof(curAgency));
+  prefs.getString("mhost", "").toCharArray(curMhost, sizeof(curMhost));
+  prefs.getString("mport", "").toCharArray(curMport, sizeof(curMport));
+  prefs.getString("muser", "").toCharArray(curMuser, sizeof(curMuser));
+  prefs.getString("mpass", "").toCharArray(curMpass, sizeof(curMpass));
+  prefs.getString("bmin", "").toCharArray(curBmin, sizeof(curBmin));
+  prefs.getString("bmax", "").toCharArray(curBmax, sizeof(curBmax));
 }
 
 // Provisioning is complete only with an SSID and a host: the binary has no
@@ -314,3 +454,13 @@ uint16_t provPort() {
   return p ? p : 443;
 }
 const char *provAgency() { return curAgency; }
+// Optional Home Assistant broker. An empty host turns the HA link off;
+// an empty port means the MQTT default (1883) at connect time.
+const char *provMqttHost() { return curMhost; }
+uint16_t provMqttPort() { return mqttPortOf(curMport); }
+const char *provMqttUser() { return curMuser; }
+const char *provMqttPass() { return curMpass; }
+// Brightness window applied to Home Assistant levels. Unset means the full
+// 0-255 range — the mapping is then the identity.
+uint8_t provBmin() { return bvalOf(curBmin, 0); }
+uint8_t provBmax() { return bvalOf(curBmax, 255); }

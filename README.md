@@ -124,14 +124,14 @@ save
 provisioned agency, and any firmware build can serve any agency: nothing
 per-agency is compiled.
 
-The firmware prints a banner on connect (`OTW-FW 2` + `UNPROVISIONED` or
+The firmware prints a banner on connect (`OTW-FW 4` + `UNPROVISIONED` or
 `STORED ...`), applies each `set` live, and `save` persists to NVS. The
 full command set is specified in [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
 — the web flasher in `flasher/` is built against exactly that spec.
 
 Libraries (auto-installed by PlatformIO):
-[ESP32-HUB75-MatrixPanel-I2S-DMA](https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-I2S-DMA)
-and ArduinoJson.
+[ESP32-HUB75-MatrixPanel-I2S-DMA](https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-I2S-DMA),
+ArduinoJson, and PubSubClient (only used when an MQTT broker is provisioned).
 
 ### Provisioning over WebSerial
 
@@ -140,6 +140,8 @@ The protocol is line-based text over the USB serial bridge (115200):
 | you send | the wall answers |
 |---|---|
 | `set ssid=…` / `set pass=…` / `set host=…` / `set agency=…` | `OK …` — takes effect immediately |
+| `set muser=…` / `set mpass=…` (optional) | `OK …` — Home Assistant MQTT credentials; the wall finds the broker itself; see [Brightness from Home Assistant](#brightness-from-home-assistant) |
+| `set bmin=…` / `set bmax=…` (optional) | `OK …` — brightness floor/ceiling: the HA slider's 0% dims only to `bmin`, its 100% reaches only `bmax` |
 | `save` | `OK saved` — persists to NVS, survives power loss |
 | `get all` / `status` | current values / live health |
 | `erase` / `reboot` | wipe NVS copy / restart |
@@ -150,6 +152,30 @@ poll cycle — no reflash, no reboot. `scheme`/`port` are optional extras for
 LAN dev against `server/proxy.py` (empty means HTTPS/443). See
 [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
 for the exact grammar, limits, and error replies.
+
+### Brightness from Home Assistant
+
+If your home runs Home Assistant with its Mosquitto add-on, just give the
+wall an MQTT username and password (`set muser=…` / `set mpass=…` — create
+a dedicated HA user). The wall finds the broker itself by browsing mDNS for
+the Home Assistant host, connects over the LAN it is already on, and
+announces itself through Home Assistant MQTT auto-discovery: a real
+**light entity** with a brightness slider, usable in scenes and
+automations, with no HA YAML. A broker elsewhere still works: `set mhost=`
+/ `mport=` override the discovery. The wall keeps its own brightness in
+NVS, so it comes back at the last setting after a power cut. With no
+credentials provisioned this whole path stays off — nothing changes. The
+proxy is not involved: it serves many walls, and brightness belongs to the
+room.
+`set bmin=<0-255>` / `set bmax=<0-255>` (the web flasher shows them as
+percent) squeeze what the panel physically does: the slider's 0% lands on
+the floor, its 100% on the ceiling, so the wall never goes fully dark or
+blazing bright no matter what an automation asks for. Turning the light
+off blanks the map, but the status pixels — green/amber/red for data
+freshness, purple while the Home Assistant link is up and red when it is
+configured but down — stay lit at about 1% so a dark wall still shows it
+is alive.
+Design and topics: [`docs/brightness-plan.md`](docs/brightness-plan.md).
 
 ### 3. Simulator (no hardware)
 
@@ -223,6 +249,9 @@ the same pin map (`firmware/include/config.h`).
   grounds are tied.
 - Set `DISPLAY_BRIGHTNESS` in `config.h` — full-white full-brightness is far
   beyond spec; the dot map only needs modest brightness (default 48/255).
+  With an MQTT broker provisioned, the live value comes from Home Assistant
+  instead and this constant is only the boot fallback (see
+  [Brightness from Home Assistant](#brightness-from-home-assistant)).
 
 ### USB serial
 
