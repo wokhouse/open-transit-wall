@@ -24,6 +24,10 @@ Configuration via environment (or server/.env):
                     len(SERVED_AGENCIES) * 3600/POLL_SECONDS under the token
                     cap (511's default is 60 req/hour); the server warns at
                     startup if it would exceed that, but does not enforce.
+  <AGENCY>_API_KEY  per-agency upstream keys named by registry api_key_env
+                    entries (e.g. CTA_API_KEY for the CTA portal). The proxy
+                    appends the value to that agency's feed URLs as the
+                    query param its portal expects (api_key_param).
   HOST / PORT       bind address (default 0.0.0.0:8000)
 """
 
@@ -89,14 +93,22 @@ AGENCY_ID_RE = re.compile(r"^[a-z0-9]{1,8}$")
 
 
 def redact(text: str) -> str:
-    """Strip the API key from an error/log string before printing.
+    """Strip API keys from an error/log string before printing.
 
-    httpx's HTTPStatusError embeds the full request URL, and 511 only
-    accepts the key as a query param (header auth 401s), so every upstream
-    4xx/5xx — including expected 429s — would otherwise log the key."""
+    httpx's HTTPError embeds the full request URL, and 511 only accepts
+    the key as a query param (header auth 401s), so every upstream
+    4xx/5xx — including expected 429s — would otherwise log the key.
+    Registry entries may name their own per-agency key env var
+    (api_key_env); those ride the gtfs-rt feed query string too, so
+    every configured key gets masked."""
     api_key = os.environ.get("FIVE11_API_KEY")
     if api_key:
         text = text.replace(api_key, "[api-key]")
+    for cfg in REGISTRY.values():
+        key_env = cfg.get("api_key_env")
+        value = os.environ.get(key_env) if key_env else None
+        if value:
+            text = text.replace(value, "[api-key]")
     return text
 
 
@@ -123,6 +135,32 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
             static = cfg.get("static_gtfs")
             if not isinstance(static, str) or not static.startswith("http"):
                 raise ValueError(f"registry entry {agency_id!r} needs a 'static_gtfs' URL")
+        # Optional fields shared by any source:
+        #   route_types   — GTFS route types to serve (fleet-cap gate on a
+        #                   mixed feed; CTA rail-only). Default: all types.
+        #   api_key_env / api_key_param — name of the env var holding this
+        #                   agency's upstream key, and the query param the
+        #                   portal expects. Default: no key.
+        #   allowance_note — the agency's documented request allowance,
+        #                   echoed verbatim at startup (see main()).
+        route_types = cfg.get("route_types")
+        if route_types is not None and (
+                not isinstance(route_types, list)
+                or not all(isinstance(t, int) and not isinstance(t, bool)
+                           for t in route_types)):
+            raise ValueError(f"registry entry {agency_id!r} 'route_types' "
+                             "must be a list of GTFS route-type ints")
+        key_env = cfg.get("api_key_env")
+        if key_env is not None and not re.fullmatch(r"[A-Z][A-Z0-9_]*", key_env):
+            raise ValueError(f"registry entry {agency_id!r} 'api_key_env' must be "
+                             "an env var name like CTA_API_KEY")
+        key_param = cfg.get("api_key_param")
+        if key_param is not None and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key_param):
+            raise ValueError(f"registry entry {agency_id!r} 'api_key_param' must be "
+                             "a query-parameter name like 'key'")
+        allowance = cfg.get("allowance_note")
+        if allowance is not None and not isinstance(allowance, str):
+            raise ValueError(f"registry entry {agency_id!r} 'allowance_note' must be a string")
         for key in ("lat_min", "lat_max", "lon_min", "lon_max"):
             if not isinstance(cfg["bbox"].get(key), (int, float)):
                 raise ValueError(f"registry entry {agency_id!r} bbox.{key} missing or not a number")
@@ -167,6 +205,13 @@ class AgencyState:
         # gtfs-rt: the per-agency upstream endpoints named by the registry.
         self.feeds = dict(cfg.get("feeds") or {})
         self.static_gtfs = cfg.get("static_gtfs", "")
+        # Optional per-agency upstream key (e.g. CTA_API_KEY, query param
+        # "key") and the GTFS route types this agency is served with
+        # (None = all, the standing no-type-filter rule).
+        self.api_key_env = cfg.get("api_key_env", "")
+        self.api_key_param = cfg.get("api_key_param", "key")
+        self.route_types = tuple(cfg["route_types"]) if cfg.get("route_types") else None
+        self.allowance_note = cfg.get("allowance_note", "")
         self.bbox = [cfg["bbox"]["lat_min"], cfg["bbox"]["lat_max"],
                      cfg["bbox"]["lon_min"], cfg["bbox"]["lon_max"]]
         self.palette = {**DEFAULT_PALETTE, **(cfg.get("palette") or {})}
@@ -249,14 +294,20 @@ STATES: dict[str, AgencyState] = {
 
 
 def compact_vehicles(raw_vehicles: list[dict], routes: dict[str, dict],
-                     fallback: dict[str, dict] | None = None) -> list[dict]:
+                     fallback: dict[str, dict] | None = None,
+                     route_types: tuple[int, ...] | None = None) -> list[dict]:
     """Map parsed SIRI entries to the cached vehicle dicts.
 
     Vehicles without a route reference (yards / deadheading, ~20% of the feed)
     are dropped — they'd plot as misclassified dots clustered at the depots.
     Refs that normalize away to nothing (e.g. 'SF:') are dropped by the same
     rule: they would produce a degenerate 'M:' palette key.
-    No type filtering: every active vehicle the agency reports is served.
+    No type filtering by default: every active vehicle the agency reports is
+    served. `route_types` is the registry's per-agency exception (see
+    load_registry): CTA's one VehiclePositions feed carries ~2,700 buses
+    alongside 256 'L' trains, and only the rail fits MAX_VEHICLES, so the
+    cta entry passes (1,). Under a filter, a route that cannot be resolved
+    in the static routes cache has unknown type and is dropped too.
     """
     out = []
     for vehicle in raw_vehicles:
@@ -264,6 +315,8 @@ def compact_vehicles(raw_vehicles: list[dict], routes: dict[str, dict],
             continue
         info = classify(vehicle["line"], routes, fallback)
         if not info["line"]:
+            continue
+        if route_types is not None and info.get("type") not in route_types:
             continue
         out.append({
             "r": info["line"],
@@ -424,10 +477,18 @@ def fetch_station_snapshot(state: AgencyState) -> list[dict]:
     """
     if not state.stations:
         raise RuntimeError(f"{state.id}: no station table (first routes refresh failed?)")
+    params = None
+    if state.api_key_env:
+        key = os.environ.get(state.api_key_env)
+        if not key:
+            raise RuntimeError(f"{state.id}: {state.api_key_env} is not set — "
+                               "this agency's RT feed is key-gated "
+                               "(registry api_key_env)")
+        params = {state.api_key_param: key}
     vehicles = []
     missing = 0
     for url in state.feeds.values():
-        response = httpx.get(url, timeout=20.0, follow_redirects=True)
+        response = httpx.get(url, params=params, timeout=20.0, follow_redirects=True)
         response.raise_for_status()
         for vp in gtfs_rt.parse_rt(response.content):
             if vp["lat"] is not None:
@@ -500,7 +561,8 @@ def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
             else:
                 raise RuntimeError("FIVE11_API_KEY not set (use --fixture for offline dev)")
 
-            vehicles = compact_vehicles(raw_vehicles, state.routes, state.fallback)
+            vehicles = compact_vehicles(raw_vehicles, state.routes, state.fallback,
+                                       state.route_types)
             state.update(vehicles)
             print(f"[poll:{state.id}] {len(vehicles)} vehicles at {state.ts()}",
                   flush=True)
@@ -621,7 +683,8 @@ def main() -> None:
         else:
             parser.error("--once needs FIVE11_API_KEY or --fixture")
             return
-        state.update(compact_vehicles(raw_vehicles, state.routes, state.fallback))
+        state.update(compact_vehicles(raw_vehicles, state.routes, state.fallback,
+                                     state.route_types))
         print(json.dumps(wire_payload(state), indent=1))
         return
 
@@ -632,6 +695,16 @@ def main() -> None:
         print(f"[poll] WARNING: {total_rph:.1f} req/h total is over the "
               f"{DEFAULT_TOKEN_RPH} req/h default token; raise POLL_SECONDS "
               "or drop an agency", file=sys.stderr)
+    # gtfs-rt portals carry documented daily allowances (CTA 50k/day,
+    # TriMet 1M/day) and no 511-style hourly token trap. State them at
+    # startup with what this deployment would spend — the operator's
+    # POLL_SECONDS always wins; the server just refuses to be silently
+    # wrong about the cost.
+    for state in STATES.values():
+        if state.allowance_note:
+            print(f"[poll] {state.id}: documented upstream allowance: "
+                  f"{state.allowance_note}; this deployment would poll it "
+                  f"{86400.0 / interval:.0f} times/day", flush=True)
     if api_key:
         check_operator_codes(api_key)
 
