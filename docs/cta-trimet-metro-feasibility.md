@@ -157,16 +157,23 @@ not CTA code:
   `stop_lat`/`stop_lon` — the first routes refresh cached 11,138
   stations live on 2026-10-31.
 
-What is not proven yet: a poll with a real Developer Center key. A key
-supplied 2026-10-31 is byte-exact and sent correctly (`?key=` gets
-`errCd 101`, not the keyless `errCd 100`), yet both the portal `.pb`
-and `.json` routes reject its value: "Invalid API key." The same key
-authenticates on the legacy Train Tracker API (`lapi.transitchicago.
-com`: `errCd 0` for RED/BLUE, `errCd 106` rate-limit on a third call
-— and position lists came back empty for two lines on a Saturday
-morning). So CTA issued this key for Train Tracker; the beta GTFS-RT
-portal has not accepted it yet — separate grant, or propagation.
-Re-test after the Developer Center registration covers GTFS Realtime.
+What is not proven yet: a poll with a real Developer Center key, because
+the public form is Train Tracker only. The approval email (2026-10-31
+14:01 CDT, "CTA Train Tracker API Key Request", dev@transitchicago.com)
+issues a "Train Tracker API key", points at lapi examples, notes the
+key activates within 5 minutes, and says Bus Tracker needs a separate
+signup at ctabustracker.com. GTFS Realtime is not mentioned, and the
+beta portal keeps answering `errCd 101` for that key. Probes at several
+points well after the email's stated 5-minute activation window all got
+101 (the portal stamps its error docs with a clock that does not match
+CTA local time, but its timestamps advance in real time, proving the
+gateway evaluates the key live rather than serving a cached page). The
+same key authenticates on `lapi.transitchicago.com` (`errCd 0` for
+RED/BLUE, `errCd 106` rate-limit on a third call — and position lists
+came back empty for two lines on a Saturday morning). Next step: ask
+webmaster@transitchicago.com (the contact the email names) to grant
+this key the GTFS Realtime beta feeds, or where beta registration
+lives.
 
 ## Fleet size against MAX_VEHICLES 1200
 
