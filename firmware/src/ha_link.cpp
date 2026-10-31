@@ -41,6 +41,11 @@
 
 #define HA_BRIGHT_KEY   "bright"
 #define HA_RETRY_MS     10000   // broker reconnect backoff
+// mDNS discovery blocks the render loop for up to ~10 s (four 2.5 s listen
+// windows), so a miss backs off far longer than a failed TCP connect: a
+// wall whose broker is gone must keep drawing its map instead of stalling
+// on the LAN every cycle.
+#define HA_DISCOVER_RETRY_MS 60000
 #define HA_BUF          1024    // PubSubClient buffer: discovery JSON is ~600 B
 #define HA_ID_HEX       6       // last 3 MAC bytes, lowercase hex
 
@@ -226,6 +231,7 @@ void haService() {
       // itself wins with its real port.
       uint16_t p = 0;
       if (!haDiscover(discHost, sizeof(discHost), &p)) {
+        nextTryMs = millis() + HA_DISCOVER_RETRY_MS;  // it blocked; wait long
         Serial.println("[ha] no mqtt broker found via mDNS (set mhost= to override)");
         return;
       }

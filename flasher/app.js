@@ -1,5 +1,5 @@
 // open-transit-wall web flasher.
-// Speaks the line protocol in docs/provisioning-protocol.md (OTW-FW 4) and
+// Speaks the line protocol in docs/provisioning-protocol.md (OTW-FW 5) and
 // flashes via the vendored esptool-js bundle. No framework, no build step.
 
 import { ESPLoader, Transport } from './vendor/esptool-js/bundle.js';

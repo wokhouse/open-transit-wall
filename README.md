@@ -124,7 +124,7 @@ save
 provisioned agency, and any firmware build can serve any agency: nothing
 per-agency is compiled.
 
-The firmware prints a banner on connect (`OTW-FW 4` + `UNPROVISIONED` or
+The firmware prints a banner on connect (`OTW-FW 5` + `UNPROVISIONED` or
 `STORED ...`), applies each `set` live, and `save` persists to NVS. The
 full command set is specified in [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
 — the web flasher in `flasher/` is built against exactly that spec.

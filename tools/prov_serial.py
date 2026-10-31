@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drive the OTW-FW 2 provisioning protocol over the USB serial bridge.
+"""Drive the OTW-FW 5 provisioning protocol over the USB serial bridge.
 
 Usage: python3 tools/prov_serial.py <port> <command> [<command> ...]
 Sends each command, prints every reply line until the stream goes idle.
