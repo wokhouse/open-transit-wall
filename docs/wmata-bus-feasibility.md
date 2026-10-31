@@ -11,7 +11,8 @@ zip current at that date (`feed_version S1000251`, service window
 Feasible, and it needs no parser work: the bus feed is the same
 position-first shape the Metro Transit entry already handles, and the
 keyed feed plus keyed static zip are already wired for the `wmata` rail
-entry. Two registry entries against one upstream key is legitimate.
+entry. Two registry entries against one upstream key is legitimate, and
+one combined entry works too — see "One entry or two" below.
 
 The question is not whether it works, it is whether the fleet fits. It
 does, barely:
@@ -106,6 +107,59 @@ percent headroom and 33 KB of payload.
 Compare the shipped walls: MTA subway 503-584 trains per poll at 19.5 KB,
 proven on hardware; SFMTA Muni ~676 vehicles. A WMATA bus wall is the
 largest wall this project would serve that still fits the current cap.
+
+## One entry or two: the Muni model
+
+SFMTA arrives as one 511 operator and one entry, so Muni Metro lines key
+as `M:<LINE>` and Muni buses as `B` on one wall. WMATA can be shaped the
+same way, and the feed plumbing for it already exists: a registry entry's
+`feeds` is an object, `fetch_station_snapshot` loops all of them, and
+`compact_vehicles` classifies each row on its own route. Measured with
+both recorded probes merged through one route table:
+
+| | Combined `wmata` entry |
+|---|---|
+| Rows at the probe | 634 (65 rail + 569 bus) |
+| Style keys | `M:RED`, `M:BLUE`, `M:GREEN`, `M:YELLOW`, `M:ORANGE`, `M:SILVER`, `B` |
+| Wire payload | 22,689 B (35.8 B/row) |
+| Estimated peak rows | ~1,039 |
+| Estimated peak payload | ~35.7 KB |
+| Headroom to `MAX_VEHICLES` 1200 | ~13 percent |
+| In the rail B box | 62/65 trains (the Loudoun clip) and 558/569 buses |
+
+That is the Muni palette shape on one wall, with one viewport that needs
+no new tuning: the shipped rail B box keeps 98 percent of the buses.
+
+The blocker is the static GTFS. One entry carries one `static_gtfs`, and
+WMATA's rail routes (`route_type 1`) and bus routes (`route_type 3`) live
+in two separate zips. With only the bus zip loaded, the six rail lines
+would classify as generic bus blue. Two ways out:
+
+1. WMATA documents a Rail & Bus Combined GTFS Static API (portal
+   operation `rail-bus-combined-gtfs-static`, daily updates). The gateway
+   path is not in any public document reachable from here — every
+   guessed `/gtfs/*.zip` variant answers 404, and the portal's API page
+   is rendered client-side. One look in the signed-in API console settles
+   it. If that zip exists at a stable URL, the combined entry is a
+   registry edit with no code at all.
+2. Let `static_gtfs` accept a list of zips and merge route tables and
+   station ids across them. ~15 lines in `refresh_routes` plus tests, and
+   generic to any agency whose modes ship separate static feeds.
+
+Cost of combined: two feed requests per poll (2,658/day, still 5 percent
+of the allowance) and two static downloads a day (3.0 MB + 34.9 MB)
+unless the combined zip is used. The real cost is the fleet: ~1,039 rows
+puts the heap gate at 35.7 KB, which is the largest payload this project
+would ever parse on a wall, and leaves 13 percent to the compiled cap.
+
+Trade-off, stated plainly:
+
+- Combined (Muni model): one wall shows trains and buses together, one
+  viewport, palette reads exactly like Muni's. Fleet math gets tight and
+  downtown density goes up.
+- Separate entries as scoped: the subway wall keeps its proven 19.5 KB,
+  the bus wall can take a tighter, denser frame, and each fleet stays
+  well inside measured territory.
 
 ## Viewport candidates
 
