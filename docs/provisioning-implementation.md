@@ -19,7 +19,7 @@ implementation behind it.
   ```
 
 - The browser tool prefills the hosted app URL
-  (`open-transit-wall-nuvez.ondigitalocean.app`) as a UI convenience only.
+  (`transit.fungj.net`) as a UI convenience only.
   The device itself knows no endpoint until you set one.
 
 ## Implementation

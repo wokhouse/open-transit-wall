@@ -79,7 +79,7 @@ The device is ready only when an SSID **and** a host are set (live or
 stored). `scheme`/`port` may stay empty — empty means the HTTPS/443 default
 at fetch time. Until ready, the wall shows the setup-needed screen and
 waits on the serial console. The tool should prefill the hosted proxy URL
-(`open-transit-wall-nuvez.ondigitalocean.app`) as a UI convenience; the
+(`transit.fungj.net`) as a UI convenience; the
 device itself knows no endpoints.
 
 ## Firmware behavior around provisioning
