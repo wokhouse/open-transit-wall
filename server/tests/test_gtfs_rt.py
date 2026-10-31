@@ -1,8 +1,10 @@
 """Tests for the gtfs-rt upstream (MTA NYCT and Metro Transit).
 
 Fixtures are recorded live responses: division feeds and the Metro
-vehicle-positions feed (raw protobuf), and the static feeds' routes.txt
-and stops.txt. No test touches the network.
+vehicle-positions feed (raw protobuf), and static routes.txt/stops.txt.
+Metro is placed by its reported coordinates, so no Metro stops fixture is
+needed; the station-snap path is exercised through the MTA fixtures.
+No test touches the network.
 """
 
 import sys
@@ -189,16 +191,6 @@ def test_parse_rt_synthetic_placement_and_identity_matrix():
     assert by["17"]["lat"] == pytest.approx(44.96) and by["17"]["stop_id"] == ""
     # zero/0 position counts as absent: the record stays via its stop_id.
     assert by["6"]["id"] == "2201" and by["6"]["lat"] is None
-
-
-def test_metro_station_table_usable():
-    stations = gtfs_rt.parse_stops((FIXTURES / "metro_stops.txt").read_text())
-    assert len(stations) > 5000
-    # The stop-only fallback path needs real coordinates near the core:
-    # require stations around downtown Minneapolis (Nicollet Mall).
-    near = [s for s in stations.values()
-            if abs(s[0] - 44.9779) < 0.01 and abs(s[1] + 93.2690) < 0.01]
-    assert near, "no stations near downtown Minneapolis"
 
 
 def test_metro_recorded_positions_inside_the_viewport():
