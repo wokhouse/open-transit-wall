@@ -30,6 +30,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_system.h>  // esp_random() for the splash animation seed
+#include <freertos/timers.h>
 #include <string.h>
 
 #include "config.h"
@@ -110,9 +111,40 @@ enum ErrorKind {
 static ErrorKind shownError = ERR_SPLASH;
 
 // Splash animation state: the roundel bounces around the panel while the
-// wall loads (Wi-Fi/NTP waits below drive frames).
+// wall loads (Wi-Fi/NTP waits, mDNS broker discovery, and the first poll all
+// block inside library code, out of reach of the loop's frame scheduler).
 static SplashState splashState;
 static void drawSplashFrame();  // defined with the screen helpers below
+
+// The splash pump. Every blocking step of the boot path (Wi-Fi, NTP, mDNS
+// discovery's listen window, the first TLS poll) sits inside a library call
+// that never returns to loop(), so no frame would get drawn and the panel
+// would sit black from the moment the splash is torn down until the first
+// snapshot lands. This timer draws one splash frame per tick from the timer
+// service task instead, which runs whether or not the loop is blocked. It is
+// started with the first splash frame and stopped by showScreen() the moment
+// the panel shows something else; the guard in the tick makes a stray fire
+// harmless.
+static TimerHandle_t splashTimer = nullptr;
+static void splashTick(TimerHandle_t) {
+  if (shownError == ERR_SPLASH && panelBrightness != 0) {
+    drawSplashFrame();
+  }
+}
+static void splashPumpStart() {
+  if (splashTimer == nullptr) {
+    splashTimer = xTimerCreate("splash", pdMS_TO_TICKS(1000 / SPLASH_FPS),
+                               pdTRUE, nullptr, splashTick);
+  }
+  if (splashTimer != nullptr) {
+    xTimerStart(splashTimer, 0);
+  }
+}
+static void splashPumpStop() {
+  if (splashTimer != nullptr) {
+    xTimerStop(splashTimer, 0);
+  }
+}
 
 // Repaint a pixel a dot has vacated: the empty map is black, so restoring
 // is one write. (1,0) belongs to the data status pixel — a dot landing
@@ -149,9 +181,6 @@ static void connectWifi() {
   while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
     delay(250);
     Serial.print(".");
-    if (shownError == ERR_SPLASH) {
-      drawSplashFrame();  // keep the logo bouncing while we wait
-    }
   }
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf(" connected, ip=%s\n", WiFi.localIP().toString().c_str());
@@ -170,9 +199,6 @@ static void syncTime() {
   while (time(nullptr) < 1735689600 && millis() - start < 15000) {
     delay(250);
     Serial.print(".");
-    if (shownError == ERR_SPLASH) {
-      drawSplashFrame();  // keep the logo bouncing while we wait
-    }
   }
   if (time(nullptr) >= 1735689600) {
     Serial.println(" ok");
@@ -399,12 +425,18 @@ static void showScreen(ErrorKind kind) {
     return;
   }
   shownError = kind;
+  // The splash pump owns the panel while the splash is up; anything else
+  // takes it over, so the pump must not draw over it.
+  if (kind != ERR_SPLASH) {
+    splashPumpStop();
+  }
   // Every status screen replaces whatever was on the panel wholesale:
   // wipe first so no pixels from the previous screen bleed through.
   screen.clear();
   switch (kind) {
     case ERR_SPLASH:
       showSplashFrame(putScreenPixel, nullptr, &splashState);
+      splashPumpStart();
       break;
     case ERR_PROVISION:
       showSetupNeeded(putScreenPixel, nullptr);
@@ -445,6 +477,7 @@ void setup() {
   screen.clear();
   splashState.seed = esp_random();
   drawSplashFrame();
+  splashPumpStart();  // ticks from the timer task: the waits below block
 
   provLoad();
   // The panel brightness the user last set from Home Assistant (if ever)
@@ -467,9 +500,14 @@ void setup() {
   syncTime();
   if (WiFi.status() != WL_CONNECTED) {
     showScreen(ERR_WIFI);
-  } else {
-    showScreen(ERR_NONE);  // blank map; dots arrive with the first poll
   }
+  // Wi-Fi is up, but the wall has nothing to show yet: leave the splash
+  // running. Two more blocking steps stand between here and the first dots
+  // — haService()'s mDNS broker discovery (a 2.5 s listen window per service
+  // query, seconds long on a miss) and the first TLS poll — and clearing to
+  // a blank map before them is exactly the black screen this avoids. The
+  // first successful poll calls showScreen(ERR_NONE), which clears the panel
+  // and hands it to the map.
 }
 
 void loop() {
@@ -560,6 +598,11 @@ void loop() {
       screen.setBrightness(STATUS_PIXEL_FLOOR);
       screen.clear();
       drawStatusPixel();
+    } else if (shownError == ERR_SPLASH) {
+      // The splash pump owns the panel: it ticks from the timer task, which
+      // keeps drawing while this loop is blocked in discovery or a TLS poll.
+      // Nothing here may paint over it (the status pixels would land on the
+      // roundel).
     } else {
       if (mapDirty) {
         // Back from the off frame: the frame was wiped, so repaint the map
