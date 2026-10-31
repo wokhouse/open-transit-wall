@@ -103,7 +103,9 @@ def classify(line_ref: str, routes: dict[str, dict] | None = None,
     `fallback` is an agency-specific table of {line: {type, color}} used when
     GTFS metadata is missing (pass MUNI_FALLBACK for SFMTA, nothing else).
     Returns {"code": "B"|"R"|"M"|"C", "key": <palette key>, "rgb": (r, g, b),
-    "line": "14R"}.
+    "line": "14R", "type": <raw GTFS route_type or None>}. The raw type
+    rides along so a caller may filter on GTFS types (the registry's
+    route_types) without re-reading the routes table.
     """
     line = normalize_line(line_ref)
     info = None
@@ -143,4 +145,5 @@ def classify(line_ref: str, routes: dict[str, dict] | None = None,
         else:
             code = "B"
             rgb = COLOR_BUS
-    return {"code": code, "key": style_key(code, line), "rgb": rgb, "line": line}
+    return {"code": code, "key": style_key(code, line), "rgb": rgb, "line": line,
+            "type": route_type}

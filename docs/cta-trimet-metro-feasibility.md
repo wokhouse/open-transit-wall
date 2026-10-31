@@ -1,6 +1,8 @@
 # CTA, TriMet, and Metro Transit as agencies: feasibility scope
 
-Status: scoped 2026-10-31. All live probes ran 2026-10-31 06:02-06:05 UTC
+Status: scoped 2026-10-31. CTA implemented 2026-10-31 as an 'L'-trains-only
+agency (`cta` in `server/agencies.json`); the implementation is described at
+the end of the CTA section. All live probes ran 2026-10-31 06:02-06:05 UTC
 (Friday 23:02-23:05 local, Chicago and Portland). Static numbers come from
 the public GTFS zips current at that date (Last-Modified: CTA 2026-09-14,
 TriMet 2026-10-21, Metro 2026-10-22).
@@ -129,6 +131,35 @@ the end.
   cache keys land as `RED`, `ORG`, and `BRN`. The current `M:<LINE>`
   palette path works. All 124 bus route ids equal their short names, and
   the current rapid pattern already matches CTA `35R` and `20X` ids.
+
+#### CTA as implemented (2026-10-31)
+
+The `cta` registry entry serves the 'L' only, as the fleet bound above
+requires. The new machinery it needed is generic gtfs-rt registry data,
+not CTA code:
+
+- `route_types: [1]` — `compact_vehicles` drops vehicles whose static
+  route type is not listed. Without it the mixed feed's ~2,700 buses
+  blow past `MAX_VEHICLES 1200`. `classify` now carries the static
+  `route_type` through to that check. Unset on every other agency: the
+  no-type-filter rule stands.
+- `api_key_env: CTA_API_KEY` + `api_key_param: key` — the proxy reads
+  that env var (see `server/.env.example`) and appends the key to the
+  feed URL. The key never reaches the wire or the logs: `redact()`
+  masks every configured key.
+- The XML-error trap is closed in `gtfs_rt.parse_rt`: an XML document
+  where a protobuf was expected raises with CTA's own `errCd`/`errNm`
+  (`fixtures/cta_error_missing_key.xml`, `cta_error_invalid_key.xml`
+  are the recorded portal responses).
+- `allowance_note` is echoed at startup with what this deployment's
+  `POLL_SECONDS` would spend against it.
+- One probe correction: the static zip's stops.txt does carry
+  `stop_lat`/`stop_lon` — the first routes refresh cached 11,138
+  stations live on 2026-10-31.
+
+What is not proven yet: a poll with a real Developer Center key. The
+live smoke test used a deliberately invalid key and saw the named
+`errCd 101` on both polls.
 
 ## Fleet size against MAX_VEHICLES 1200
 

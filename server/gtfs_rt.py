@@ -37,14 +37,31 @@ docs/cta-trimet-metro-feasibility.md):
   numeric vehicle.id — position-first placement, fleet-number identity.
 - route_id values are bare static GTFS ids ("3", "14", "922") that
   resolve through the routes cache unchanged.
+
+Facts verified live 2026-10-31 on the CTA portal (same doc; the RT field
+shape is unconfirmed until a Developer Center key lands — what IS
+verified is the gate behavior and the static zip):
+- A keyless request to transitdata.transitchicago.com/GtfsRealtime/
+  VehiclePositions.pb answers HTTP 200 with an XML error document
+  (errCd 100 missing key / 101 invalid key). raise_for_status() is
+  blind to it, so parse_rt treats any XML document as a failed poll and
+  reports the errCd/errNm it carries. The same guard names MTA's
+  NoSuchKey body for an unknown feed path.
+- CTA serves ONE VehiclePositions feed mixing buses and 'L' trains.
+  The rail-only wall is the registry's `route_types` filter applied by
+  the proxy (fleet-cap bound: 3,026 mixed vs 256 rail vs MAX_VEHICLES
+  1200) — not parser logic.
 """
 
 from __future__ import annotations
 
 import csv
 import io
+import re
 
 from google.transit import gtfs_realtime_pb2
+
+_XML_ERROR_RE = re.compile(r"<errCd>(\d+)</errCd>\s*<errNm>(.*?)</errNm>", re.S)
 
 
 def parse_rt(data: bytes) -> list[dict]:
@@ -59,6 +76,16 @@ def parse_rt(data: bytes) -> list[dict]:
     static station table. Identity prefers vehicle.id (it survives trip
     changes); trip_id, then the entity id, are the fallbacks.
     """
+    head = data.lstrip(b"\xef\xbb\xbf \r\n\t")
+    if head[:5] == b"<?xml":
+        # Key-gated portals answer an error as XML inside HTTP 200 (CTA:
+        # errCd 100/101; MTA api-endpoint: NoSuchKey for unknown paths).
+        # Decoding by content, not header: some feeds serve protobuf as
+        # application/octet-stream, so an XML body means failed poll, period.
+        match = _XML_ERROR_RE.search(head.decode("utf-8", "replace"))
+        detail = f" (errCd {match.group(1)}: {match.group(2)})" if match else ""
+        raise ValueError(f"upstream answered with an XML document, not a "
+                        f"protobuf feed{detail}")
     feed = gtfs_realtime_pb2.FeedMessage()
     feed.ParseFromString(data)
     out = []

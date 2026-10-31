@@ -44,6 +44,24 @@
       "lon_max": -93.041
     }
   },
+  "cta": {
+    "name": "Chicago 'L' Trains (CTA)",
+    "source": "gtfs-rt",
+    "feeds": {
+      "vehicle-positions": "https://transitdata.transitchicago.com/GtfsRealtime/VehiclePositions.pb"
+    },
+    "api_key_env": "CTA_API_KEY",
+    "api_key_param": "key",
+    "static_gtfs": "https://www.transitchicago.com/downloads/sch_data/google_transit.zip",
+    "route_types": [1],
+    "allowance_note": "50,000 requests/day (CTA Train Tracker API documented default; the GTFS-RT portal states no quota). The feed mixes buses and trains; route_types [1] keeps this the rail-only wall the 1200-vehicle cap fits.",
+    "bbox": {
+      "lat_min": 41.715,
+      "lat_max": 42.08,
+      "lon_min": -88.0,
+      "lon_max": -87.512
+    }
+  },
   "ct": {
     "name": "Caltrain",
     "siri_agency": "CT",

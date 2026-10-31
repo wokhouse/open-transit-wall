@@ -1,0 +1,13 @@
+agency_id,route_id,route_short_name,route_long_name,route_type,route_url,route_color,route_text_color
+50066,1,1,Bronzeville/Union Station,3,http://www.transitchicago.com/bus/1/,99999C,ffffff
+50066,3,3,King Drive,3,http://www.transitchicago.com/bus/3/,99999C,ffffff
+50066,X4,X4,Cottage Grove Express,3,http://www.transitchicago.com/bus/X4/,b71234,ffffff
+50066,X9,X9,Ashland Express,3,http://www.transitchicago.com/bus/X9/,b71234,ffffff
+50066,Red,,Red Line,1,http://www.transitchicago.com/redline/,C60C30,FFFFFF
+50066,P,,Purple Line,1,http://www.transitchicago.com/purpleline/,522398,FFFFFF
+50066,Y,,Yellow Line,1,http://www.transitchicago.com/yellowline/,F9E300,000000
+50066,Blue,,Blue Line,1,http://www.transitchicago.com/blueline/,00A1DE,FFFFFF
+50066,Pink,,Pink Line,1,http://www.transitchicago.com/pinkline/,E27EA6,FFFFFF
+50066,G,,Green Line,1,http://www.transitchicago.com/greenline/,009B3A,FFFFFF
+50066,Org,,Orange Line,1,http://www.transitchicago.com/orangeline/,F9461C,FFFFFF
+50066,Brn,,Brown Line,1,http://www.transitchicago.com/brownline/,62361B,FFFFFF
