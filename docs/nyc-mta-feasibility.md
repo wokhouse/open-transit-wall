@@ -1,6 +1,6 @@
 # NYC MTA as an agency: feasibility scope
 
-Status: subway prototype implemented 2026-10-30 (branch `scope-nyc-mta-agency`);
+Status: subway prototype implemented 2026-10-30 (branch `light-cobra`);
 see "Prototype shipped" at the end. Originally scoped same day: assesses adding
 New York City Transit (MTA NYCT subway + bus) as an agency in the
 multi-agency framework (`docs/multi-agency-plan.md`). Bus is deferred.
@@ -169,7 +169,7 @@ Superseded by the subway-only section for phasing; totals unchanged:
 
 ## Prototype shipped (2026-10-30)
 
-What landed on `scope-nyc-mta-agency` (subway-only, per the revised phasing):
+What landed (subway-only, per the revised phasing):
 
 - `server/mta_rt.py`: parses the 8 division GTFS-RT feeds and the static
   `stops.txt` station table. `proxy.py` gains a `source` branch; an
