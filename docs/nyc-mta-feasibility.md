@@ -100,7 +100,7 @@ Feedback: the subway is what people care about. Reframed first scope: an
 NYC wall showing subway lines only. The station-coordinate gap turns out
 to be fully covered by the glide mechanism already on the wall:
 
-- `mergeVehicles` (main.cpp:277-290) matches vehicles by id across polls
+- `mergeVehicles` (in `firmware/src/main.cpp`) matches vehicles by id across polls
   and linearly interpolates each one, in pixel space, from the pixel it
   is visually at to the new snapshot's target. With subway dots placed at
   their reported station each poll, every poll's station-to-station hop
@@ -132,7 +132,8 @@ dependency, the 2.5-3x whole-fleet payload, and bus static GTFS. Buses
 become the later phase if ever wanted.
 
 Open item before committing the cap: one peak-hour fleet count. Run the
-8-feed probe on a weekday at ET morning peak and record the total.
+polled-feed probe (seven feeds; SIR is not polled) on a weekday at ET
+morning peak and record the total.
 
 ## Ops and risk notes
 
@@ -160,7 +161,8 @@ Open item before committing the cap: one peak-hour fleet count. Run the
 
 Superseded by the subway-only section for phasing; totals unchanged:
 
-- Subway-only end-to-end (8-feed parser, static zip + station index,
+- Subway-only end-to-end (feed parser — 8 feeds at estimate time, 7
+  shipped with SIR dropped — static zip + station index,
   colors, fixture tests, cap/heap confirmation): 1.5-2.5 days.
 - Bus phase, if ever wanted: 1-2 days.
 - NYC backdrop polygon: half a day, optional. (Moot: the backdrop concept
@@ -172,9 +174,11 @@ Superseded by the subway-only section for phasing; totals unchanged:
 
 What landed (subway-only, per the revised phasing):
 
-- `server/mta_rt.py`: parses the 8 division GTFS-RT feeds and the static
-  `stops.txt` station table. `proxy.py` gains a `source` branch; an
-  `mta-rt` poll fetches all 8 feeds, resolves `stop_id` to coords, and
+- `server/mta_rt.py`: parses the seven polled division GTFS-RT feeds and
+  the static `stops.txt` station table (SIR is deliberately not polled —
+  the viewport excludes Staten Island). `proxy.py` gains a `source`
+  branch; an `mta-rt` poll fetches all seven feeds, resolves `stop_id` to
+  coords, and
   feeds the shared compact/classify path. `routes_mta.json` and
   `stations_mta.json` are cached in-repo (same offline pattern as the
   other agencies).

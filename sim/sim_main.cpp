@@ -142,10 +142,16 @@ int main(int argc, char **argv) {
   char line[256];
   int count = 0, clipped = 0;
   while (fgets(line, sizeof(line), csv)) {
-    if (strncmp(line, "#bbox", 5) == 0) {
+    if (strncmp(line, "#bbox,", 6) == 0) {
       double b[4];
-      if (sscanf(line + 5, ",%lf,%lf,%lf,%lf", &b[0], &b[1], &b[2], &b[3]) != 4) {
-        fprintf(stderr, "bad #bbox header in %s\n", csvPath);
+      if (haveBbox) {
+        fprintf(stderr, "second #bbox header in %s\n", csvPath);
+        return 1;
+      }
+      if (sscanf(line + 6, "%lf,%lf,%lf,%lf", &b[0], &b[1], &b[2], &b[3]) != 4
+          || b[0] >= b[1] || b[2] >= b[3]) {
+        // Same shape check the firmware's readBbox applies to the wire.
+        fprintf(stderr, "bad or reversed #bbox header in %s\n", csvPath);
         return 1;
       }
       BBox bbox = {b[0], b[1], b[2], b[3]};
@@ -174,6 +180,11 @@ int main(int argc, char **argv) {
     count++;
   }
   fclose(csv);
+  if (!haveBbox) {
+    fprintf(stderr, "%s has no #bbox header line — regenerate it with "
+                    "tools/vehicles_to_csv.py\n", csvPath);
+    return 1;
+  }
 
   writeBmp(bmpPath, w, h, scale);
   printf("sim: %d vehicles drawn, %d outside bbox -> %s (%dx%d, scale %d)\n",

@@ -16,7 +16,7 @@ SRC=sim/sim_main.cpp
 OUT=/tmp/otw_sim
 CSV=/tmp/otw_vehicles.csv
 BMP=/tmp/otw_wall.bmp
-AGENCY="${AGENCY:-}"
+AGENCY="${AGENCY:-}"   # live-fetch only; ignored when a payload file is given
 
 if [ ! -f "$SRC" ]; then
   echo "no simulator source at $SRC" >&2
@@ -30,7 +30,7 @@ else
   [ -n "$AGENCY" ] && Q="?agency=$AGENCY"
   curl -s "http://localhost:8000/vehicles$Q" | python3 tools/vehicles_to_csv.py > "$CSV"
 fi
-echo "vehicles: $(wc -l < "$CSV") rows -> $CSV"
+echo "vehicles: $(($(wc -l < "$CSV") - 1)) rows -> $CSV"
 
 CXX="${CXX:-c++}"
 "$CXX" -std=c++17 -O1 -I firmware/src -o "$OUT" "$SRC" firmware/src/status_screen.cpp

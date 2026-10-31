@@ -7,7 +7,8 @@ the proxy resolves stop_id -> coords per poll. Trip identity rides the
 vehicle id so the wall's glide animation interpolates station-to-station.
 
 Facts verified live 2026-10-30 (see docs/nyc-mta-feasibility.md):
-- The eight per-division feeds update every ~30 s and need no API key.
+- The seven per-division feeds update every ~30 s and need no API key.
+  (SIR is deliberately not polled: the viewport excludes Staten Island.)
   The %2F path encoding is required; a literal slash returns 403.
 - Every subway VehiclePosition carried a stop_id; none carried lat/lon.
 - route_id is the bare line name ("1", "6X", "A"), which feeds the

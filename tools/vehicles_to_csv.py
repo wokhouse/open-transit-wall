@@ -13,7 +13,10 @@ import json
 import sys
 
 data = json.load(sys.stdin)
-bbox = data["bbox"]
+bbox = data.get("bbox")
+if not isinstance(bbox, list) or len(bbox) != 4 or not all(
+        isinstance(x, (int, float)) for x in bbox):
+    sys.exit('payload has no numeric 4-element "bbox" — cannot write the header')
 print(f"#bbox,{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}")
 palette = data.get("palette", {})
 for lat, lon, style_key, _vid in data["v"]:

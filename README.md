@@ -14,7 +14,8 @@ MatrixPortal S3.
 ```
 
 **One codebase, many agencies.** The server runs one or more agencies from
-`server/agencies.json` (SFMTA, Caltrain, AC Transit, VTA today); each wall is
+`server/agencies.json` (SFMTA, Caltrain, AC Transit, and VTA via 511; MTA
+NYC subway via its open GTFS-RT endpoint — no key); each wall is
 provisioned with an agency id and gets its bounding box, refresh cadence, and
 vehicle colors from the wire — nothing agency-specific is compiled into the
 firmware at all. The map is vehicles on black; there is no backdrop. See
@@ -37,8 +38,8 @@ PANEL_CHAIN_H` in `firmware/include/config.h`. The project targets a single
 
 | Piece | What it does |
 |---|---|
-| `server/agencies.json` | The agency registry: id, display name, 511 SIRI agency code, bounding box, optional per-agency palette overrides. Agency codes come from `GET https://api.511.org/transit/operators` — never guessed. |
-| `server/proxy.py` | Polls 511's SIRI VehicleMonitoring feed for each served agency (`SERVED_AGENCIES`, one shared `POLL_SECONDS`), classifies vehicles, and serves compact JSON at `GET /vehicles?agency=<id>` — plus `GET /agencies` for discovery and `/health`. The payload carries the agency's `bbox`, `next` (seconds until the server's next upstream fetch), and `palette`, so clients are configured entirely from the wire. Yard/deadhead vehicles (no route assigned) are filtered out; everything else the agency reports is served. |
+| `server/agencies.json` | The agency registry: id, display name, upstream `source` — `"511"` (+ `siri_agency` code) or `"mta-rt"` for MTA's open GTFS-RT endpoint — bounding box, optional per-agency palette overrides. 511 agency codes come from `GET https://api.511.org/transit/operators` — never guessed. |
+| `server/proxy.py` | Polls each served agency's upstream — 511's SIRI VehicleMonitoring feed, or MTA GTFS-RT for `source: mta-rt` (`SERVED_AGENCIES`, one shared `POLL_SECONDS`) — classifies vehicles, and serves compact JSON at `GET /vehicles?agency=<id>` — plus `GET /agencies` for discovery and `/health`. The payload carries the agency's `bbox`, `next` (seconds until the server's next upstream fetch), and `palette`, so clients are configured entirely from the wire. Yard/deadhead vehicles (no route assigned) are filtered out; everything else the agency reports is served. |
 | `server/classify.py` | Route → type/color logic. Standalone-importable so it can be reused elsewhere (e.g. a Pi Zero build). |
 | `firmware/` | PlatformIO + Arduino ESP32 firmware. One binary for every wall: WiFi credentials, the proxy endpoint, and the agency id are provisioned at runtime over WebSerial and kept in NVS (see [Provisioning](#provisioning-over-webserial)). Fetches the proxy over HTTPS (roots pinned in `firmware/include/proxy_ca.h`), projects lat/lon → pixels using the bbox from the payload, and plots dots in the payload's palette colors. Each vehicle glides to its next known position at a random moment inside an equal slot of the server's advertised refresh cycle, so the wall reads as independent movement spread evenly over the cycle rather than one synchronized jump or chance clumps. |
 | `sim/` + `tools/run_sim.sh` | Native simulator: renders exactly what the ESP32 will draw (same projection and palette code) to a BMP — no hardware needed. The bbox travels in its CSV input, exactly as it does on the wire. |
@@ -146,8 +147,7 @@ The protocol is line-based text over the USB serial bridge (115200):
 A wall without an SSID **and** a host shows the setup-needed screen and
 waits on the serial console; the moment both arrive it connects on the next
 poll cycle — no reflash, no reboot. `scheme`/`port` are optional extras for
-LAN dev
-against `server/proxy.py` (empty means HTTPS/443). See
+LAN dev against `server/proxy.py` (empty means HTTPS/443). See
 [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
 for the exact grammar, limits, and error replies.
 
@@ -155,7 +155,7 @@ for the exact grammar, limits, and error replies.
 
 ```bash
 tools/run_sim.sh                                   # live: local proxy on :8000
-tools/run_sim.sh fixtures/payload.json             # or a recorded /vehicles payload
+tools/run_sim.sh fixtures/sample_vehiclemonitor.json  # or a recorded /vehicles payload
 AGENCY=ct tools/run_sim.sh                         # fetch that agency's payload
 ```
 
@@ -241,7 +241,9 @@ pio device list
 ## Attribution
 
 Vehicle location data provided by [511](https://511.org/open-data/) and the
-served transit agencies (SFMTA, Caltrain, AC Transit, VTA). Required
+served transit agencies (SFMTA, Caltrain, AC Transit, VTA), and by the
+Metropolitan Transportation Authority for NYC subway
+(`api-endpoint.mta.info`, open GTFS-RT — no key). Required
 acknowledgment for 511 open data tokens; please keep this notice.
 
 ## Alternatives considered

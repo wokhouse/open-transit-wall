@@ -42,8 +42,9 @@ static uint32_t nextPollMs = 0;
 static uint8_t pollFailures = 0;
 
 // One animatable dot. Positions are display pixels (projected once at merge
-// time, so the render loop is just integer lerps). ~20 B/vehicle keeps the
-// whole fleet in ~16 KB of static RAM.
+// time, so the render loop is just integer lerps). ~20 B/vehicle for
+// actives plus the snapshot's vehicles[]: at MAX_VEHICLES 1200 the two
+// arrays are ~45 KB of static RAM.
 struct ActiveVehicle {
   uint32_t startMs;  // when the glide begins
   uint32_t id;       // stable crc31 of the SIRI VehicleRef
@@ -55,6 +56,10 @@ struct ActiveVehicle {
 };
 static ActiveVehicle actives[MAX_VEHICLES];
 static int activeCount = 0;
+// Glide coordinates are int8_t: a display past 127 px needs wider fields.
+// (The backdrop size guard is gone, so this is the pixel-width guard now.)
+static_assert(DISPLAY_W <= 127 && DISPLAY_H <= 127,
+              "ActiveVehicle int8_t pixel coords cap displays at 127 px");
 static bool seen[MAX_VEHICLES];
 static int16_t slotOrder[MAX_VEHICLES];  // shuffled glide-slot assignment
 
@@ -83,7 +88,8 @@ static SplashState splashState;
 static void drawSplashFrame();  // defined with the screen helpers below
 
 // Repaint a pixel a dot has vacated: the empty map is black, so restoring
-// is one write. (0,0) always belongs to the status pixel, never the map.
+// is one write. (0,0) belongs to the status pixel — a dot landing there is
+// overpainted by the per-frame drawStatusPixel() anyway.
 static void clearMapPixel(int x, int y) {
   if (x < 0 || y < 0 || x >= DISPLAY_W || y >= DISPLAY_H) {
     return;
@@ -366,7 +372,7 @@ static void showScreen(ErrorKind kind) {
       break;
     case ERR_NONE:
     default:
-      screen.clear();
+      // (The panel is already cleared above; no extra paint needed.)
       // Dots from before the error screen are gone; forget them so the
       // next merge re-adds vehicles at their current positions.
       activeCount = 0;
