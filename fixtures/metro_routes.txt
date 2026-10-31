@@ -1,0 +1,127 @@
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color,route_sort_order
+901,0,,METRO Blue Line,Blue Line - Mpls - Airport - MOA,0,https://www.metrotransit.org/route/blue,00539F,ffffff,1
+902,0,,METRO Green Line,Green Line - Mpls - St Paul,0,https://www.metrotransit.org/route/green,008144,ffffff,2
+905,0,,METRO Gold Line,Gold Line-St Paul-Woodbury,3,https://www.metrotransit.org/route/gold,FFDF52,000000,3
+904,0,,METRO Orange Line,Orange Line-Mpls-Richfield-Bloomington-Burnsville,3,https://www.metrotransit.org/route/orange,F68B1F,000000,4
+903,0,,METRO Red Line,Red Line - Apple Valley - Eagan - Mall of America,3,https://www.metrotransit.org/route/red,E71324,ffffff,6
+921,0,,METRO A Line,A Line - Roseville - Snelling Av - 46th St,3,https://www.metrotransit.org/route/aline,8A8B8A,000000,7
+922,0,,METRO B Line,B Line - Lake St - Selby Av - Union Depot,3,https://www.metrotransit.org/route/bline,8A8B8A,000000,8
+923,0,,METRO C Line,C Line - Penn Av - Brooklyn Center,3,https://www.metrotransit.org/route/cline,8A8B8A,000000,9
+924,0,,METRO D Line,D Line - Brooklyn Ctr - Fremont - Chicago - MOA,3,https://www.metrotransit.org/route/dline,8A8B8A,000000,10
+925,0,,METRO E Line,E Line - U of M - Hennepin - France - Southdale,3,https://www.metrotransit.org/route/eline,8A8B8A,000000,11
+906,10,,Airport Shuttle,Light Rail Shuttle - Terminal 1 - Terminal 2,0,https://www.metrotransit.org/route/airprt,00539F,ffffff,12
+2,0,2,,Franklin Av - Riverside Av - U of M - 8th St SE,3,https://www.metrotransit.org/route/2,771473,ffffff,13
+3,0,3,,U of M - Como Av - Energy Park Dr - Maryland Av,3,https://www.metrotransit.org/route/3,771473,ffffff,14
+4,0,4,,Johnson St - Lyndale Av - Penn Av - Southtown,3,https://www.metrotransit.org/route/4,771473,ffffff,15
+5,0,5,,Brooklyn Ctr - Fremont  - Chicago - 56 St Sta,3,https://www.metrotransit.org/route/5,771473,ffffff,16
+7,0,7,,Plymouth-27Av-Minnehaha-46St Sta-34Av S-66st/Cedar,3,https://www.metrotransit.org/route/7,771473,ffffff,17
+9,0,9,,Glenwood-Wayzata Blvd-Cedar Lk Rd-36Av S-46 St Sta,3,https://www.metrotransit.org/route/9,771473,ffffff,18
+10,0,10,,Central Av - University Av - Northtown,3,https://www.metrotransit.org/route/10,771473,ffffff,19
+11,0,11,,Columbia Heights - 2nd St NE - 4th Av S,3,https://www.metrotransit.org/route/11,771473,ffffff,20
+14,0,14,,Robbinsdale-West Broadway-Bloomington Av-66St,3,https://www.metrotransit.org/route/14,771473,ffffff,21
+17,0,17,,Minnetonka Blvd - Uptown - Washington St NE,3,https://www.metrotransit.org/route/17,771473,ffffff,22
+18,0,18,,Nicollet Av - South Bloomington,3,https://www.metrotransit.org/route/18,771473,ffffff,23
+22,0,22,,Brooklyn Ctr - Lyndale Av N - Cedar - 28 Av S - VA,3,https://www.metrotransit.org/route/22,771473,ffffff,24
+25,2,25,,Northtown- Stinson- Lake of the Isles,3,https://www.metrotransit.org/route/25,771473,ffffff,25
+27,0,27,,Uptown-26St-28St-Hiawatha-Lake,3,https://www.metrotransit.org/route/27,771473,ffffff,26
+30,2,30,,Broadway Crosstown - Westgate Sta,3,https://www.metrotransit.org/route/30,771473,ffffff,27
+32,0,32,,Robbinsdale - Lowry Av - Rosedale,3,https://www.metrotransit.org/route/32,771473,ffffff,28
+33,2,33,,Westgate Sta - Elm St - Kasota Av - SE Mpls Indust,3,https://www.metrotransit.org/route/33,771473,ffffff,29
+36,0,36,,Uptown Transit Station - via Xer- 78th and Johnson,3,https://www.metrotransit.org/route/36,771473,ffffff,30
+38,0,38,,38th St-Highland Village-Uptown-Hopkins-Opus,3,https://www.metrotransit.org/route/38,771473,ffffff,31
+46,1,46,,50St - 46St - 46St Sta,3,https://www.metrotransit.org/route/46,771473,ffffff,32
+48,0,48,,Mpls-Robbinsdale-Penn-Duluth/Golden Valley Rd,3,https://www.metrotransit.org/route/48,771473,ffffff,33
+54,0,54,,Ltd Stop - W 7 St - Airport - MOA - Maplewood Mall,3,https://www.metrotransit.org/route/54,771473,ffffff,34
+61,0,61,,E Hennepin Av - Larpenteur Av - Arcade St,3,https://www.metrotransit.org/route/61,771473,ffffff,35
+62,0,62,,Shoreview - Little Canada - Rice St - Signal Hills,3,https://www.metrotransit.org/route/62,771473,ffffff,36
+63,0,63,,Raymond Sta - Grand Av - Sun Ray,3,https://www.metrotransit.org/route/63,771473,ffffff,37
+64,0,64,,Payne - Maryland - White Bear Av - Maplewood Mall,3,https://www.metrotransit.org/route/64,771473,ffffff,38
+65,2,65,,Dale St - Co Rd B - Rosedale,3,https://www.metrotransit.org/route/65,771473,ffffff,39
+67,0,67,,W Minnehaha Av - Raymond Sta - Franklin Av,3,https://www.metrotransit.org/route/67,771473,ffffff,40
+68,0,68,,Jackson St - Robert St - W St Paul - Inver Hills,3,https://www.metrotransit.org/route/68,771473,ffffff,41
+71,2,71,,Little Canada - Westminster- Concord - Inver Hills,3,https://www.metrotransit.org/route/71,771473,ffffff,42
+72,2,72,,Midway-Selby Av-Burns Av-Sun Ray,3,https://www.metrotransit.org/route/72,771473,ffffff,43
+74,0,74,,46th St - Randolph - W 7th St - E 7th St - Sun Ray,3,https://www.metrotransit.org/route/74,771473,ffffff,44
+75,2,75,,Stryker - Robert - Lake Cove Apts,3,https://www.metrotransit.org/route/75,771473,ffffff,45
+80,2,80,,Maplewood - White Bear Av - Sun Ray,3,https://www.metrotransit.org/route/80,771473,ffffff,46
+83,2,83,,Rosedale - Lexington Av,3,https://www.metrotransit.org/route/83,771473,ffffff,47
+87,2,87,,Rosedale - U of M St Paul - Cleveland - Davern,3,https://www.metrotransit.org/route/87,771473,ffffff,48
+94,0,94,,Express - Mpls - St Paul,3,https://www.metrotransit.org/route/94,DFAACC,000000,49
+113,0,113,,Ltd Stop - Grand Av S - Lyndale Av S - U of M,3,https://www.metrotransit.org/route/113,8AF3FF,000000,50
+114,0,114,,Ltd Stop - Uptown - U of M,3,https://www.metrotransit.org/route/114,8AF3FF,000000,51
+120,11,120,,U of M - East Bank Circulator,3,https://www.metrotransit.org/route/120,7A0019,ffffff,52
+121,11,121,,U of M - Campus Connector,3,https://www.metrotransit.org/route/121,7A0019,ffffff,53
+122,11,122,,U of M - University Ave Circulator,3,https://www.metrotransit.org/route/122,7A0019,ffffff,54
+123,11,123,,U of M - 4th Street Circulator,3,https://www.metrotransit.org/route/123,7A0019,ffffff,55
+124,11,124,,U of M - Saint Paul Circulator,3,https://www.metrotransit.org/route/124,7A0019,ffffff,56
+125,11,125,,U of M - Dinkytown Circulator,3,https://www.metrotransit.org/route/125,7A0019,ffffff,57
+134,0,134,,Ltd Stop - Highland - Cleveland - Cretin - Mpls,3,https://www.metrotransit.org/route/134,8AF3FF,000000,58
+156,0,156,,Express - 58th St - 56th St - Diamond Lake - Mpls,3,https://www.metrotransit.org/route/156,8AF3FF,000000,59
+215,2,215,,Maplewood - McKnight - Sun Ray,3,https://www.metrotransit.org/route/215,771473,ffffff,60
+219,2,219,,Maplewood - Century Av - Hadley Av - Sun Ray,3,https://www.metrotransit.org/route/219,771473,ffffff,61
+223,2,223,,Rosedale-Little Canada-Maplewood,3,https://www.metrotransit.org/route/223,771473,ffffff,62
+225,2,225,,Target Shoreview - Roseville - Coventry - Rosedale,3,https://www.metrotransit.org/route/225,771473,ffffff,63
+227,2,227,,Target Shoreview - Victoria - Rosedale,3,https://www.metrotransit.org/route/227,771473,ffffff,64
+250,0,250,,Express - Co Rd H P&R - 95th Av P&R - Mpls,3,https://www.metrotransit.org/route/250,DFAACC,000000,65
+252,0,252,,Express - 95th Av P&R - U of M,3,https://www.metrotransit.org/route/252,8AF3FF,000000,66
+264,0,264,,Express - Roseville - Co Rd C P & R - Mpls,3,https://www.metrotransit.org/route/264,8AF3FF,000000,67
+270,0,270,,Express - Maplewood -  Little Canada - Minneapolis,3,https://www.metrotransit.org/route/270,DFAACC,000000,68
+275,0,275,,Express - Co Rd 14 P&R - Co Rd E P&R - St Paul,3,https://www.metrotransit.org/route/275,8AF3FF,000000,69
+294,0,294,,Express - Oakdale - Stillwater - St Paul,3,https://www.metrotransit.org/route/294,8AF3FF,000000,70
+323,2,323,,Sun Ray - McKnight Rd - Londin Ln - Woodbury,3,https://www.metrotransit.org/route/323,771473,ffffff,71
+345,2,345,,MOA-Airport-Newport-Woodbury,3,https://www.metrotransit.org/route/345,771473,ffffff,72
+355,0,355,,Express - Woodbury - Mpls,3,https://www.metrotransit.org/route/355,8AF3FF,000000,73
+363,0,363,,Express - Cottage Grove - St Paul - Mpls,3,https://www.metrotransit.org/route/363,8AF3FF,000000,74
+467,0,467,,Express - Lakeville - Mpls,3,https://www.metrotransit.org/route/467,8AF3FF,000000,85
+515,0,515,,Southdale - 66th St - Bloomington Av - MOA,3,https://www.metrotransit.org/route/515,771473,ffffff,94
+534,2,534,,Normndale College - Knox - 98th St Sta,3,https://www.metrotransit.org/route/534,771473,ffffff,95
+537,2,537,,Valley West - Normandale Col - France - Southdale,3,https://www.metrotransit.org/route/537,771473,ffffff,96
+538,2,538,,Southdale - York Av - Southtown - 86th St - MOA,3,https://www.metrotransit.org/route/538,771473,ffffff,97
+539,2,539,,Normandale College - 98th St - MOA,3,https://www.metrotransit.org/route/539,771473,ffffff,98
+540,2,540,,Edina - Richfield - 77th St - MOA,3,https://www.metrotransit.org/route/540,771473,ffffff,99
+542,2,542,,Normandale Lake - American Blvd - MOA,3,https://www.metrotransit.org/route/542,771473,ffffff,100
+546,2,546,,Norm Vill - Norm Coll - Valley West - 98th St Sta,3,https://www.metrotransit.org/route/546,771473,ffffff,101
+578,0,578,,Express - Edina - Southdale - Mpls,3,https://www.metrotransit.org/route/578,8AF3FF,000000,102
+600,6,600,,SW Transit - Express - SW Sta - Gold Tri - Mpls,3,https://www.metrotransit.org/route/600,,000000,103
+615,2,615,,Ridgedale - Co Rd 73 - St Louis Park,3,https://www.metrotransit.org/route/615,771473,ffffff,104
+645,0,645,,Ltd Stop - Mound - Wayzata - Ridgedale - Mpls,3,https://www.metrotransit.org/route/645,771473,ffffff,105
+667,0,667,,Express - Minnetonka - St Louis Park - Mpls,3,https://www.metrotransit.org/route/667,8AF3FF,000000,106
+673,0,673,,Express - Co Rd 73 P&R - Mpls,3,https://www.metrotransit.org/route/673,8AF3FF,000000,107
+686,6,686,,SW Transit - Southwest Station - Airport,3,https://www.metrotransit.org/route/686,,,108
+695,6,695,,SW Transit - Express - Chaska - Chanhassen - Mpls,3,https://www.metrotransit.org/route/695,,000000,109
+698,6,698,,SW Transit - Express - Chaska - Chanhassen - Mpls,3,https://www.metrotransit.org/route/698,,000000,110
+705,2,705,,Starlite - Winnetka Av - Louisiana Av Transit Ctr,3,https://www.metrotransit.org/route/705,771473,ffffff,111
+716,2,716,,Zane Av - 63rd Av - Crystal - Robbinsdale,3,https://www.metrotransit.org/route/716,771473,ffffff,112
+717,2,717,,Brooklyn Center - Robbinsdale - New Hope,3,https://www.metrotransit.org/route/717,771473,ffffff,113
+721,0,721,,Brooklyn Center -Bass Lake Rd - Henn Tech,3,https://www.metrotransit.org/route/721,771473,ffffff,114
+722,0,722,,Brooklyn Ctr - Humboldt - Shingle Creek -Oak Grove,3,https://www.metrotransit.org/route/722,771473,ffffff,115
+723,0,723,,Starlite - N Henn Comm College - Brooklyn Ctr,3,https://www.metrotransit.org/route/723,771473,ffffff,116
+724,0,724,,Oak Grove - Starlite - Brooklyn Ctr,3,https://www.metrotransit.org/route/724,771473,ffffff,117
+725,2,725,,Northtown TC-Starlite-Central 5ST,3,https://www.metrotransit.org/route/725,771473,ffffff,118
+747,5,747,,Plymouth - Express - Station 73  - Reverse Commute,3,https://www.metrotransit.org/route/747,,000000,119
+755,0,755,,Ltd Stop - Hwy 55 - Golden Valley Rd - Winnetka Av,3,https://www.metrotransit.org/route/755,8AF3FF,000000,120
+760,0,760,,Express  - 65th Av P&R - Mpls,3,https://www.metrotransit.org/route/760,8AF3FF,000000,121
+763,0,763,,Express-85th Av-Brookdale Dr-Humboldt-Dupont-Mpls,3,https://www.metrotransit.org/route/763,8AF3FF,000000,122
+764,0,764,,Express - Winnetka Av - 42nd Av - Mpls,3,https://www.metrotransit.org/route/764,8AF3FF,000000,123
+765,0,765,,Express - Target - Hwy 252 and 73rd Av P&R - Mpls,3,https://www.metrotransit.org/route/765,8AF3FF,000000,124
+766,0,766,,Express  -  Champlin - W River Rd - Mpls,3,https://www.metrotransit.org/route/766,8AF3FF,000000,125
+768,0,768,,Express - Noble P&R - Mpls,3,https://www.metrotransit.org/route/768,8AF3FF,000000,126
+774,5,774,,Plymouth - Express - NW Greenway P&R,3,https://www.metrotransit.org/route/774,,000000,127
+776,5,776,,Plymouth - Express - St Philip P&R-NW Greenway P&R,3,https://www.metrotransit.org/route/776,,000000,128
+777,5,777,,Plymouth - Express Station 73-Reserve Transit Sta,3,https://www.metrotransit.org/route/777,,000000,129
+781,4,781,,Maple Grove - Express - Maple Grove Station,3,https://www.metrotransit.org/route/781,,000000,130
+784,4,784,,Maple Grove - Express - Maple Grove Sta - Dtw East,3,https://www.metrotransit.org/route/784,,000000,131
+785,4,785,,Maple Grove - Express - Parkway Station,3,https://www.metrotransit.org/route/785,,000000,132
+789,4,789,,Maple Grove - Express - Maple Grove Sta - U of M,3,https://www.metrotransit.org/route/789,,000000,133
+790,5,790,,Plymouth - Express - Cub Foods - Four Seasons,3,https://www.metrotransit.org/route/790,,000000,134
+795,5,795,,Plymouth - Express - Midday - Northeast Plymouth,3,https://www.metrotransit.org/route/795,,000000,135
+801,2,801,,Brooklyn Ctr - Columbia Heights - Rosedale,3,https://www.metrotransit.org/route/801,771473,ffffff,136
+802,2,802,,Anoka - Coon Rapids - Foley P&R - Northtown,3,https://www.metrotransit.org/route/802,771473,ffffff,137
+804,2,804,,Co Rd H P&R - Old Hwy 8 - Silver Lake Village,3,https://www.metrotransit.org/route/804,771473,ffffff,138
+805,2,805,,Anoka - Coon Rapids - Northtown,3,https://www.metrotransit.org/route/805,771473,ffffff,139
+824,0,824,,Ltd Stop - Northtown - Monroe - University - Mpls,3,https://www.metrotransit.org/route/824,8AF3FF,000000,140
+827,0,827,,Northtown - E River Rd - Mpls,3,https://www.metrotransit.org/route/827,771473,000000,141
+850,0,850,,Express - Foley P&R - Mpls,3,https://www.metrotransit.org/route/850,DFAACC,000000,142
+860,0,860,,Express - Coon Rapids - Northtown - St Paul,3,https://www.metrotransit.org/route/860,8AF3FF,000000,143
+882,0,882,,Big Lake - Elk River,3,https://www.metrotransit.org/route/882,8AF3FF,000000,144
+888,0,888,,Elk River - Anoka - Mpls,3,https://www.metrotransit.org/route/888,DFAACC,000000,145

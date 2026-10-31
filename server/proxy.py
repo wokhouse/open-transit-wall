@@ -411,14 +411,16 @@ def check_operator_codes(api_key: str) -> None:
 
 
 def fetch_station_snapshot(state: AgencyState) -> list[dict]:
-    """Poll one gtfs-rt agency's feeds and resolve vehicles to station coords.
+    """Poll one gtfs-rt agency's feeds and place every vehicle.
 
     Returns vehicles in the siri.parse_vehiclemonitor shape so the shared
-    compact_vehicles/classify path applies. These VPs carry no coordinates:
-    each is placed at its reported station (the wall's glide then animates
-    the hop between polls). Reports whose station id is missing from the
-    static table are skipped and counted — that mismatch means the routes
-    cache needs refreshing.
+    compact_vehicles/classify path applies. Position-first: feeds that
+    report coordinates (Metro Transit) place the vehicle where it is.
+    Feeds that report only a station id (MTA subway) are placed at that
+    station from the static table (the wall's glide then animates the
+    hop between polls). Reports whose station id is missing from the
+    static table are skipped and counted — that mismatch means the
+    routes cache needs refreshing.
     """
     if not state.stations:
         raise RuntimeError(f"{state.id}: no station table (first routes refresh failed?)")
@@ -428,11 +430,15 @@ def fetch_station_snapshot(state: AgencyState) -> list[dict]:
         response = httpx.get(url, timeout=20.0, follow_redirects=True)
         response.raise_for_status()
         for vp in gtfs_rt.parse_rt(response.content):
-            loc = state.stations.get(vp["stop_id"])
-            if loc is None:
-                missing += 1
-                continue
-            vehicles.append({"line": vp["line"], "lat": loc[0], "lon": loc[1],
+            if vp["lat"] is not None:
+                lat, lon = vp["lat"], vp["lon"]
+            else:
+                loc = state.stations.get(vp["stop_id"])
+                if loc is None:
+                    missing += 1
+                    continue
+                lat, lon = loc
+            vehicles.append({"line": vp["line"], "lat": lat, "lon": lon,
                              "bearing": None, "direction": "", "id": vp["id"]})
     if missing:
         print(f"[poll:{state.id}] NOTE: skipped {missing} reports with unknown "

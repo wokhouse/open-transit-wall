@@ -1,0 +1,744 @@
+{
+"901": {
+"type": 0,
+"long": "METRO Blue Line",
+"color": "00539F",
+"text": "ffffff"
+},
+"902": {
+"type": 0,
+"long": "METRO Green Line",
+"color": "008144",
+"text": "ffffff"
+},
+"905": {
+"type": 3,
+"long": "METRO Gold Line",
+"color": "FFDF52",
+"text": "000000"
+},
+"904": {
+"type": 3,
+"long": "METRO Orange Line",
+"color": "F68B1F",
+"text": "000000"
+},
+"903": {
+"type": 3,
+"long": "METRO Red Line",
+"color": "E71324",
+"text": "ffffff"
+},
+"921": {
+"type": 3,
+"long": "METRO A Line",
+"color": "8A8B8A",
+"text": "000000"
+},
+"922": {
+"type": 3,
+"long": "METRO B Line",
+"color": "8A8B8A",
+"text": "000000"
+},
+"923": {
+"type": 3,
+"long": "METRO C Line",
+"color": "8A8B8A",
+"text": "000000"
+},
+"924": {
+"type": 3,
+"long": "METRO D Line",
+"color": "8A8B8A",
+"text": "000000"
+},
+"925": {
+"type": 3,
+"long": "METRO E Line",
+"color": "8A8B8A",
+"text": "000000"
+},
+"906": {
+"type": 0,
+"long": "Airport Shuttle",
+"color": "00539F",
+"text": "ffffff"
+},
+"2": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"3": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"4": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"5": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"7": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"9": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"10": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"11": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"14": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"17": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"18": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"22": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"25": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"27": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"30": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"32": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"33": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"36": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"38": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"46": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"48": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"54": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"61": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"62": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"63": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"64": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"65": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"67": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"68": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"71": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"72": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"74": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"75": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"80": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"83": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"87": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"94": {
+"type": 3,
+"long": "",
+"color": "DFAACC",
+"text": "000000"
+},
+"113": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"114": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"120": {
+"type": 3,
+"long": "",
+"color": "7A0019",
+"text": "ffffff"
+},
+"121": {
+"type": 3,
+"long": "",
+"color": "7A0019",
+"text": "ffffff"
+},
+"122": {
+"type": 3,
+"long": "",
+"color": "7A0019",
+"text": "ffffff"
+},
+"123": {
+"type": 3,
+"long": "",
+"color": "7A0019",
+"text": "ffffff"
+},
+"124": {
+"type": 3,
+"long": "",
+"color": "7A0019",
+"text": "ffffff"
+},
+"125": {
+"type": 3,
+"long": "",
+"color": "7A0019",
+"text": "ffffff"
+},
+"134": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"156": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"215": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"219": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"223": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"225": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"227": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"250": {
+"type": 3,
+"long": "",
+"color": "DFAACC",
+"text": "000000"
+},
+"252": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"264": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"270": {
+"type": 3,
+"long": "",
+"color": "DFAACC",
+"text": "000000"
+},
+"275": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"294": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"323": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"345": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"355": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"363": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"467": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"515": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"534": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"537": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"538": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"539": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"540": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"542": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"546": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"578": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"600": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"615": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"645": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"667": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"673": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"686": {
+"type": 3,
+"long": "",
+"text": ""
+},
+"695": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"698": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"705": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"716": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"717": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"721": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"722": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"723": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"724": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"725": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"747": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"755": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"760": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"763": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"764": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"765": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"766": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"768": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"774": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"776": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"777": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"781": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"784": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"785": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"789": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"790": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"795": {
+"type": 3,
+"long": "",
+"text": "000000"
+},
+"801": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"802": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"804": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"805": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "ffffff"
+},
+"824": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"827": {
+"type": 3,
+"long": "",
+"color": "771473",
+"text": "000000"
+},
+"850": {
+"type": 3,
+"long": "",
+"color": "DFAACC",
+"text": "000000"
+},
+"860": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"882": {
+"type": 3,
+"long": "",
+"color": "8AF3FF",
+"text": "000000"
+},
+"888": {
+"type": 3,
+"long": "",
+"color": "DFAACC",
+"text": "000000"
+}
+}

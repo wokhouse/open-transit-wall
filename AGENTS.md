@@ -2,8 +2,9 @@
 
 Live transit map on a tiling HUB75 LED matrix wall. A Python mini-proxy
 polls each agency's upstream — 511 SIRI for SF Bay Area operators, MTA
-GTFS-RT for NYC subway — and serves compact JSON. An ESP32 firmware renders
-every served vehicle as a colored dot on black.
+GTFS-RT for NYC subway, GTFS-RT for Metro Transit (Twin Cities) — and
+serves compact JSON. An ESP32 firmware renders every served vehicle as a
+colored dot on black.
 
 Repo: `/home/fungj/projects/open-transit-wall` (worktrees under
 `~/.paseo/worktrees/0pedc9uz/<name>`).
@@ -134,4 +135,5 @@ tools/run_sim.sh /tmp/v.csv      # writes /tmp/otw_wall.bmp (64x64)
 - `docs/multi-agency-plan.md` — the multi-agency architecture (implemented).
 - `docs/nyc-mta-feasibility.md` — MTA subway agency: feed facts, station
   snapping, viewport history.
+- `docs/cta-trimet-metro-feasibility.md` — CTA, TriMet, Metro Transit scoping: key gates, position-first feeds, fleet bounds.
 - `docs/plan.md` — the browser provisioning tool. Not built yet.

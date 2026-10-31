@@ -29,6 +29,20 @@
       "lon_max": -73.6607
     }
   },
+  "metro": {
+    "name": "Metro Transit (Twin Cities)",
+    "source": "gtfs-rt",
+    "feeds": {
+      "vehicle-positions": "https://svc.metrotransit.org/mtgtfs/vehiclepositions.pb"
+    },
+    "static_gtfs": "https://svc.metrotransit.org/mtgtfs/gtfs.zip",
+    "bbox": {
+      "lat_min": 44.845,
+      "lat_max": 45.095,
+      "lon_min": -93.379,
+      "lon_max": -93.041
+    }
+  },
   "ct": {
     "name": "Caltrain",
     "siri_agency": "CT",
