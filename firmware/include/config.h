@@ -107,6 +107,8 @@
 // path against server/proxy.py — provisioned, never compiled.
 #define POLL_INTERVAL_MS 12000UL  // ESP32-side refresh; proxy rate-limits 511 itself
 #define STALE_AFTER_POLLS 3       // status pixel goes amber after this many failed polls
+#define SPLASH_FPS 10             // boot splash frame rate; the pump lives in
+                                  // src/main.cpp (splashPumpStart/splashTick)
 
 #define MAX_VEHICLES 1200         // sized for the largest served fleet: MTA NYC subway
                                   // observed 584 trains off-peak, weekday peak order ~1k
