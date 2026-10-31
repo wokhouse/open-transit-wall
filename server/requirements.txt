@@ -2,3 +2,6 @@ fastapi>=0.110
 uvicorn>=0.29
 httpx>=0.27
 python-dotenv>=1.0
+protobuf>=5
+# mta-rt upstream (NYC subway GTFS-RT). v3+ generates google.transit.*
+gtfs-realtime-bindings>=3

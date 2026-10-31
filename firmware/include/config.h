@@ -5,8 +5,8 @@
 //
 // The project targets a single 64x64 panel (PANEL_RES_X/Y below, chain 1x1).
 // The code derives everything from those numbers, so a tiled wall is
-// possible but untested; if you try one, regenerate the backdrop:
-//     python3 tools/gen_backdrop.py --agency <id> --w <DISPLAY_W> --h <DISPLAY_H>
+// possible but untested. Nothing per-agency is compiled: the panel size is
+// the only display constant, and adding an agency is a server-side change.
 // ============================================================================
 
 // --- Panel hardware ---------------------------------------------------------
@@ -76,11 +76,11 @@
 #define STATUS_PIXEL_ENABLED 1    // corner pixel: green=fresh, amber=aging, red=error
 
 // --- Map area ---------------------------------------------------------------
-// The bounding box is NOT compiled: the proxy ships it per agency in the
-// /vehicles payload ("bbox", from server/agencies.json), and the projection
-// initializes from it. Vehicles outside are clipped. The backdrop bitmap is
-// the one per-agency artifact that stays compiled — regenerate it with
-// tools/gen_backdrop.py --agency <id> and reflash to add an agency.
+// Nothing per-agency is compiled at all: the proxy ships the bounding box
+// per agency in the /vehicles payload ("bbox", from server/agencies.json),
+// and the projection initializes from it. Vehicles outside are clipped. The
+// map is vehicles on black — there is no backdrop or land layer, so adding
+// an agency never needs a reflash.
 
 // 0 = preserve true geographic aspect, centered (leaves margins on panels
 // wider/narrower than the map's aspect). 1 = stretch the bounding box to fill
@@ -98,7 +98,9 @@
 #define POLL_INTERVAL_MS 12000UL  // ESP32-side refresh; proxy rate-limits 511 itself
 #define STALE_AFTER_POLLS 3       // status pixel goes amber after this many failed polls
 
-#define MAX_VEHICLES 800          // live SFMTA feed observed ~676 vehicles
+#define MAX_VEHICLES 1200         // sized for the largest served fleet: MTA NYC subway
+                                  // observed 584 trains off-peak, weekday peak order ~1k
+                                  // (SFMTA, the other reference fleet, runs ~676)
 
 // --- Per-vehicle motion ------------------------------------------------------
 // The proxy publishes positions every POLL_SECONDS and advertises the exact

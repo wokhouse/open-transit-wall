@@ -77,15 +77,15 @@ unknown key ...`. Bad value → `ERR <key> must be ...`.
 
 The device is ready only when an SSID **and** a host are set (live or
 stored). `scheme`/`port` may stay empty — empty means the HTTPS/443 default
-at fetch time. Until ready, the wall shows the backdrop and waits on the
-serial console. The tool should prefill the hosted proxy URL
+at fetch time. Until ready, the wall shows the setup-needed screen and
+waits on the serial console. The tool should prefill the hosted proxy URL
 (`open-transit-wall-nuvez.ondigitalocean.app`) as a UI convenience; the
 device itself knows no endpoints.
 
 ## Firmware behavior around provisioning
 
 - Incomplete at boot (no SSID or no host in NVS): the wall shows the
-  backdrop, does not touch WiFi, and answers serial commands. Once an SSID
+  setup-needed screen, does not touch WiFi, and answers serial commands. Once an SSID
   and a host arrive, the next poll cycle connects — no reboot needed.
 - Provisioned at boot: normal operation; the serial console still works, so
   a wrong password can be fixed live and `save`d.

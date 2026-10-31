@@ -15,8 +15,10 @@ TEST_CFG = {"name": "Test", "siri_agency": "TS",
 def test_load_registry_accepts_shipped_file():
     registry = proxy.load_registry()
     assert "sf" in registry
-    for cfg in registry.values():
-        assert cfg["siri_agency"]
+    for agency_id, cfg in registry.items():
+        assert cfg["name"]
+        if cfg.get("source", "511") == "511":
+            assert cfg["siri_agency"], f"{agency_id} is 511-source without siri_agency"
         assert set(cfg["bbox"]) == {"lat_min", "lat_max", "lon_min", "lon_max"}
 
 

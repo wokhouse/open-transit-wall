@@ -123,7 +123,8 @@ Plain HTML + one ES module, no framework:
 ## Test plan
 
 - Manual, one 64×64 wall: fresh flash → provision `sf` against the hosted
-  proxy → vehicles appear; then agency swap `sf`→`ct` → backdrop mismatch
-  warning path; then `erase` → re-provision.
+  proxy → vehicles appear; then agency swap `sf`→`ct` → the vehicles
+  recolor and reframe with no reflash (nothing per-agency is compiled);
+  then `erase` → re-provision.
 - CI: pages workflow must produce a manifest whose sha256s match the
   staged files (build_firmware.py asserts this before staging).

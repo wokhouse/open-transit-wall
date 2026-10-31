@@ -53,4 +53,3 @@ void showSetupNeeded(PutPixel put, void *ctx);   // unprovisioned prompt
 void showWifiError(PutPixel put, void *ctx);     // saved wifi won't connect
 void showServerError(PutPixel put, void *ctx);   // proxy unreachable
 void showAgencyError(PutPixel put, void *ctx);   // proxy 400s the agency id
-void showNoMapError(PutPixel put, void *ctx, const char *agency);

@@ -2,21 +2,61 @@
   "sf": {
     "name": "SFMTA (Muni)",
     "siri_agency": "SF",
-    "bbox": {"lat_min": 37.705, "lat_max": 37.810, "lon_min": -122.512, "lon_max": -122.385}
+    "bbox": {
+      "lat_min": 37.705,
+      "lat_max": 37.81,
+      "lon_min": -122.512,
+      "lon_max": -122.385
+    }
+  },
+  "mta": {
+    "name": "NYC Subway (MTA)",
+    "source": "gtfs-rt",
+    "feeds": {
+      "1-7": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs",
+      "ACE": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace",
+      "BDFM": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-bdfm",
+      "G": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-g",
+      "JZ": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-jz",
+      "L": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-l",
+      "NQRW": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw"
+    },
+    "static_gtfs": "https://web.mta.info/developers/data/nyct/subway/google_transit.zip",
+    "bbox": {
+      "lat_min": 40.5701,
+      "lat_max": 40.88,
+      "lon_min": -74.0727,
+      "lon_max": -73.6638
+    }
   },
   "ct": {
     "name": "Caltrain",
     "siri_agency": "CT",
-    "bbox": {"lat_min": 36.999, "lat_max": 37.780, "lon_min": -122.416, "lon_max": -121.562}
+    "bbox": {
+      "lat_min": 36.999,
+      "lat_max": 37.78,
+      "lon_min": -122.416,
+      "lon_max": -121.562
+    }
   },
   "ac": {
     "name": "AC Transit",
     "siri_agency": "AC",
-    "bbox": {"lat_min": 37.406, "lat_max": 38.022, "lon_min": -122.423, "lon_max": -121.883}
+    "bbox": {
+      "lat_min": 37.406,
+      "lat_max": 38.022,
+      "lon_min": -122.423,
+      "lon_max": -121.883
+    }
   },
   "sc": {
     "name": "VTA",
     "siri_agency": "SC",
-    "bbox": {"lat_min": 36.971, "lat_max": 37.462, "lon_min": -122.178, "lon_max": -121.545}
+    "bbox": {
+      "lat_min": 36.971,
+      "lat_max": 37.462,
+      "lon_min": -122.178,
+      "lon_max": -121.545
+    }
   }
 }

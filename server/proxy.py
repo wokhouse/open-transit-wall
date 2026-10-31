@@ -1,12 +1,15 @@
 """open-transit-wall mini-proxy.
 
 Serves one or more transit agencies from server/agencies.json (the registry).
-Each served agency is polled from the 511 SIRI VehicleMonitoring feed on its
-own timer (POLL_SECONDS per agency) and served as a compact vehicle list for
-the ESP32 display. Which agencies a deployment runs is set by
-SERVED_AGENCIES; the payload carries the agency's bbox, refresh cadence, and
-vehicle-color palette (per-line for metro) so clients are configured
-entirely from the wire.
+Each served agency is polled from its upstream on its own timer (POLL_SECONDS
+per agency): 511 member agencies from the 511 SIRI VehicleMonitoring feed,
+registry entries with `"source": "gtfs-rt"` (rail agencies, e.g. NYC subway)
+from the public GTFS-RT feeds + static GTFS zip named in their registry
+entry. Each agency is served as a compact vehicle list for the ESP32
+display. Which agencies a deployment runs is set by SERVED_AGENCIES; the
+payload carries the agency's bbox, refresh cadence, and vehicle-color
+palette (per-line for metro) so clients are configured entirely from the
+wire.
 
 Usage:
   python proxy.py --fixture ../fixtures/sample_vehiclemonitor.json   # offline
@@ -27,6 +30,7 @@ Configuration via environment (or server/.env):
 from __future__ import annotations
 
 import argparse
+import csv
 import io
 import json
 import os
@@ -39,6 +43,7 @@ import zlib
 from datetime import UTC, datetime
 from pathlib import Path
 
+import gtfs_rt
 import httpx
 import uvicorn
 from classify import (
@@ -101,9 +106,23 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
     for agency_id, cfg in registry.items():
         if not AGENCY_ID_RE.match(agency_id):
             raise ValueError(f"registry id {agency_id!r} must match {AGENCY_ID_RE.pattern}")
-        for key in ("name", "siri_agency", "bbox"):
+        source = cfg.get("source", "511")
+        if source not in ("511", "gtfs-rt"):
+            raise ValueError(f"registry entry {agency_id!r} has unknown source {source!r}")
+        required = ("name", "bbox") if source != "511" else ("name", "siri_agency", "bbox")
+        for key in required:
             if key not in cfg:
                 raise ValueError(f"registry entry {agency_id!r} missing {key!r}")
+        if source == "gtfs-rt":
+            feeds = cfg.get("feeds")
+            if (not isinstance(feeds, dict) or not feeds
+                    or not all(isinstance(url, str) and url.startswith("https://")
+                              for url in feeds.values())):
+                raise ValueError(f"registry entry {agency_id!r} needs a non-empty "
+                                 "'feeds' object of https URLs")
+            static = cfg.get("static_gtfs")
+            if not isinstance(static, str) or not static.startswith("http"):
+                raise ValueError(f"registry entry {agency_id!r} needs a 'static_gtfs' URL")
         for key in ("lat_min", "lat_max", "lon_min", "lon_max"):
             if not isinstance(cfg["bbox"].get(key), (int, float)):
                 raise ValueError(f"registry entry {agency_id!r} bbox.{key} missing or not a number")
@@ -143,18 +162,33 @@ class AgencyState:
     def __init__(self, agency_id: str, cfg: dict) -> None:
         self.id = agency_id
         self.name = cfg["name"]
-        self.siri_agency = cfg["siri_agency"]
+        self.source = cfg.get("source", "511")
+        self.siri_agency = cfg.get("siri_agency", "")
+        # gtfs-rt: the per-agency upstream endpoints named by the registry.
+        self.feeds = dict(cfg.get("feeds") or {})
+        self.static_gtfs = cfg.get("static_gtfs", "")
         self.bbox = [cfg["bbox"]["lat_min"], cfg["bbox"]["lat_max"],
                      cfg["bbox"]["lon_min"], cfg["bbox"]["lon_max"]]
         self.palette = {**DEFAULT_PALETTE, **(cfg.get("palette") or {})}
         # SFMTA keeps its offline line table; other agencies rely on GTFS.
         self.fallback = MUNI_FALLBACK if agency_id == "sf" else None
         self.routes_path = SERVER_DIR / f"routes_{agency_id}.json"
+        # gtfs-rt: VehiclePositions report station ids, not coords;
+        # this table (from the static GTFS stops.txt) resolves them.
+        self.stations_path = SERVER_DIR / f"stations_{agency_id}.json"
+        self.stations: dict[str, tuple[float, float]] = self._load_stations()
         self._lock = threading.Lock()
         self._vehicles: list[dict] = []
         self._fetched_at: float = 0.0
         self._next_fetch_at: float = 0.0
         self.routes: dict[str, dict] = load_routes(self.routes_path)
+
+    def _load_stations(self) -> dict[str, tuple[float, float]]:
+        try:
+            with open(self.stations_path, encoding="utf-8") as fh:
+                return {k: (lat, lon) for k, (lat, lon) in json.load(fh).items()}
+        except (OSError, ValueError):
+            return {}
 
     def update(self, vehicles: list[dict]) -> None:
         with self._lock:
@@ -274,8 +308,65 @@ def fetch_live(api_key: str, siri_agency: str) -> dict:
     return json.loads(response.text.lstrip("\ufeff \t\r\n"))
 
 
-def refresh_routes(api_key: str, state: AgencyState) -> None:
-    """Download the agency's GTFS static feed and cache route types/colors."""
+def parse_routes_txt(routes_txt: str) -> dict[str, dict]:
+    """Parse a GTFS routes.txt into the per-agency route metadata cache.
+
+    Parsed with the csv module on purpose: MTA route descriptions carry
+    commas inside quoted fields, which breaks naive line splitting.
+    """
+    rows = [row for row in csv.reader(io.StringIO(routes_txt)) if row]
+    header = [cell.strip() for cell in rows[0]]
+    idx = {name: header.index(name) for name in
+          ("route_id", "route_short_name", "route_long_name", "route_type")}
+    color_idx = header.index("route_color") if "route_color" in header else None
+    text_idx = header.index("route_text_color") if "route_text_color" in header else None
+
+    routes: dict[str, dict] = {}
+    for cells in rows[1:]:
+        if len(cells) <= max(idx.values()):
+            continue
+        route_id = cells[idx["route_id"]].strip()
+        short = cells[idx["route_short_name"]].strip().upper() or route_id.upper()
+        entry = {
+            "type": int(float(cells[idx["route_type"]].strip() or 3)),
+            "long": cells[idx["route_long_name"]].strip(),
+        }
+        if color_idx is not None and len(cells) > color_idx and cells[color_idx].strip():
+            entry["color"] = cells[color_idx].strip().lstrip("#").upper()
+        if text_idx is not None and len(cells) > text_idx:
+            entry["text"] = cells[text_idx].strip()
+        routes[route_id] = entry
+        routes[short] = entry
+    return routes
+
+
+def refresh_routes(api_key: str | None, state: AgencyState, quiet: bool = False) -> None:
+    """Download the agency's GTFS static feed and cache route types/colors.
+
+    The upstream differs by source: 511 datafeeds (keyed) for member
+    agencies, and for gtfs-rt agencies the public static GTFS zip named
+    by their registry entry — which also supplies the station coordinate
+    table the RT feeds lack. quiet=True
+    logs to stderr so callers that print a payload on stdout (--once)
+    keep their output clean.
+    """
+    log = (lambda msg: print(msg, file=sys.stderr)) if quiet else print
+    if state.source == "gtfs-rt":
+        response = httpx.get(state.static_gtfs, timeout=120.0, follow_redirects=True)
+        response.raise_for_status()
+        with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+            routes = parse_routes_txt(archive.read("routes.txt").decode("utf-8-sig"))
+            stations = gtfs_rt.parse_stops(archive.read("stops.txt").decode("utf-8-sig"))
+        state.routes_path.write_text(json.dumps(routes, indent=0))
+        state.routes = routes
+        state.stations_path.write_text(json.dumps({k: list(v) for k, v in stations.items()}))
+        state.stations = stations
+        log(f"[routes] cached {len(routes)//2} {state.name} routes + "
+            f"{len(stations)} stations")
+        return
+
+    if not api_key:
+        raise RuntimeError("FIVE11_API_KEY not set (use --fixture for offline dev)")
     response = httpx.get(
         DATAFEED_URL,
         params={"api_key": api_key, "operator_id": state.siri_agency,
@@ -286,29 +377,7 @@ def refresh_routes(api_key: str, state: AgencyState) -> None:
     response.raise_for_status()
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
         routes_txt = archive.read("routes.txt").decode("utf-8-sig")
-    rows = [line.split(",") for line in routes_txt.splitlines() if line.strip()]
-    header = [cell.strip('"') for cell in rows[0]]
-    idx = {name: header.index(name) for name in
-           ("route_id", "route_short_name", "route_long_name", "route_type")}
-    color_idx = header.index("route_color") if "route_color" in header else None
-    text_idx = header.index("route_text_color") if "route_text_color" in header else None
-
-    routes: dict[str, dict] = {}
-    for cells in rows[1:]:
-        if len(cells) <= max(idx.values()):
-            continue
-        route_id = cells[idx["route_id"]].strip('"')
-        short = cells[idx["route_short_name"]].strip('"').upper() or route_id.upper()
-        entry = {
-            "type": int(float(cells[idx["route_type"]].strip('"') or 3)),
-            "long": cells[idx["route_long_name"]].strip('"'),
-        }
-        if color_idx is not None and cells[color_idx].strip('"'):
-            entry["color"] = cells[color_idx].strip('"').lstrip("#").upper()
-        if text_idx is not None:
-            entry["text"] = cells[text_idx].strip('"')
-        routes[route_id] = entry
-        routes[short] = entry
+    routes = parse_routes_txt(routes_txt)
 
     state.routes_path.write_text(json.dumps(routes, indent=0))
     state.routes = routes
@@ -318,7 +387,10 @@ def refresh_routes(api_key: str, state: AgencyState) -> None:
 
 def check_operator_codes(api_key: str) -> None:
     """Warn (never block) when a registry siri_agency is missing from 511's
-    live operator list — the authoritative source for accepted agency codes."""
+    live operator list — the authoritative source for accepted agency codes.
+    Only 511-source agencies have a siri_agency to check."""
+    if not any(state.source == "511" for state in STATES.values()):
+        return
     try:
         response = httpx.get(OPERATORS_URL, params={"api_key": api_key},
                              timeout=30.0, follow_redirects=True)
@@ -330,10 +402,42 @@ def check_operator_codes(api_key: str) -> None:
               "skipping check", file=sys.stderr)
         return
     for state in STATES.values():
+        if state.source != "511":
+            continue
         if state.siri_agency not in known:
             print(f"[registry] WARNING: {state.id} uses siri_agency "
                   f"{state.siri_agency!r}, which is not in 511's operator list",
                   file=sys.stderr)
+
+
+def fetch_station_snapshot(state: AgencyState) -> list[dict]:
+    """Poll one gtfs-rt agency's feeds and resolve vehicles to station coords.
+
+    Returns vehicles in the siri.parse_vehiclemonitor shape so the shared
+    compact_vehicles/classify path applies. These VPs carry no coordinates:
+    each is placed at its reported station (the wall's glide then animates
+    the hop between polls). Reports whose station id is missing from the
+    static table are skipped and counted — that mismatch means the routes
+    cache needs refreshing.
+    """
+    if not state.stations:
+        raise RuntimeError(f"{state.id}: no station table (first routes refresh failed?)")
+    vehicles = []
+    missing = 0
+    for url in state.feeds.values():
+        response = httpx.get(url, timeout=20.0, follow_redirects=True)
+        response.raise_for_status()
+        for vp in gtfs_rt.parse_rt(response.content):
+            loc = state.stations.get(vp["stop_id"])
+            if loc is None:
+                missing += 1
+                continue
+            vehicles.append({"line": vp["line"], "lat": loc[0], "lon": loc[1],
+                             "bearing": None, "direction": "", "id": vp["id"]})
+    if missing:
+        print(f"[poll:{state.id}] NOTE: skipped {missing} reports with unknown "
+              "station ids (refresh the static GTFS cache)", file=sys.stderr)
+    return vehicles
 
 
 def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
@@ -352,15 +456,17 @@ def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
     while True:
         next_slot += interval
         try:
-            if first and api_key:
+            if first and (api_key or state.source != "511"):
                 try:
                     refresh_routes(api_key, state)
                 except Exception as error:
                     print(f"[routes] refresh failed ({redact(str(error))}); "
                           "using fallback")
 
-            if fixture is not None:
-                payload = json.loads(fixture.read_text())
+            if state.source == "gtfs-rt":
+                raw_vehicles = fetch_station_snapshot(state)
+            elif fixture is not None:
+                raw_vehicles = parse_vehiclemonitor(json.loads(fixture.read_text()))
             elif api_key:
                 payload = fetch_live(api_key, state.siri_agency)
                 if record:
@@ -368,11 +474,11 @@ def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
                     stamp = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
                     (FIXTURES_DIR / f"vehiclemonitor_{state.id}_{stamp}.json").write_text(
                         json.dumps(payload, indent=1))
+                raw_vehicles = parse_vehiclemonitor(payload)
             else:
                 raise RuntimeError("FIVE11_API_KEY not set (use --fixture for offline dev)")
 
-            vehicles = compact_vehicles(parse_vehiclemonitor(payload),
-                                       state.routes, state.fallback)
+            vehicles = compact_vehicles(raw_vehicles, state.routes, state.fallback)
             state.update(vehicles)
             print(f"[poll:{state.id}] {len(vehicles)} vehicles at {state.ts()}",
                   flush=True)
@@ -478,22 +584,30 @@ def main() -> None:
                          f"(SERVED_AGENCIES={','.join(SERVED)})")
             return
         state = STATES[agency_id]
-        if args.fixture:
+        if state.source == "gtfs-rt":
+            try:
+                refresh_routes(None, state, quiet=True)
+            except Exception as error:
+                print(f"[routes] refresh failed ({redact(str(error))}); "
+                      "using cached tables", file=sys.stderr)
+            raw_vehicles = fetch_station_snapshot(state)
+        elif args.fixture:
             payload = json.loads(args.fixture.read_text())
+            raw_vehicles = parse_vehiclemonitor(payload)
         elif api_key:
             payload = fetch_live(api_key, state.siri_agency)
+            raw_vehicles = parse_vehiclemonitor(payload)
         else:
             parser.error("--once needs FIVE11_API_KEY or --fixture")
             return
-        state.update(compact_vehicles(parse_vehiclemonitor(payload),
-                                     state.routes, state.fallback))
+        state.update(compact_vehicles(raw_vehicles, state.routes, state.fallback))
         print(json.dumps(wire_payload(state), indent=1))
         return
 
     print(f"[poll] serving {len(STATES)} agencies ({', '.join(SERVED)}) "
           f"each every {interval:g}s", flush=True)
     total_rph = len(STATES) * 3600.0 / interval
-    if total_rph > DEFAULT_TOKEN_RPH:
+    if total_rph > DEFAULT_TOKEN_RPH and any(state.source == "511" for state in STATES.values()):
         print(f"[poll] WARNING: {total_rph:.1f} req/h total is over the "
               f"{DEFAULT_TOKEN_RPH} req/h default token; raise POLL_SECONDS "
               "or drop an agency", file=sys.stderr)

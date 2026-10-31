@@ -1,0 +1,188 @@
+{
+"A": {
+"type": 1,
+"long": "8 Avenue Express",
+"color": "0062CF",
+"text": "FFFFFF"
+},
+"C": {
+"type": 1,
+"long": "8 Avenue Local",
+"color": "0062CF",
+"text": "FFFFFF"
+},
+"E": {
+"type": 1,
+"long": "8 Avenue Local",
+"color": "0062CF",
+"text": "FFFFFF"
+},
+"B": {
+"type": 1,
+"long": "6 Avenue Express",
+"color": "EB6800",
+"text": "FFFFFF"
+},
+"D": {
+"type": 1,
+"long": "6 Avenue Express",
+"color": "EB6800",
+"text": "FFFFFF"
+},
+"F": {
+"type": 1,
+"long": "Queens Blvd Express/6 Av Local",
+"color": "EB6800",
+"text": "FFFFFF"
+},
+"FX": {
+"type": 1,
+"long": "Brooklyn F Express",
+"color": "EB6800",
+"text": "FFFFFF"
+},
+"M": {
+"type": 1,
+"long": "Queens Blvd Local/6 Av Local",
+"color": "EB6800",
+"text": "FFFFFF"
+},
+"G": {
+"type": 1,
+"long": "Brooklyn-Queens Crosstown",
+"color": "799534",
+"text": "FFFFFF"
+},
+"J": {
+"type": 1,
+"long": "Nassau St Local",
+"color": "8E5C33",
+"text": "FFFFFF"
+},
+"Z": {
+"type": 1,
+"long": "Nassau St Express",
+"color": "8E5C33",
+"text": "FFFFFF"
+},
+"L": {
+"type": 1,
+"long": "14 St-Canarsie Local",
+"color": "7C858C",
+"text": "FFFFFF"
+},
+"N": {
+"type": 1,
+"long": "Broadway Local",
+"color": "F6BC26",
+"text": "000000"
+},
+"Q": {
+"type": 1,
+"long": "Broadway Express",
+"color": "F6BC26",
+"text": "000000"
+},
+"R": {
+"type": 1,
+"long": "Broadway Local",
+"color": "F6BC26",
+"text": "000000"
+},
+"W": {
+"type": 1,
+"long": "Broadway Local",
+"color": "F6BC26",
+"text": "000000"
+},
+"GS": {
+"type": 1,
+"long": "42 St Shuttle",
+"color": "7C858C",
+"text": "FFFFFF"
+},
+"S": {
+"type": 1,
+"long": "Rockaway Park Shuttle",
+"color": "7C858C",
+"text": "FFFFFF"
+},
+"FS": {
+"type": 1,
+"long": "Franklin Avenue Shuttle",
+"color": "7C858C",
+"text": "FFFFFF"
+},
+"H": {
+"type": 1,
+"long": "Rockaway Park Shuttle",
+"color": "7C858C",
+"text": "FFFFFF"
+},
+"1": {
+"type": 1,
+"long": "Broadway - 7 Avenue Local",
+"color": "D82233",
+"text": "FFFFFF"
+},
+"2": {
+"type": 1,
+"long": "7 Avenue Express",
+"color": "D82233",
+"text": "FFFFFF"
+},
+"3": {
+"type": 1,
+"long": "7 Avenue Express",
+"color": "D82233",
+"text": "FFFFFF"
+},
+"4": {
+"type": 1,
+"long": "Lexington Avenue Express",
+"color": "009952",
+"text": "FFFFFF"
+},
+"5": {
+"type": 1,
+"long": "Lexington Avenue Express",
+"color": "009952",
+"text": "FFFFFF"
+},
+"6": {
+"type": 1,
+"long": "Lexington Avenue Local",
+"color": "009952",
+"text": "FFFFFF"
+},
+"6X": {
+"type": 1,
+"long": "Pelham Bay Park Express",
+"color": "009952",
+"text": "FFFFFF"
+},
+"7": {
+"type": 1,
+"long": "Flushing Local",
+"color": "9A38A1",
+"text": "FFFFFF"
+},
+"7X": {
+"type": 1,
+"long": "Flushing Express",
+"color": "9A38A1",
+"text": "FFFFFF"
+},
+"SI": {
+"type": 2,
+"long": "Staten Island Railway",
+"color": "08179C",
+"text": "FFFFFF"
+},
+"SIR": {
+"type": 2,
+"long": "Staten Island Railway",
+"color": "08179C",
+"text": "FFFFFF"
+}
+}

@@ -55,6 +55,15 @@ firmware reads.
 - Does the provisioning tool need any server support at all, or is it a pure
   client against Web Serial?
 
+## Update (2026-10-30)
+
+Decision 5's dual-source bbox rule is obsolete, and its last consumer is
+gone: the land/backdrop concept (`server/geo.py`, `tools/gen_backdrop.py`,
+`firmware/src/backdrop.h`) was removed from the project entirely — the map
+is vehicles on black. The bbox is single-sourced in
+`server/agencies.json` and ships on the wire; a bbox change needs a proxy
+restart only, never a reflash.
+
 ## References
 
 - `docs/provisioning-protocol.md` — WebSerial contract.
