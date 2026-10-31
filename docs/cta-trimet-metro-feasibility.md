@@ -158,10 +158,15 @@ not CTA code:
   stations live on 2026-10-31.
 
 What is not proven yet: a poll with a real Developer Center key. A key
-supplied 2026-10-31 is sent correctly (`?key=` gets `errCd 101`, not
-the keyless `errCd 100`) but both the portal `.pb` and `.json` routes
-reject its value: "Invalid API key." Re-test after the Developer
-Center registration completes.
+supplied 2026-10-31 is byte-exact and sent correctly (`?key=` gets
+`errCd 101`, not the keyless `errCd 100`), yet both the portal `.pb`
+and `.json` routes reject its value: "Invalid API key." The same key
+authenticates on the legacy Train Tracker API (`lapi.transitchicago.
+com`: `errCd 0` for RED/BLUE, `errCd 106` rate-limit on a third call
+— and position lists came back empty for two lines on a Saturday
+morning). So CTA issued this key for Train Tracker; the beta GTFS-RT
+portal has not accepted it yet — separate grant, or propagation.
+Re-test after the Developer Center registration covers GTFS Realtime.
 
 ## Fleet size against MAX_VEHICLES 1200
 
