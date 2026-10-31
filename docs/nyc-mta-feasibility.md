@@ -65,7 +65,7 @@ scope — their extents dwarf any city bbox and they would stretch the map.
 | `classify.py` | No change. GTFS types drive everything; subway `route_color` gives official line colors via the existing `M:<LINE>` path | none |
 | `requirements.txt` | Add `protobuf` + `gtfs-realtime-bindings` | trivial |
 | Tests | Record raw protobuf bytes as fixtures (same no-live-API rule as 511); parser + compact tests | small |
-| `geo.py` / backdrop | Optional: author a coarse NYC land polygon (Manhattan, Bronx, Long Island); missing entry = blank backdrop, map still works | data authoring, half-day |
+| `geo.py` / backdrop | N/A — the land/backdrop concept was removed from the whole project on 2026-10-30; the map is vehicles on black | — |
 | Flasher | Nothing: agency dropdown reads `/agencies` | none |
 | Firmware | No contract change. Heap work only — see below | the risk |
 
@@ -163,7 +163,8 @@ Superseded by the subway-only section for phasing; totals unchanged:
 - Subway-only end-to-end (8-feed parser, static zip + station index,
   colors, fixture tests, cap/heap confirmation): 1.5-2.5 days.
 - Bus phase, if ever wanted: 1-2 days.
-- NYC backdrop polygon: half a day, optional.
+- NYC backdrop polygon: half a day, optional. (Moot: the backdrop concept
+  was dropped project-wide on 2026-10-30.)
 - Blocking unknown: the on-wall heap measurement. Everything else is
   routine.
 
@@ -183,9 +184,8 @@ What landed (subway-only, per the revised phasing):
   composition Jade asked for: Manhattan and Brooklyn centered at ~30%
   from the left margin, Coney Island on the bottom edge, north edge at
   Riverdale to squeeze detail out of the square. Staten Island is
-  excluded from the map (and drawn as water where the west margin slips
-  past its east end), the same way the sf viewport sits south of
-  Treasure Island: the SIR GTFS-RT feed is not polled at all. The crop
+  excluded the way the sf viewport sits south of Treasure Island: the SIR
+  GTFS-RT feed is not polled at all. The crop
   clips nine branch-tip stations — the 1 above 238 St, the 2/5 White
   Plains Rd el north of 238 St, the 5's Dyre Av — whose trains drop at
   the top edge; every other station is inside by construction.
@@ -194,13 +194,15 @@ What landed (subway-only, per the revised phasing):
   approach into the frame; the system's real east end is Far Rockaway
   (the network spans 23.3 km E-W, so the square's extra width is
   deliberate margin). Verified on live data after each change.
-- Backdrop: Natural Earth land (110m and 50m) failed NYC — it fills the
-  East River, Jamaica Bay, and drops Manhattan. The shipped polygons come
-  from OpenStreetMap island/borough polygons via Nominatim, minus
-  hand-traced Jamaica Bay and Upper New York Bay cutouts, simplified at
-  0.0004 (© OpenStreetMap contributors, ODbL). `gen_backdrop.py` now
-  handles multi-polygon agencies and holes (even-odd); the `sf` table is
-  byte-identical to before.
+- Backdrop: built for the plan at the time — Natural Earth land (110m and
+  50m) failed NYC (it fills the East River, Jamaica Bay, and drops
+  Manhattan), so the polygons came from OpenStreetMap island/borough
+  polygons via Nominatim, minus hand-traced Jamaica Bay and Upper New York
+  Bay cutouts, simplified at 0.0004 (© OpenStreetMap contributors, ODbL).
+  This was later superseded: the land/backdrop concept was removed from the
+  whole project on 2026-10-30 (Jade: the map is just the transit
+  vehicles). `server/geo.py` and `tools/gen_backdrop.py` are deleted, and
+  the panel draws vehicles on black with no backdrop at all.
 - `MAX_VEHICLES` raised 800 -> 1200 (static arrays only, ~38 KB RAM on a
   512 KB SRAM board). The on-wall heap check still wants a first boot on
   real hardware at weekday peak.
@@ -212,11 +214,12 @@ Server suite: 32 tests pass; the new `test_mta_rt.py` checks fixture
 parse -> station resolve -> viewport containment -> palette keys -> wire
 shape, all offline from recorded fixtures.
 
-Deployment: flash firmware built from this branch (the backdrop table and
-the raised cap are compiled), start the proxy with `SERVED_AGENCIES=mta`,
+Deployment: flash firmware built from this branch (the raised
+`MAX_VEHICLES` cap is compiled), start the proxy with `SERVED_AGENCIES=mta`,
 provision host + agency `mta` with the WebSerial tool. Switching a wall
 between agencies after that is WebSerial-only; no reflash. Reflashes
-return only for backdrop/panel-size/cap changes.
+return only for cap/panel-size changes — the bbox and palette ride the
+wire.
 
 Still open: weekday ET peak fleet count (next weekday morning), the heap
 spike on first real boot, and the bus phase (deferred).

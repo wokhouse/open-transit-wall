@@ -38,7 +38,7 @@ implementation behind it.
 `provNeeded()` is true when the SSID is unset OR the host is unset (live value
 or stored value). While `provNeeded()` is true:
 
-- The wall shows the backdrop.
+- The wall shows the setup-needed screen.
 - The wall does not touch WiFi.
 - The wall answers serial commands, so a terminal can complete the setup.
 - `loop()` returns before the poll, so no fetch starts.

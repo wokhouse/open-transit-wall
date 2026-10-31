@@ -15,20 +15,18 @@
 // as many vehicles moving independently, spread evenly over the cycle.
 //
 // The map bounding box and the vehicle colors also come from the payload
-// ("bbox", "palette"): nothing about the agency is compiled except the
-// backdrop bitmap, which is looked up by agency id below.
+// ("bbox", "palette"): nothing about an agency is compiled at all. The map
+// is vehicles on black — there is no backdrop or land layer.
 //
-// Rendering is strictly incremental: the backdrop is painted once at boot
-// and the loop only rewrites the individual pixels that change as dots
-// glide. Full-frame redraws would tear against the DMA scan-out and show
-// up as flicker at the render rate.
+// Rendering is strictly incremental: the loop only rewrites the individual
+// pixels that change as dots glide. Full-frame redraws would tear against
+// the DMA scan-out and show up as flicker at the render rate.
 
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_system.h>  // esp_random() for the splash animation seed
 #include <string.h>
 
-#include "backdrop.h"
 #include "config.h"
 #include "map_project.h"
 #include "provisioner.h"
@@ -73,29 +71,24 @@ enum ErrorKind {
   ERR_WIFI,       // configured, but the network won't take us
   ERR_SERVER,     // network up, proxy unreachable
   ERR_AGENCY,     // proxy 400s our agency id
-  ERR_NOMAP,      // no compiled backdrop for the provisioned agency
 };
 // Track what the panel ACTUALLY shows. Boot draws the splash, so that's the
 // initial state — initializing to ERR_NONE would make the first
 // showScreen(ERR_NONE) a no-op and leave the splash under the map.
 static ErrorKind shownError = ERR_SPLASH;
-static const BackdropDef *curBackdrop = nullptr;  // chosen at (re)provision
 
 // Splash animation state: the roundel bounces around the panel while the
 // wall loads (Wi-Fi/NTP waits below drive frames).
 static SplashState splashState;
 static void drawSplashFrame();  // defined with the screen helpers below
 
-// Backdrop pixel class (0 land / 1 water) decoded from the RLE once at boot,
-// so a vacated pixel can be repainted without touching the rest of the map.
-static uint8_t bgIndex[DISPLAY_W * DISPLAY_H];
-
-static void paintBg(int x, int y) {
+// Repaint a pixel a dot has vacated: the empty map is black, so restoring
+// is one write. (0,0) always belongs to the status pixel, never the map.
+static void clearMapPixel(int x, int y) {
   if (x < 0 || y < 0 || x >= DISPLAY_W || y >= DISPLAY_H) {
     return;
   }
-  const uint8_t *rgb = bgIndex[y * DISPLAY_W + x] ? BACKDROP_WATER : BACKDROP_LAND;
-  screen.drawPixel(x, y, rgb[0], rgb[1], rgb[2]);
+  screen.drawPixel(x, y, 0, 0, 0);
   if (x == 0 && y == 0) {
     drawStatusPixel();  // the status pixel lives at (0,0)
   }
@@ -109,33 +102,6 @@ static void redrawOccupants(int x, int y, int skipIdx) {
     }
     if (actives[i].dx == x && actives[i].dy == y) {
       screen.drawPixel(x, y, actives[i].r, actives[i].g, actives[i].b);
-    }
-  }
-}
-
-// The backdrop is the one per-agency artifact that cannot come over the
-// wire. gen_backdrop.py --agency <id> emits one BackdropDef per agency;
-// the wall picks its provisioned agency's entry at boot.
-static const BackdropDef *backdropFor(const char *agency) {
-  for (unsigned int i = 0; i < backdrop_count; i++) {
-    if (strcmp(backdrops[i].agency, agency) == 0) {
-      return &backdrops[i];
-    }
-  }
-  return nullptr;
-}
-
-static void decodeBackdropIndices(const BackdropDef &bd) {
-  int x = 0, y = 0;
-  for (unsigned int i = 0; i + 1 < bd.rle_len; i += 2) {
-    for (uint8_t n = bd.rle[i]; n > 0; n--) {
-      if (x < DISPLAY_W && y < DISPLAY_H) {
-        bgIndex[y * DISPLAY_W + x] = bd.rle[i + 1];
-      }
-      if (++x >= DISPLAY_W) {
-        x = 0;
-        y++;
-      }
     }
   }
 }
@@ -313,7 +279,7 @@ static void mergeVehicles(uint32_t nowMs, float upstreamAge, uint32_t nextS) {
     if (seen[i]) {
       actives[w++] = actives[i];
     } else {
-      paintBg(actives[i].dx, actives[i].dy);
+      clearMapPixel(actives[i].dx, actives[i].dy);
       redrawOccupants(actives[i].dx, actives[i].dy, i);
     }
   }
@@ -334,7 +300,7 @@ static void animate(uint32_t now) {
     if (x == a.dx && y == a.dy) {
       continue;
     }
-    paintBg(a.dx, a.dy);
+    clearMapPixel(a.dx, a.dy);
     int oldx = a.dx, oldy = a.dy;
     a.dx = x;
     a.dy = y;
@@ -360,7 +326,7 @@ static void drawStatusPixel() {
 
 // Paint the panel for a (possibly new) error state. No-op when the panel
 // already shows it, so the retry loop can call this every cycle without
-// repainting. Clearing back to the map repaints the backdrop (dots are
+// repainting. Clearing back to the map starts from a black panel (dots are
 // dropped — they were drawn under the error screen).
 static void putScreenPixel(void *, int x, int y, uint8_t r, uint8_t g,
                            uint8_t b) {
@@ -398,16 +364,9 @@ static void showScreen(ErrorKind kind) {
     case ERR_AGENCY:
       showAgencyError(putScreenPixel, nullptr);
       break;
-    case ERR_NOMAP:
-      showNoMapError(putScreenPixel, nullptr, provAgency());
-      break;
     case ERR_NONE:
     default:
-      if (curBackdrop) {
-        screen.drawBackdrop(*curBackdrop);
-      } else {
-        screen.clear();
-      }
+      screen.clear();
       // Dots from before the error screen are gone; forget them so the
       // next merge re-adds vehicles at their current positions.
       activeCount = 0;
@@ -444,25 +403,12 @@ void setup() {
     return;
   }
 
-  // The backdrop is chosen once at boot from the provisioned agency id.
-  // Changing agency is a re-provision + reboot, not a live edit.
-  curBackdrop = backdropFor(provAgency());
-  if (curBackdrop) {
-    decodeBackdropIndices(*curBackdrop);
-  } else {
-    Serial.printf("BACKDROP none for agency '%s' — blank map; regenerate with "
-                  "tools/gen_backdrop.py --agency %s and reflash\n",
-                  provAgency(), provAgency());
-  }
-
   connectWifi();
   syncTime();
   if (WiFi.status() != WL_CONNECTED) {
     showScreen(ERR_WIFI);
-  } else if (!curBackdrop) {
-    showScreen(ERR_NOMAP);
   } else {
-    showScreen(ERR_NONE);  // paint the map
+    showScreen(ERR_NONE);  // blank map; dots arrive with the first poll
   }
 }
 
@@ -482,15 +428,6 @@ void loop() {
       showScreen(ERR_PROVISION);
       return;  // still waiting for set ssid/pass
     }
-    if (!curBackdrop) {
-      // Either boot found no backdrop for this agency, or the agency was
-      // (re)provisioned live since then: pick the backdrop for the current
-      // id before polling. A null result keeps the NO MAP screen up.
-      curBackdrop = backdropFor(provAgency());
-      if (curBackdrop) {
-        decodeBackdropIndices(*curBackdrop);
-      }
-    }
     if (WiFi.status() != WL_CONNECTED) {
       connectWifi();
       if (WiFi.status() != WL_CONNECTED) {
@@ -498,10 +435,6 @@ void loop() {
         return;
       }
       syncTime();  // TLS needs the wall clock; NTP only works over WiFi
-    }
-    if (!curBackdrop) {
-      showScreen(ERR_NOMAP);
-      return;
     }
     PollResult poll = fetchVehicles(provScheme(), provPollHost(), provPort(),
                                     provAgency(), vehicles, MAX_VEHICLES);
@@ -544,7 +477,7 @@ void loop() {
       if (activeCount > 0) {
         // Old dots sit at pixels from the previous bbox: wipe them all.
         for (int i = 0; i < activeCount; i++) {
-          paintBg(actives[i].dx, actives[i].dy);
+          clearMapPixel(actives[i].dx, actives[i].dy);
         }
         activeCount = 0;
       }

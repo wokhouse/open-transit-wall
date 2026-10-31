@@ -251,9 +251,3 @@ void showAgencyError(PutPixel put, void *ctx) {
   showErrorScreen(put, ctx, "BAD AGENCY", "wrong agency id. scan qr",
                   nullptr);
 }
-
-void showNoMapError(PutPixel put, void *ctx, const char *agency) {
-  char detail1[32];
-  snprintf(detail1, sizeof(detail1), "no map for agency %s", agency);
-  showErrorScreen(put, ctx, "NO MAP", detail1, "reflash it");
-}

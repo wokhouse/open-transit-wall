@@ -13,7 +13,7 @@
 // Load the stored values into RAM (call once, before any WiFi use).
 void provLoad();
 // True until BOTH a WiFi SSID and a proxy host are set — the wall stays in
-// provisioning mode (backdrop shown, no WiFi, no polling) until then.
+// provisioning mode (status screen shown, no WiFi, no polling) until then.
 bool provNeeded();
 // Consume stdin; answer on stdout. Non-blocking except for a partial line.
 void provPumpSerial();

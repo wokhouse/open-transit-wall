@@ -4,12 +4,11 @@
 #
 #   tools/run_sim.sh                 # live: fetch from the local mini-proxy
 #   tools/run_sim.sh fixtures/x.json # recorded payload
-#   AGENCY=sc tools/run_sim.sh       # pick that agency's backdrop + bbox
+#   AGENCY=sc tools/run_sim.sh       # that agency's payload (proxy ?agency=)
 #
-# The sim renders the compiled backdrop.h entry for AGENCY (default: the
-# first entry) using the bbox baked into it — the same bbox the server
-# ships on the wire. Regenerate backdrop.h for other agencies with
-# tools/gen_backdrop.py --agency <id>.
+# The sim draws the same vehicles, palette, and bbox the server ships on
+# the wire (bbox travels in the CSV header — see tools/vehicles_to_csv.py).
+# The map is vehicles on black; there is no backdrop.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,8 +17,6 @@ OUT=/tmp/otw_sim
 CSV=/tmp/otw_vehicles.csv
 BMP=/tmp/otw_wall.bmp
 AGENCY="${AGENCY:-}"
-AGENCY_ARGS=()
-[ -n "$AGENCY" ] && AGENCY_ARGS=(--agency "$AGENCY")
 
 if [ ! -f "$SRC" ]; then
   echo "no simulator source at $SRC" >&2
@@ -37,6 +34,6 @@ echo "vehicles: $(wc -l < "$CSV") rows -> $CSV"
 
 CXX="${CXX:-c++}"
 "$CXX" -std=c++17 -O1 -I firmware/src -o "$OUT" "$SRC" firmware/src/status_screen.cpp
-"$OUT" "$CSV" "$BMP" 64 64 8 1 "${AGENCY_ARGS[@]+"${AGENCY_ARGS[@]}"}"
+"$OUT" "$CSV" "$BMP" 64 64 8 1
 echo "rendered: $BMP"
 command -v open >/dev/null 2>&1 && open "$BMP" || true

@@ -17,7 +17,7 @@ assumed. Per agency, only these change:
 | GTFS `operator_id=` | `SF` hardcoded in `refresh_routes()` | registry id |
 | Route metadata | `routes.json` + `MUNI_FALLBACK` | `routes_<agency>.json`; fallback table only for `sf` |
 | Map bbox | `geo.py BBOX` ↔ `config.h MAP_*` (manual sync) | registry; shipped on the wire |
-| Backdrop | `backdrop.h` from `SF_LAND` | generated table in `backdrop.h`, one entry per agency id |
+| Backdrop | `backdrop.h` from `SF_LAND` | none — the land/backdrop concept was removed from the project (2026-10-30); the map is vehicles on black |
 
 ## Server
 
@@ -43,9 +43,9 @@ registry from the operator list; a startup check warns when a registry
 code is missing from it.
 
 `SERVED_AGENCIES=sf,ct` (env) picks which entries a deployment runs. Two
-deployments of the same code differ only in this env var. Shoreline polygons
-stay in `geo.py`, keyed by agency id, for backdrop generation; `BBOX` moves
-into the registry per agency.
+deployments of the same code differ only in this env var. The land polygon
+and backdrop layer were later dropped from the project entirely
+(2026-10-30); `BBOX` lives in the registry per agency.
 
 ### Per-agency state
 
@@ -115,8 +115,7 @@ Consequences of serving the full fleet:
 - SF keeps the current bbox. Buses running over the Bay Bridge / East Bay
   fall outside it and clip at the edge — the firmware already clips
   out-of-bbox vehicles, so this is existing behavior, not new. Widen the
-  bbox (and extend the `SF_LAND` polygon past the shoreline) only if the
-  clipped dots turn out to matter.
+  bbox only if the clipped dots turn out to matter.
 
 ### Rate limiting: operator-specified, not auto-split
 
@@ -168,13 +167,10 @@ follows on its next poll without a reflash.
 4. **Projection** — `map_project` reads the bbox from the payload instead
    of `MAP_*` macros; re-init when the bbox changes (agency swap after
    re-provisioning). `MAP_*` deleted from `config.h`.
-5. **Backdrop** — stays compiled: `gen_backdrop.py --agency ct` picks the
-   bbox + polygon from the registry and emits one table entry per agency into
-   `backdrop.h` (`{agency_id → rle, bbox}`; ~262 bytes per agency at 64×64 —
-   four agencies is nothing in flash). Each entry carries the bbox it was
-   rasterized for, so the firmware can tell when the provisioned agency's
-   backdrop does not match its map. Unknown agency id → blank backdrop; the
-   map still works.
+5. **Backdrop** — removed (2026-10-30): there is no land layer. The map
+   is vehicles on black. Nothing per-agency is compiled at all, so adding
+   an agency never needs a reflash, and the "provisioned agency's backdrop
+   does not match its map" state no longer exists.
 6. **Sim** — `sim/sim_main.cpp` mirrors the firmware: same bbox-from-payload
    and `next` handling.
 

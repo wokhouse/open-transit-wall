@@ -66,12 +66,6 @@ curl -s localhost:8000/vehicles | .venv/bin/python tools/vehicles_to_csv.py > /t
 tools/run_sim.sh /tmp/v.csv build/sim_out 64x32 128x32
 ```
 
-Backdrop (run after a map bbox or matrix size change):
-
-```bash
-python3 tools/gen_backdrop.py --w 128 --h 64    # writes firmware/src/backdrop.h
-```
-
 ## Structure
 
 | Path | Contents |
@@ -79,13 +73,11 @@ python3 tools/gen_backdrop.py --w 128 --h 64    # writes firmware/src/backdrop.h
 | `server/proxy.py` | FastAPI mini-proxy. Polls 511 every 65 s. Owns the API. |
 | `server/classify.py` | Route -> type/color logic. Importable on its own (e.g. a Pi build). |
 | `server/siri.py` | SIRI VehicleMonitoring parser. |
-| `server/geo.py` | Map bbox + land polygon. Library only: no server route uses it. `tools/gen_backdrop.py` imports it. |
 | `server/routes.json` | Cached GTFS route types and colors. |
 | `firmware/` | PlatformIO + Arduino ESP32. `include/config.h` holds map and panel constants. |
 | `firmware/src/provisioner.cpp` | WebSerial provisioning. NVS namespace `otw`. |
 | `firmware/src/map_project.h` | lat/lon -> pixel projection. |
-| `sim/`, `tools/run_sim.sh` | Native simulator: same projection and backdrop, no hardware. It compiles no firmware `main`, so it is unaffected by a firmware change. |
-| `tools/gen_backdrop.py` | Shoreline -> RLE bitmap at the matrix size. |
+| `sim/`, `tools/run_sim.sh` | Native simulator: same projection, no hardware. It compiles no firmware `main`, so it is unaffected by a firmware change. |
 | `fixtures/` | Recorded SIRI responses for offline work. |
 
 ## Boundaries
@@ -111,9 +103,9 @@ python3 tools/gen_backdrop.py --w 128 --h 64    # writes firmware/src/backdrop.h
 - MUST `chmod +x` every new script in `tools/`. Ruff rule EXE001 fails CI on a
   shebang without the execute bit (a `tools/prov_serial.py` without it broke
   main CI for 7 runs on 2026-10-15).
-- MUST restart `server/proxy.py` after a change to `server/geo.py`.
-- MUST keep `MAP_*` in `firmware/include/config.h`, `BBOX` in
-  `server/geo.py`, and the backdrop in step. Change all three together.
+- MUST NOT re-add a land layer or backdrop. The map is vehicles on black
+  only (Jade's decision, 2026-10-30); there is no compiled per-agency
+  artifact — the bbox ships on the wire from `server/agencies.json` alone.
 - MUST NOT trust a return value from `setCACert`. On arduino core 3.x it
   returns `void` (core 2.x returned `bool`). Call `lastError(buf, size)` and
   check for `"OK"`.
