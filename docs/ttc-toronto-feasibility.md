@@ -183,24 +183,28 @@ cap without new code.
 
 ### The shipped v1 frame
 
-The registry bbox is a 23 km true square centered on the recorded
-streetcar span (live 2026-10-31 14:36: 10.5 km N-S x 20.4 km E-W,
-185 cars): `43.53828..43.74489 N, -79.55065..-79.26514 W`. The
-streetcar network sizes the frame; it must stay wholly inside
-(3.8 px minimum margin), and the test pins that.
+The registry bbox is a 23 km true square: `43.585..43.79161 N,
+-79.55065..-79.26514 W`. The E-W pair comes from the recorded
+streetcar span (20.4 km E-W at 10.5 km N-S, 185 cars, live
+2026-10-31 14:36). The south edge anchors 0.9 km below the network's
+true southern end (the Humbermouth 507/123 terminal cluster at 43.592)
+so Lake Ontario sits UNDER the frame instead of filling its bottom
+rows — a first centered variant spent 17 of 64 rows on open water and
+only reached Eglinton; this one puts the whole streetcar network
+inside (2.9 px minimum margin) and reaches Steeles at row 61.
 
-Measured against the same full recording: 712/1,212 rows in frame
-(59%), streetcars 185/185. Clipping is intentional at three edges —
-north 392 rows (max 51 px beyond), west 65 (21 px), east 43 (8 px) —
-and zero rows sit south of the south edge; the test encodes exactly
-that shape. A live `--once --agency ttc` at 16:35 served 1,209 wire
-rows (48.6 KB); the simulator drew 707 in-frame and reported 502
-outside, matching the sweep. The rasterized grid check passed: px rows
-30-37 carry the King/Queen/Dundas streetcar bands and px cols 32-35
-carry the Yonge/University corridor. At 359 m/px the streetcar lines
-resolve one pixel per corridor and the surface fleet reads sparse; a
-full-network frame (41.4 km) was rejected — it would put every corridor
-inside one pixel and cost nothing on the cap.
+Measured against the same full recording: 891/1,212 rows in frame
+(74%), streetcars 185/185. Clipping is intentional at three edges —
+north 108 rows (max 36 px beyond), east 135 (30 px), west 78 (21 px)
+— and zero rows sit south of the south edge; the test encodes exactly
+that shape. A live `--once --agency ttc` served the full surface fleet
+(~1,200 rows, ~49 KB); the simulator draws only the in-frame rows and
+reports the rest as outside. The rasterized grid check passes at this
+anchor too: px rows 17-22 carry the King/Queen/Dundas streetcar bands
+and px cols 32-35 the Yonge/University corridor. At 359 m/px the
+streetcar lines resolve one pixel per corridor and the surface fleet
+reads sparse; a full-network frame (41.4 km) was rejected — it would
+put every corridor inside one pixel and cost nothing on the cap.
 
 ## Per-component changes
 

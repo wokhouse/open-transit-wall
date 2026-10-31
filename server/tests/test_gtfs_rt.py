@@ -295,12 +295,14 @@ def test_parse_rt_ttc_identity_is_the_fleet_number():
 
 
 def test_ttc_frame_holds_the_streetcar_network_inside():
-    """The shipped bbox is a 23 km true square centered on the recorded
-    streetcar span: the streetcar network sizes the frame, and it must
-    stay wholly inside. The bus network reaches past three named edges
-    (over the full 1,212-row recording: north 392 rows up to 51 px
-    beyond, west 65 up to 21 px, east 43 up to 8 px); no recorded row
-    is south of the south edge at all. Those rows still count against
+    """The shipped bbox is a 23 km true square anchored just below the
+    network's southern edge (the Humbermouth 507/123 terminal cluster at
+    43.592): Lake Ontario sits under the frame, not inside it. Every
+    recorded streetcar row must stay in-frame (2.9 px minimum margin at
+    Humbermouth). The bus network reaches past three named edges (over
+    the full 1,212-row recording: north 108 rows up to 36 px beyond,
+    east 135 up to 30 px, west 78 up to 21 px); no recorded row is
+    south of the south edge at all. Those rows still count against
     MAX_VEHICLES on the wall; the frame only hides them (see the doc)."""
     bbox = load_registry()["ttc"]["bbox"]
     routes = parse_routes_txt((FIXTURES / "ttc_routes.txt").read_text())
@@ -330,9 +332,9 @@ def test_ttc_frame_holds_the_streetcar_network_inside():
     assert streetcars >= 180
     assert out["S"] == 0
     assert out["N"] and out["W"] and out["E"]
-    assert far["N"] <= 55 * km_per_px
+    assert far["N"] <= 40 * km_per_px
     assert far["W"] <= 25 * km_per_px
-    assert far["E"] <= 12 * km_per_px
+    assert far["E"] <= 35 * km_per_px
 
 
 def test_ttc_route_colors_and_style_keys():
