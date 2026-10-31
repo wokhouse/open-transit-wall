@@ -60,10 +60,14 @@ def test_feed_reports_resolve_into_the_viewport(stations):
     reports resolve to a station, and every resolved one is either inside
     the served viewport or north of its top edge — the Riverdale crop
     deliberately clips the Van Cortlandt, Dyre Avenue, and 238 St branch
-    tips, like the sf viewport clips lines running past its edges. A
-    resolved point outside any other edge would be a viewport bug. A
-    small unresolved tail (two station ids missing from the static GTFS)
-    is skipped and counted at runtime — see fetch_station_snapshot."""
+    tips, like the sf viewport clips lines running past its edges. The
+    centered box's other three edges contain the system: the east edge
+    sits ~2 px beyond the Lefferts and 179 St branch tips, the west edge
+    is west of every subway station (it crosses only the unpolled Staten
+    Island land). A resolved point outside any other edge would be a
+    viewport bug. A small unresolved tail (two station ids missing from
+    the static GTFS) is skipped and counted at runtime — see
+    fetch_station_snapshot."""
     bbox = load_registry()["mta"]["bbox"]
     total = resolved = clipped = 0
     for feed in RT_FEEDS:

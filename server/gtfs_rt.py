@@ -12,8 +12,9 @@ the parsing.
 
 Facts verified live 2026-10-30 on MTA NYCT (see docs/nyc-mta-feasibility.md):
 - Its seven polled division feeds update every ~30 s and need no API key.
-  (SIR is deliberately unpolled there: the mta viewport excludes Staten
-  Island.) The %2F path encoding is required on api-endpoint.mta.info; a
+  (SIR is deliberately unpolled: even though the mta viewport now covers
+  most of Staten Island, there is no feed to draw.) The %2F path
+  encoding is required on api-endpoint.mta.info; a
   literal slash returns 403.
 - Every subway VehiclePosition carried a stop_id; none carried lat/lon.
 - route_id is the bare line name ("1", "6X", "A"), which feeds the

@@ -250,6 +250,33 @@ data: 234 trains, 21 line keys, 1 report outside the north edge (the 1
 north of 238 St — deliberate crop, unchanged), 0 outside every other edge.
 The bottom edge now fully contains both Rockaway branches.
 
+## Viewport update (2026-10-31, third crop: traffic centered)
+
+Weekday/weekend daytime traffic was now visible on a live wall, and Jade
+asked to move the picture on the wall ~20% to the right so the traffic
+sits centered; Staten Island appearing was explicitly not a priority,
+just a tell. Note the direction: moving the *picture* right = moving the
+*bbox* west. The first candidate (frame east 20%) moves the picture
+left, jams the Manhattan core on the left border, and drops 53 live
+rows — measured, not inspected.
+
+The chosen box keeps the same 35.8 km square (lat edges unchanged) and
+shifts lon west by 20% of the span: lon -74.1697/-73.7455. The picture
+on the wall moves +12.6 px right; the live traffic pattern spans px
+20-61 with its mass center at px 33.9 (panel center 31.5). West edge at
+-74.1697: the lower-left now covers northeastern Staten Island — 14 of
+the 24 SIR stations (Tompkinsville to Prince's Bay) fall inside — still
+no dots, SIR remains unpolled. East edge at -73.7455: the east-most
+served subway stop (Lefferts Blvd, -73.7554) keeps a ~1.5 px margin;
+the 179 St tip is ~5 px inside. Verified on live data (weekend, 423
+rows): 0 rows outside any edge except the north crop, unchanged at 1.
+No served station drops at the west edge — the west edge crosses only
+unpolled land.
+
+Trade-off accepted: a ~24 px black band at the lower-left where Staten
+Island is (no feed), and the Lefferts branch tip sits 1.5 px from the
+east border. Polling SIR is the obvious follow-up to fill that band.
+
 ## Still open
 
 Weekday ET peak fleet count (next weekday morning), the heap
