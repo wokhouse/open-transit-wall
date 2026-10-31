@@ -255,13 +255,15 @@ def test_metro_compact_wire_rows():
 # contract, the key plumbing (offline), the static-side classification,
 # and the deliberate viewport crops.
 #
-# Viewport: the v1 frame is centered on the rail network's mass center at
-# the MTA-class ~530 m/px. It clips only named far-suburb tips: the
+# Viewport: 34 km tall at the MTA-class ~530 m/px, deliberately nudged
+# 15% north of the rail network's mass center so the Columbia River sits
+# at the top: the top edge stays ~2 km above Expo Center, the northern
+# rail tip on the river. It clips only named far-suburb tips: the
 # Hillsboro end of the Blue/Red lines (west edge), the far-Gresham end of
 # the Blue Line (east edge), and the Wilsonville end of WES (south edge;
 # Tualatin itself stays in frame). Nothing clips at the north edge (the
-# Yellow Line's Rose Quarter terminus is in frame). The assertions below
-# encode exactly that measured clip set.
+# Yellow Line runs to Expo Center inside the frame). The assertions below
+# encode exactly that measured clip set and the river composition.
 
 def test_trimet_registry_entry():
     cfg = load_registry()["trimet"]
@@ -468,3 +470,11 @@ def test_trimet_viewport_encodes_only_the_named_crops():
     assert at("Hatfield Government Center MAX Station")[1] < bbox["lon_min"]
     assert at("Gresham City Hall MAX Station")[1] > bbox["lon_max"]
     assert at("Wilsonville WES Station")[0] < bbox["lat_min"]
+
+    # River composition (Jade's call, 2026-10-31): the frame top sits
+    # tight above the Columbia. Expo Center, the northern rail tip on
+    # the river, must stay in frame and within 2.5 km of the top edge —
+    # the visible "river at the top" is the point of the 15% nudge.
+    expo_lat, _ = at("Expo Center MAX Station")
+    assert bbox["lat_min"] <= expo_lat <= bbox["lat_max"]
+    assert (bbox["lat_max"] - expo_lat) * 111_000 < 2500

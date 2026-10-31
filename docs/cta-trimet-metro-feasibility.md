@@ -44,7 +44,8 @@ the end.
   1,000,000); the keyed-fetch plumbing in `proxy.py` (per-agency query
   parameter, key redaction from error strings, startup refusal to serve
   a keyless agency, the startup allowance line); the `classify` type-6
-  cable-amber line; and the 34 km rail-centered viewport with named
+  cable-amber line; and the 34 km rail viewport, nudged 15% north of
+  the rail mass center so the Columbia River sits at the top, with named
   crops (Hillsboro west edge, far-Gresham east edge, Wilsonville south
   edge, nothing north). Registry, key plumbing, classification, and
   viewport are pinned by offline tests against the recorded static

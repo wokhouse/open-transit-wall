@@ -55,8 +55,8 @@
     "requests_per_day_limit": 1000000,
     "static_gtfs": "https://developer.trimet.org/schedule/gtfs.zip",
     "bbox": {
-      "lat_min": 45.3639,
-      "lat_max": 45.6693,
+      "lat_min": 45.3181,
+      "lat_max": 45.6235,
       "lon_min": -122.8893,
       "lon_max": -122.4534
     }
