@@ -180,7 +180,7 @@ network extents from the static zips, for scale only:
 | `proxy.py` | Pass the optional key into the gtfs-rt fetch. At startup, state the per-agency request allowances where documented (TriMet 1M/day, CTA 50k/day) | small |
 | `classify.py` | None for all three; verified against each static routes.txt above. Optional one line only if you want the Aerial Tram to render cable-amber | none |
 | Fixtures + tests | Record the Metro feed bytes now (already probed). Record TriMet and CTA after their keys. Same offline rule as MTA | small |
-| Cached tables | `routes_<id>.json` and `stations_<id>.json` generate from each static zip at first run, same pattern as `routes_mta.json` | automatic |
+| Cached tables | `routes_<id>.json` and `stations_<id>.json` generate from each static zip at runtime (first poll, refreshed daily); gitignored | automatic |
 | Firmware | No change for any TriMet, Metro, or CTA-rail wall: all bounds sit under the compiled 1200 cap. A CTA bus wall joins the MTA bus phase (raise the cap, measure heap on hardware) | none / shared risk |
 | Flasher | Nothing; the dropdown reads `/agencies` | none |
 | Deploy | `SERVED_AGENCIES` adds the ids in the DigitalOcean console. TriMet and CTA also need their key set in the app env | ops only |

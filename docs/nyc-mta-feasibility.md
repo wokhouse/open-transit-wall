@@ -184,9 +184,9 @@ What landed (subway-only, per the revised phasing):
   branch; a `gtfs-rt` poll fetches the entry's feeds, resolves `stop_id`
   to
   coords, and
-  feeds the shared compact/classify path. `routes_mta.json` and
-  `stations_mta.json` are cached in-repo (same offline pattern as the
-  other agencies).
+  feeds the shared compact/classify path. The route and station tables
+  are rebuilt at runtime (first poll, refreshed daily) and are not
+  committed to the repo.
 - Identity: `id = crc32(trip_id)` as scoped. Positions snap to the
   reported station; the existing glide animates the hops.
 - Viewport: a 34.5 km true-square (539 m/px at 64x64) with the

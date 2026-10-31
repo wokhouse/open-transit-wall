@@ -446,6 +446,16 @@ def fetch_station_snapshot(state: AgencyState) -> list[dict]:
     return vehicles
 
 
+# Static GTFS (route types/colors, station coords) is (re)fetched on the
+# first poll cycle and every ROUTES_REFRESH_SECONDS after: agency timetables
+# change, and no per-agency derived table should stay pinned in git or in
+# process memory for the life of the container. One zip fetch per agency per
+# day is negligible against the 511 60 req/hr budget; a failed refresh keeps
+# the current tables and retries after ROUTES_RETRY_SECONDS.
+ROUTES_REFRESH_SECONDS = 24 * 3600
+ROUTES_RETRY_SECONDS = 600
+
+
 def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
               record: bool, interval: float, start_delay: float = 0.0) -> None:
     """Poll one agency on a fixed schedule.
@@ -454,20 +464,26 @@ def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
     operator's token math stay true even when a fetch is slow; a fetch that
     overruns its slot skips to the next one instead of shifting the whole
     schedule. start_delay staggers agencies so N threads don't stampede 511
-    in the same second."""
+    in the same second. The static tables refresh on the first cycle and then
+    daily (see ROUTES_REFRESH_SECONDS); a failed refresh keeps the current
+    tables rather than degrading a live agency."""
     if start_delay > 0:
         time.sleep(start_delay)
-    first = True
     next_slot = time.monotonic()
+    next_routes_refresh = 0.0  # the first cycle always refreshes
     while True:
         next_slot += interval
         try:
-            if first and (api_key or state.source != "511"):
+            due = time.monotonic() >= next_routes_refresh
+            if due and (api_key or state.source != "511"):
                 try:
                     refresh_routes(api_key, state)
                 except Exception as error:
                     print(f"[routes] refresh failed ({redact(str(error))}); "
-                          "using fallback")
+                          "keeping current tables", file=sys.stderr)
+                    next_routes_refresh = time.monotonic() + ROUTES_RETRY_SECONDS
+                else:
+                    next_routes_refresh = time.monotonic() + ROUTES_REFRESH_SECONDS
 
             if state.source == "gtfs-rt":
                 raw_vehicles = fetch_station_snapshot(state)
@@ -488,7 +504,6 @@ def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
             state.update(vehicles)
             print(f"[poll:{state.id}] {len(vehicles)} vehicles at {state.ts()}",
                   flush=True)
-            first = False
         except Exception as error:
             print(f"[poll:{state.id}] error: {redact(str(error))}", file=sys.stderr)
         state.arm_next_poll(interval)
