@@ -23,10 +23,10 @@
     },
     "static_gtfs": "https://web.mta.info/developers/data/nyct/subway/google_transit.zip",
     "bbox": {
-      "lat_min": 40.5701,
-      "lat_max": 40.88,
-      "lon_min": -74.0727,
-      "lon_max": -73.6638
+      "lat_min": 40.559,
+      "lat_max": 40.8805,
+      "lon_min": -74.0849,
+      "lon_max": -73.6607
     }
   },
   "ct": {

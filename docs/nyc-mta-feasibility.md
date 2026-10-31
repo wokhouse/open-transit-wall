@@ -230,5 +230,27 @@ between agencies after that is WebSerial-only; no reflash. Reflashes
 return only for cap/panel-size changes — the bbox and palette ride the
 wire.
 
-Still open: weekday ET peak fleet count (next weekday morning), the heap
+## Viewport update (2026-10-30, second crop)
+
+Composition re-ask from Jade: top edge in Inwood, bottom edge at Jacob
+Riis Park, left edge barely clipping the SIRT north end so Manhattan and
+Brooklyn sit near center. Chosen from three rendered candidate frames: the
+right-at-Jamaica-179-St variant forced the left edge 14 km west of Bay
+Ridge and cropped the Far Rockaway branch, so it was rejected; the
+left-at-SIRT-tip frame (chosen) forces 8 km of deliberate empty margin
+east of Far Rockaway — the square's forced slack.
+
+The box is a 35.8 km true square (568 m/px at 64x64): lat 40.559-40.8805,
+the edges pinned to OpenStreetMap land polygons (Inwood Hill Park north
+edge, Jacob Riis Park south shore) plus a ~1 px margin, lon span derived
+from the lat span at mid-latitude. The left edge at -74.0849 sits ~1 px
+outside St. George/Tompkinsville; still no SIRT dots — the SIR GTFS-RT
+feed remains unpolled, so the left is black margin only. Verified on live
+data: 234 trains, 21 line keys, 1 report outside the north edge (the 1
+north of 238 St — deliberate crop, unchanged), 0 outside every other edge.
+The bottom edge now fully contains both Rockaway branches.
+
+## Still open
+
+Weekday ET peak fleet count (next weekday morning), the heap
 spike on first real boot, and the bus phase (deferred).
