@@ -2,7 +2,8 @@
 
 Live transit map on a tiling HUB75 LED matrix wall. A Python mini-proxy
 polls each agency's upstream — 511 SIRI for SF Bay Area operators, MTA
-GTFS-RT for NYC subway, GTFS-RT for Metro Transit (Twin Cities) — and
+GTFS-RT for NYC subway, GTFS-RT for Metro Transit (Twin Cities), and
+AppID-keyed GTFS-RT for TriMet (Portland) — and
 serves compact JSON. An ESP32 firmware renders every served vehicle as a
 colored dot on black.
 
@@ -74,18 +75,18 @@ tools/run_sim.sh /tmp/v.csv      # writes /tmp/otw_wall.bmp (64x64)
 
 | Path | Contents |
 |---|---|
-| `server/proxy.py` | FastAPI mini-proxy. Per-agency upstream poll every `POLL_SECONDS` (511 SIRI or MTA GTFS-RT). Owns the API. |
-| `server/gtfs_rt.py` | Generic GTFS-RT upstream: parses one agency's RT feeds + static GTFS (stations, route colors). `source: gtfs-rt` in the registry selects it; the feed URLs and static zip are registry data (`feeds`, `static_gtfs`). No API keys. Adding a GTFS-RT rail agency is a registry edit. |
+| `server/proxy.py` | FastAPI mini-proxy. Per-agency upstream poll every `POLL_SECONDS` (511 SIRI or GTFS-RT). Owns the API. |
+| `server/gtfs_rt.py` | Generic GTFS-RT upstream: parses one agency's RT feeds + static GTFS (stations, route colors). `source: gtfs-rt` in the registry selects it; the feed URLs and static zip are registry data (`feeds`, `static_gtfs`). A feed can require an API key: `api_key_env` names the env var, `api_key_param` the query parameter (TriMet's AppID). Adding a GTFS-RT rail agency is a registry edit. |
 | `server/classify.py` | Route -> type/color logic. Importable on its own (e.g. a Pi build). |
 | `server/siri.py` | SIRI VehicleMonitoring parser. |
-| `server/agencies.json` | The agency registry: id, name, `source` (`511` + `siri_agency`, or `gtfs-rt` + `feeds` + `static_gtfs`), bbox, optional palette overrides. Single source for anything agency-specific. |
+| `server/agencies.json` | The agency registry: id, name, `source` (`511` + `siri_agency`, or `gtfs-rt` + `feeds` + `static_gtfs` + optional `api_key_env`/`api_key_param`/`requests_per_day_limit`), bbox, optional palette overrides. Single source for anything agency-specific. |
 | `server/routes_<agency>.json` | Runtime GTFS route-type and station-coordinate caches written by the proxy's route refresh (first poll, then daily). Gitignored; never committed. |
 | `firmware/` | PlatformIO + Arduino ESP32. `include/config.h` holds map and panel constants. |
 | `firmware/src/provisioner.cpp` | WebSerial provisioning. NVS namespace `otw`. |
 | `firmware/src/ha_link.*` | Optional Home Assistant link: MQTT light entity + NVS-persisted brightness. Off unless MQTT credentials or a broker host are provisioned; `ha_discover.*` finds the broker via mDNS when no host is set. |
 | `firmware/src/map_project.h` | lat/lon -> pixel projection. |
 | `sim/`, `tools/run_sim.sh` | Native simulator: same projection, no hardware. It compiles no firmware `main`, so it is unaffected by a firmware change. |
-| `fixtures/` | Recorded upstream responses (511 SIRI XML, MTA protobuf feeds + static text dumps) for offline work. |
+| `fixtures/` | Recorded upstream responses (511 SIRI XML, MTA protobuf feeds + static text dumps, TriMet static GTFS text dumps) for offline work. |
 | `hardware/` | Print-ready STLs: rear enclosure for the Waveshare 64×64 wall + desktop stand. OnShape models linked from `README.md`. |
 
 ## Boundaries
@@ -138,5 +139,5 @@ tools/run_sim.sh /tmp/v.csv      # writes /tmp/otw_wall.bmp (64x64)
 - `docs/multi-agency-plan.md` — the multi-agency architecture (implemented).
 - `docs/nyc-mta-feasibility.md` — MTA subway agency: feed facts, station
   snapping, viewport history.
-- `docs/cta-trimet-metro-feasibility.md` — CTA, TriMet, Metro Transit scoping: key gates, position-first feeds, fleet bounds.
+- `docs/cta-trimet-metro-feasibility.md` — CTA, TriMet, Metro Transit scoping plus TriMet implementation status: key gates, position-first feeds, fleet bounds.
 - `docs/plan.md` — the browser provisioning tool. Not built yet.

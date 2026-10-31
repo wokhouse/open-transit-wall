@@ -37,6 +37,24 @@ docs/cta-trimet-metro-feasibility.md):
   numeric vehicle.id — position-first placement, fleet-number identity.
 - route_id values are bare static GTFS ids ("3", "14", "922") that
   resolve through the routes cache unchanged.
+
+Facts probed 2026-10-31 for TriMet (Portland):
+- VehiclePositions at developer.trimet.org/ws/V1/VehiclePositions is
+  gated behind a free self-service AppID: without one the service answers
+  HTTP 403 with the body "A valid appID is required to access this
+  resource." The static zip (developer.trimet.org/schedule/gtfs.zip) is
+  keyless. The registry entry names the env var ("api_key_env":
+  TRIMET_APPID) and the query parameter the key rides under
+  ("api_key_param": appID); the proxy appends it per request.
+- Static routes.txt verified from the recorded zip: the five MAX lines
+  are type 0 with empty route_short_name and bare ids ("90", "100",
+  "190", "200", "290") carrying their official route_color; Portland
+  Streetcar rides the same feed as type 0; WES is type 2; the Portland
+  Aerial Tram is type 6 (classify: cable amber).
+- The keyed probe that confirms this feed's coordinate coverage and
+  vehicle.id shape is still pending the AppID. The parser needs no
+  change for either answer: position-first placement, station-snap
+  fallback, vehicle.id identity.
 """
 
 from __future__ import annotations
