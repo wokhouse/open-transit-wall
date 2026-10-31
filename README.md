@@ -91,7 +91,7 @@ Use `--record` during live runs to save raw SIRI responses into `fixtures/`
 Run the tests: `.venv/bin/python -m pytest server/tests -q`
 
 The firmware carries no endpoint at all — the browser tool prefills the
-hosted instance (`open-transit-wall-nuvez.ondigitalocean.app`) as a
+hosted instance (`transit.fungj.net`) as a
 convenience, and the device only learns it by provisioning. Running
 `proxy.py` locally is the LAN dev path: provision `host` = this machine's
 address, `scheme=http://`, `port=8000` — no rebuild.
@@ -114,7 +114,7 @@ PlatformIO needed), or use any serial terminal at 115200:
 ```text
 set ssid=MyWifi
 set pass=hunter2
-set host=open-transit-wall-nuvez.ondigitalocean.app
+set host=transit.fungj.net
 set agency=sf
 save
 ```

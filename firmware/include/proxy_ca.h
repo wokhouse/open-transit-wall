@@ -10,7 +10,7 @@
 //
 // Source: curl.se Mozilla trust store + secure.globalsign.net. If the wall
 // goes red after a CA rotation, re-check the chain and refresh this bundle:
-//   echo | openssl s_client -connect open-transit-wall-nuvez.ondigitalocean.app:443 -showcerts
+//   echo | openssl s_client -connect transit.fungj.net:443 -showcerts
 // and pull the current root from https://curl.se/ca/cacert.pem.
 
 static const char PROXY_CA_PEM[] = R"PEM(

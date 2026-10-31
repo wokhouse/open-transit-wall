@@ -22,6 +22,10 @@ firmware/include/secrets.h
 # Staged by tools/build_firmware.py for the Pages artifact
 flasher/firmware/
 
+# Generated per-agency GTFS caches (proxy route refresh rebuilds them at runtime)
+server/routes_*.json
+server/stations_*.json
+
 # macOS
 .DS_Store
 
