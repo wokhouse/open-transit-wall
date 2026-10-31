@@ -15,6 +15,22 @@ bool Screen::begin() {
 
 void Screen::setBrightness(uint8_t brightness) { dma_->setBrightness8(brightness); }
 
+bool Screen::setRotation(uint16_t degrees) {
+  if (degrees != 90 && degrees != 180 && degrees != 270) {
+    degrees = 0;
+  }
+  if (degrees == rot_) {
+    return false;
+  }
+  rot_ = degrees;
+  return true;
+}
+
+// A quarter turn swaps the logical dimensions (a no-op on a square panel).
+int Screen::width() const { return rotatedWidth(rot_, DISPLAY_W, DISPLAY_H); }
+
+int Screen::height() const { return rotatedHeight(rot_, DISPLAY_W, DISPLAY_H); }
+
 int Screen::panelIndex(int col, int row) const {
   switch (TILE_LAYOUT) {
     case LINE_TOP_RIGHT_DOWN:
@@ -34,13 +50,15 @@ int Screen::panelIndex(int col, int row) const {
 }
 
 void Screen::drawPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b) {
-  if (x < 0 || y < 0 || x >= DISPLAY_W || y >= DISPLAY_H) {
+  // Logical (rotated) frame -> physical panel frame (see display_rotate.h).
+  int px, py;
+  if (!rotatePixel(rot_, x, y, DISPLAY_W, DISPLAY_H, &px, &py)) {
     return;
   }
-  int col = x / PANEL_RES_X;
-  int row = y / PANEL_RES_Y;
+  int col = px / PANEL_RES_X;
+  int row = py / PANEL_RES_Y;
   int panel = panelIndex(col, row);
-  dma_->drawPixel(panel * PANEL_RES_X + (x % PANEL_RES_X), y % PANEL_RES_Y,
+  dma_->drawPixel(panel * PANEL_RES_X + (px % PANEL_RES_X), py % PANEL_RES_Y,
                   dma_->color565(r, g, b));
 }
 

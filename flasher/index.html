@@ -54,6 +54,18 @@
     <input id="agency-manual" type="text" placeholder="or type an id (a-z0-9, 1-8)"
            pattern="[a-z0-9]{1,8}" maxlength="8" hidden>
 
+    <div id="rotwrap">
+    <label for="rot">Panel rotation</label>
+    <select id="rot">
+      <option value="0" selected>0° — as wired</option>
+      <option value="90">90° clockwise</option>
+      <option value="180">180°</option>
+      <option value="270">270° clockwise</option>
+    </select>
+    <p class="muted small">Match how the wall hangs. Pick a value and send to
+    see it turn.</p>
+    </div>
+
     <label for="ssid">WiFi network</label>
     <input id="ssid" type="text" maxlength="32">
     <label for="pass">WiFi password</label>

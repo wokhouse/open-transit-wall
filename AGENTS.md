@@ -124,6 +124,9 @@ tools/run_sim.sh /tmp/v.csv      # writes /tmp/otw_wall.bmp (64x64)
 - MUST NOT call `projection.begin()` from `setup()`. Call it in `loop()` on the
   first ready cycle, or the provisioned-live-from-serial path misses it.
 - MUST NOT add a build-time secret or a compiled endpoint to the firmware.
+- MUST NOT compile a panel orientation. Rotation is the provisioned NVS key
+  `rot` (0/90/180/270, degrees clockwise) and `screen.cpp` applies it per
+  pixel through `display_rotate.h`; one binary serves every mount.
 - MUST NOT re-add a browser preview route to the server.
 - MUST NOT call the live 511 API from a test or from CI. Use `--fixture`.
 - MUST NOT power the panel from the ESP32 5 V pin or from USB.

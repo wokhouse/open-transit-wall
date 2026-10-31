@@ -26,7 +26,7 @@ compiled defaults. The firmware implementation is
 
 ```
 OTW-FW <version>
-STORED ssid=<s> pass=set|empty host=<h> scheme=<s> port=<p> agency=<a> mhost=<m> mport=<p> muser=<u> mpass=set|empty bmin=<i> bmax=<i>
+STORED ssid=<s> pass=set|empty host=<h> scheme=<s> port=<p> agency=<a> mhost=<m> mport=<p> muser=<u> mpass=set|empty bmin=<i> bmax=<i> rot=<n>
 ```
 
 or, when no SSID is stored in NVS:
@@ -55,12 +55,13 @@ The tool uses `OTW-FW` to recognize the device and `UNPROVISIONED` /
 | `set mpass=<password>` | `OK mpass set ...` | optional; 0–63 chars, never echoed back |
 | `set bmin=<0-255>` | `OK bmin=<i> ...` | optional brightness floor; empty means 0. See the brightness window below |
 | `set bmax=<0-255>` | `OK bmax=<i> ...` | optional brightness ceiling; empty means 255 |
-| `get ssid` / `host` / `scheme` / `port` / `agency` / `mhost` / `mport` / `muser` / `bmin` / `bmax` | `VAL <key>=<value>` | current live value (`ssid` replies `VAL ssid EMPTY` when unset; `port` replies `VAL port=0`, and 0 is never a valid port; `mport` replies `VAL mport=0` when unset — 0 means the 1883 default; `bmin`/`bmax` reply the effective 0–255 values, defaults 0/255) |
+| `set rot=<0\|90\|180\|270>` | `OK rot=<n> ...` | how the panel is mounted, in degrees clockwise; empty means 0. The wall repaints as soon as the value changes |
+| `get ssid` / `host` / `scheme` / `port` / `agency` / `mhost` / `mport` / `muser` / `bmin` / `bmax` / `rot` | `VAL <key>=<value>` | current live value (`ssid` replies `VAL ssid EMPTY` when unset; `port` replies `VAL port=0`, and 0 is never a valid port; `mport` replies `VAL mport=0` when unset — 0 means the 1883 default; `bmin`/`bmax` reply the effective 0–255 values, defaults 0/255; `rot` replies the effective degrees, default 0) |
 | `get pass` / `get mpass` | `VAL pass SET len=<n>` or `VAL pass EMPTY len=0` | the password is never echoed back |
-| `get all` | twelve `VAL` lines | |
-| `status` | several `STATUS ...` lines | fw version, provisioned flag, proxy URL, MQTT broker + link state, WiFi state + IP, free heap |
+| `get all` | thirteen `VAL` lines | |
+| `status` | several `STATUS ...` lines | fw version, provisioned flag, proxy URL, agency, rotation, MQTT broker + link state, WiFi state + IP, free heap |
 | `save` | `OK saved` | persist the live values to NVS (survives power loss) |
-| `erase` | `OK erased ...` | wipe the NVS copy; `ssid`/`pass` also clear in the live session (back to provisioning mode), `host`/`scheme`/`port`/`agency`/`mhost`/`mport`/`muser`/`mpass`/`bmin`/`bmax` stay until reboot |
+| `erase` | `OK erased ...` | wipe the NVS copy; `ssid`/`pass` also clear in the live session (back to provisioning mode), `host`/`scheme`/`port`/`agency`/`mhost`/`mport`/`muser`/`mpass`/`bmin`/`bmax`/`rot` stay until reboot |
 | `reboot` | `OK rebooting` | `esp_restart()` |
 | `help` | `CMD ...` lines | command list |
 
@@ -73,15 +74,18 @@ unknown key ...`. Bad value → `ERR <key> must be ...`.
   value). `host`: 1–127 chars, no `/`, `:`, or spaces. `mhost`: same
   rules as `host`, but empty is allowed and turns the HA link off.
   `muser`/`mpass`: 0–63 chars. `bmin`/`bmax`: integers 0–255, empty
-  restores the default (0 and 255); `bmin` may not exceed the current
-  `bmax` and vice versa. Line length ≤ 256.
+  restores the default (0 and 255);  `bmin` may not exceed the current
+  `bmax` and vice versa. `rot`: exactly `0`, `90`, `180` or `270`
+  (degrees clockwise); empty restores 0, anything else is rejected. Line
+  length ≤ 256.
 - Values run to end of line; no quoting. A `set` takes effect immediately in
   the running session; `save` is what persists it. The tool's flow is:
   `set ssid=…`, `set pass=…`, `set host=…`, `save`, then read the next
   `WiFi: connecting…` / `connected, ip=` lines from the firmware log as the
   success signal.
 - Storage: NVS namespace `otw`, keys `ssid`, `pass`, `host`, `scheme`,
-  `port`, `agency`, `mhost`, `mport`, `muser`, `mpass`, `bmin`, `bmax`.
+  `port`, `agency`, `mhost`, `mport`, `muser`, `mpass`, `bmin`, `bmax`,
+  `rot`.
   An empty stored `ssid` means unprovisioned. The brightness the wall last
   applied from HA is also in namespace `otw` (key `bright`) — see
   `docs/brightness-plan.md`; `erase` clears it too.
@@ -124,7 +128,13 @@ device itself knows no endpoints.
 ## Versioning
 
 `OTW-FW <version>` is a single integer, bumped only on breaking protocol
-changes. Current: 5.
+changes. Current: 6.
+
+Version 6 added the optional `rot` key and the matching `STORED`/`get all`/
+`status` fields. Rotation is how the panel is mounted, in degrees
+clockwise: 0 (default), 90, 180 or 270. Older firmware (v5) answers
+`ERR unknown key` for it, so the tool should only show the rotation control
+when the banner reports `OTW-FW >= 6`.
 
 Version 5 changes the meaning of an empty `mhost`: with credentials set
 the wall now finds the broker via mDNS instead of leaving the link off,
