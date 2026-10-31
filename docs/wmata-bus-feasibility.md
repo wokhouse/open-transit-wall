@@ -57,8 +57,9 @@ returned HTTP 200, `application/octet-stream`, 61,735 bytes.
 - `bearing` is on 293 of 635 rows only; the wall does not use it.
 
 Wire size, measured: 569 rows serialize to 20,043 bytes of `[lat, lon,
-key, id]` arrays, 35.2 bytes per row. At the ~934-row peak estimate the
-payload lands near 33 KB.
+key, id]` arrays, 35.2 bytes per row for the bus half and 36.3 bytes per
+row for a measured combined payload (22,163 B / 611 rows). At the
+~1,039-row peak the payload lands near 37 KB.
 
 ## Static GTFS — keyed, and the largest download in the project
 
@@ -74,8 +75,9 @@ matter: `stop_times.txt` 177 MB uncompressed, `shapes.txt` 18 MB,
   RAPID, and no route id matches the numeric-R pattern, so `classify`'s
   rapid path never fires here.
 - `stops.txt`: 7,540 rows, spanning 38.694-39.156 N (51.4 km) and
-  -77.366 to -76.720 W (55.9 km). The bus network is wider than the rail
-  system in both directions.
+  -77.366 to -76.720 W (55.9 km). Against the rail system's 39.3 x 56.0
+  km, the bus network grows the vertical axis by 12 km and is 0.1 km
+  narrower east-west, which is why its square frame crops differently.
 - `calendar.txt` exists (unlike the rail feed) with eight service
   patterns and day columns, plus 58 `calendar_dates.txt` exceptions that
   replace weekday service with a Saturday pattern on holidays. Any fleet
@@ -101,9 +103,16 @@ sweep over the static timetable is a hard upper bound.
 
 The static number under-counts the live fleet, measured directly: at
 22:05 UTC on a Saturday the schedule says 495 trips are in progress and
-the feed reports 569 buses in service, a ratio of 1.15. Scaled to the
-weekday peak that is ~934 rows, which fits the compiled 1200 with 22
-percent headroom and 33 KB of payload.
+the feed reports 569 buses in service, a ratio of 1.149.
+
+So write the peak as a function of that one measured ratio, not as a
+point:  rows(k) = 105 + 812k, where 105 is the rail peak at 08:43 and 812
+is the bus peak at 17:00. At the measured k = 1.15 that is ~1,039 rows;
+the compiled 1200 cap holds for any k below 1.35, a 17 percent error on
+the only ratio sample we have, taken on a Saturday evening. Using the
+sweep's maximum (816 on Wed 2026-11-04) instead gives ~1,043 rows and a
+break-even of 1.34. Summing two different peak hours is a bound, not a
+forecast: the combined wall's true peak will be at or below it.
 
 Compare the shipped walls: MTA subway 503-584 trains per poll at 19.5 KB,
 proven on hardware; SFMTA Muni ~676 vehicles. A WMATA bus wall is the
@@ -131,10 +140,9 @@ both recorded probes merged through one route table:
 That is the Muni palette shape on one wall, with one viewport that needs
 no new tuning: the shipped rail B box keeps 98 percent of the buses.
 
-The static GTFS was the blocker, and the code now answers it: one entry
-carries one `static_gtfs` today, and
-WMATA's rail routes (`route_type 1`) and bus routes (`route_type 3`) live
-in two separate zips. With only the bus zip loaded, the six rail lines
+The static GTFS was the blocker at scoping time: an entry carried one
+`static_gtfs`, and WMATA's rail routes (`route_type 1`) and bus routes
+(`route_type 3`) live in two separate zips. With only the bus zip loaded, the six rail lines
 would classify as generic bus blue. Two ways out:
 
 1. WMATA documents a Rail & Bus Combined GTFS Static API (portal
@@ -164,18 +172,21 @@ Trade-off, stated plainly:
   well inside measured territory.
 
 Jade chose combined on 2026-10-31. Option 2 shipped (the `static_gtfs`
-list), so the wall does not depend on finding WMATA's combined zip: the
-two zips are fetched and merged on every refresh.
+list), so the wall does not depend on finding WMATA's combined zip: both
+zips are fetched and merged on the daily static refresh (24 h, retried
+after 10 minutes on failure).
 
 ## Viewport candidates
 
-The network is 55.9 km across, but the traffic is not: at the probe the
-live mass sat at 38.9111 N, -77.0199 W, essentially downtown. Five
+The network is 51.4 km north-south by 55.9 km east-west, and the
+aspect-fit projection scales by the larger span, so a candidate box is
+sized by its east-west side. The traffic is not spread evenly: at the
+probe the live mass sat at 38.9111 N, -77.0199 W, essentially downtown. Five
 candidate frames were measured from one payload:
 
 | | Box | Side | m/px | Buses in frame | Stops in frame | Dot span | Mass center |
 |---|---|---|---|---|---|---|---|
-| A | lat 38.694-39.156, lon -77.366--76.720 | 55.9 km | 804 | 569/569 | 7540/7540 | x 0-61, y 2-60 | 33.2, 32.8 |
+| A | lat 38.694-39.156, lon -77.366--76.720 | 55.9 km | 873 | 569/569 | 7540/7540 | x 0-61, y 2-60 | 33.2, 32.8 |
 | B | the rail B box | 45.9 km | 717 | 562/569 | 7303/7540 | x 0-63, y 0-60 | 39.6, 35.7 |
 | **C** | lat 38.7315-39.0908, lon -77.2508--76.7890 | 40.0 km | 625 | **552/569** | 6943/7540 | x 0-63, y 0-59 | 31.6, 31.0 |
 | D | lat 38.7674-39.0549, lon -77.2046--76.8352 | 32.0 km | 500 | 530/569 | 6315/7540 | x 0-62, y 0-63 | 32.4, 31.4 |
@@ -187,7 +198,8 @@ Recommendation: **C**, 40 km at 625 m/px, mass-centred by construction
 
 - B is the interesting alternative: it is the exact frame the rail wall
   ships, so a bus wall and a subway wall would line up pixel for pixel.
-  It costs 7 buses and moves the mass to 39.6, off centre.
+  At the 22:05 probe it keeps 562 of 569 buses (98.8 percent); on the
+  combined 23:35 probe 14 of 545 bus rows were outside, 97.4 percent.
 - D and E trade fleet for detail, down to 88 percent at 26 km. Downtown
   DC bus density at 406 m/px reads as a solid blob on a 64 px panel.
 - Every cropped candidate cuts the network at the border, and buses move
@@ -211,7 +223,8 @@ every route the same blue. WMATA publishes four route-color families
    routes because one color per type is the project's standing default.
    A registry flag (`bus_route_colors: true`) that keys buses as
    `B:<ROUTE>` would light the four families, at the cost of a palette
-   with 126 more entries on the wire (~1.5 KB) and a lookup per row.
+   with 126 more entries on the wire (~2.5 KB measured) and a lookup per
+   row.
    ~15 lines in `classify`/`proxy` plus tests.
 3. A registry `palette` override on `B` — one color, no code, no value.
 
@@ -220,15 +233,15 @@ flat once it is running.
 
 ## Per-component changes
 
-| Component | Change | Size |
+| Component | Change as scoped (two entries) | Shipped instead (one entry) |
 |---|---|---|
-| `agencies.json` | One `gtfs-rt` entry. Id must be `wmatabus`: `AGENCY_ID_RE` is `^[a-z0-9]{1,8}$`, so a dash is not allowed. Same `api_key_env`/`api_key_param` as the rail entry, `feeds` = the bus VehiclePositions URL, `static_gtfs` = the bus zip, `requests_per_day_limit` 50000 | small |
-| `proxy.py` | None. Keyed feeds, keyed static zips and multiple entries per upstream all work today | none |
-| `classify.py` | None for the all-blue cut. Optional `bus_route_colors` for the four families | none / ~15 lines |
-| Fixtures + tests | Re-encode a bus VP subset (one row per drawn corridor, two rows beyond the chosen edges, one trip-less yard row) plus the static `routes.txt` and a `stops.txt` subset; assert parse -> classify -> viewport containment -> wire shape, offline | small |
-| Firmware | None to commit. The cap fits at ~934 rows; the on-wall heap at 33 KB is the one measurement left | measurement |
-| Flasher | None. The dropdown reads `/agencies`, so `wmatabus` appears once the proxy serves it | none |
-| Deploy | `SERVED_AGENCIES` gains `wmatabus`, reusing `WMATA_API_KEY`. One extra upstream request per poll and one 34.9 MB static download per day | ops only |
+| `agencies.json` | A second entry with id `wmatabus` — `AGENCY_ID_RE` is `^[a-z0-9]{1,8}$`, so a dash is not allowed — its own feed, its own zip | The existing `wmata` entry gained the bus feed and a second `static_gtfs` URL. No new id |
+| `proxy.py` | None: keyed feeds and keyed zips already worked | `static_gtfs` accepts a URL or a list and merges route/station tables; per-feed isolation on the RT side; per-zip failure reporting |
+| `classify.py` | None for the all-blue cut | None. Optional `bus_route_colors` for the four colour families remains open (~15 lines) |
+| Fixtures + tests | Bus VP subset + `routes.txt` + `stops.txt` subset | Shipped: `wmata_bus_vp.pb` (11 KB, 104 of 126 routes), the whole bus `routes.txt`, a 118-row `stops.txt` subset, 12 tests across the combined entry |
+| Firmware | None to commit, heap measurement at the bus fleet | None to the cap; one log line added so the heap gate is measurable (`ESP.getMinFreeHeap()` beside the free figure) |
+| Flasher | None: `/agencies` lists whatever the proxy serves | None. `wmata` is already in the list |
+| Deploy | `SERVED_AGENCIES` gains `wmatabus` | Nothing new: `wmata` is already served; the app env keeps `WMATA_API_KEY`. One extra upstream request per poll, 34.9 MB more static per cold start and per day |
 
 ## Ops notes
 
@@ -254,9 +267,10 @@ Terms of Use (2019-11-19, sections 6.6 and 8) forbid serving their data
 through your own API to third parties without prior written authorization
 (`api-support@wmata.com`), while section 7's grant covers the operator's
 own application. Bus data is the same data family under the same terms.
-A wall for Jade's own panel is inside the grant. The combined `wmata`
-entry is already served by the shared hosted proxy, which is the rail
-entry's existing situation: fine while it backs her own walls, and needing
+A wall for Jade's own panel is inside the grant. Verified 2026-10-31:
+the shared hosted proxy (`transit.fungj.net`) does serve `wmata` — its
+`/agencies` lists it and `/vehicles?agency=wmata` returns rows — and that
+is legitimate only while the endpoint backs her own walls. It needs
 WMATA's written yes before other people's walls read it.
 
 Attribution: the GTFS license is CC-BY 4.0, so credit WMATA in the README
@@ -302,18 +316,22 @@ Open: the weekday peak probe and the on-wall heap log at ~1,040 rows.
    and the palette carries exactly one key. Quarter day.
 3. Optional: the `bus_route_colors` flag if the all-blue wall reads flat.
    Half a day.
-4. Weekday peak probe (08:00-09:00 ET) and the on-wall heap log at that
-   fleet size. Both need the wall and a weekday morning.
+4. Weekday peak probe at 16:45-17:30 ET — the bus peak in the sweep is
+   17:00, not the rail's 08:43 — plus the on-wall heap log at that fleet
+   size. Take an 08:45 reading too if the combined wall is what matters,
+   so the sum-of-peaks bound can be replaced by two real hours.
 
 ## Blocking unknowns
 
-1. The weekday peak live bus count. The static bound is 812 and the live
-   ratio says ~934; one weekday morning probe settles it. Nothing in the
-   pipeline changes if the answer is higher — only whether the compiled
-   cap holds.
-2. The on-wall heap at the combined peak: ~1,040 rows and ~35.7 KB. The
-   largest payload proven on hardware is the MTA subway's 19.5 KB. This is
-   the gate for calling the combined wall shipped, exactly as it was for
-   the MTA bus phase.
+1. The weekday peak live bus count. The static bound is 812 (816 on the
+   sweep's best day) and the measured live/scheduled ratio is 1.15, so the
+   estimate is ~1,039 rows with a break-even at k = 1.35. One weekday
+   probe at 17:00 ET settles it. Nothing in the pipeline changes if the
+   answer is higher — only whether the compiled cap holds.
+2. The on-wall heap at the combined peak: ~1,040 rows and ~37 KB. Read
+   the minimum free heap through connect + parse + render, not the free
+   heap after merge (the JSON document is already freed by then). The
+   firmware now logs both (`heap` and `min`), so one weekday boot settles
+   it. The largest payload proven on hardware is the MTA subway's 19.5 KB.
 3. Whether the four published route-color families are wanted. A taste
    call, not a risk.

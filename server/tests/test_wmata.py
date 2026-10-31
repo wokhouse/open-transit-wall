@@ -237,11 +237,6 @@ class _ZipResponse:
         pass
 
 
-# The RT feeds and the static zips share one response shape here: both are
-# fetched through proxy.httpx.get and only .content is read.
-_EmptyFeedResponse = _ZipResponse
-
-
 def _static_zip_bytes():
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
@@ -388,7 +383,7 @@ def test_combined_snapshot_serves_both_modes(monkeypatch, tmp_path):
                 "https://example.invalid/bus.pb": BUS_VP.read_bytes()}
 
     def fake_get(url, params=None, **kwargs):
-        return _EmptyFeedResponse(payloads[url])
+        return _ZipResponse(payloads[url])
 
     monkeypatch.setattr(proxy.httpx, "get", fake_get)
     raw = proxy.fetch_station_snapshot(state)
@@ -403,7 +398,7 @@ def test_combined_snapshot_serves_both_modes(monkeypatch, tmp_path):
     assert all(v["r"] != "NR" for v in vehicles)
 
 
-def test_bus_fixture_parses_and_clips_only_named_edges():
+def test_bus_fixture_rows_and_the_frame_edges():
     """The bus half of the fixture: every row is position-first and classifies
     to the single bus key, and the only rows outside the shared frame are
     beyond the north and south edges (M22 north of the frame, F1X at the
@@ -451,3 +446,183 @@ def test_registry_rejects_bad_static_lists(tmp_path):
         path.write_text(json.dumps(registry))
         with pytest.raises(ValueError):
             load_registry(path)
+
+
+# --- Failure paths: the static refresh is all-or-nothing --------------------
+#
+# A half-merged table would classify a mode's vehicles as the wrong type (a
+# rail route missing from the table falls through to generic bus blue), so a
+# refresh either produces a complete merged table or leaves the previous one
+# alone. These pin that, plus the key on every request and the log count the
+# operator reads.
+
+def _raw_zip(routes_text, stops_text):
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("routes.txt", routes_text)
+        archive.writestr("stops.txt", stops_text)
+    return buffer.getvalue()
+
+
+class _StatusError(Exception):
+    pass
+
+
+def _seeded_state(tmp_path, cfg):
+    state = proxy.AgencyState("wmata_test", cfg)
+    state.routes_path = tmp_path / "routes_wmata_test.json"
+    state.stations_path = tmp_path / "stations_wmata_test.json"
+    state.routes = {"OLD": {"rid": "OLD", "type": 1, "long": "Old"}}
+    state.stations = {"S_OLD": (1.0, 2.0)}
+    state.routes_path.write_text(json.dumps(state.routes))
+    state.stations_path.write_text(json.dumps({"S_OLD": [1.0, 2.0]}))
+    return state
+
+
+def test_failed_second_zip_keeps_the_cached_tables(monkeypatch, tmp_path):
+    """One unreachable zip must not publish a partial table: the previous
+    routes, stations and both cache files stay exactly as they were."""
+    monkeypatch.setenv(STATIC_KEY_ENV, "TESTKEY1234")
+    state = _seeded_state(tmp_path, _combined_cfg())
+    good = _zip_bytes(ROUTES_TXT, STOPS_TXT)
+    routes_before = state.routes_path.read_text()
+    stations_before = state.stations_path.read_text()
+
+    def fake_get(url, params=None, **kwargs):
+        if url == RAIL_STATIC_URL:
+            return _ZipResponse(good)
+        raise _StatusError("401 Unauthorized for " + url)
+
+    monkeypatch.setattr(proxy.httpx, "get", fake_get)
+    with pytest.raises(RuntimeError, match="401"):
+        proxy.refresh_routes(None, state, quiet=True)
+
+    assert state.routes == {"OLD": {"rid": "OLD", "type": 1, "long": "Old"}}
+    assert state.stations == {"S_OLD": (1.0, 2.0)}
+    assert state.routes_path.read_text() == routes_before
+    assert state.stations_path.read_text() == stations_before
+
+
+def test_zero_yield_zip_is_a_failed_refresh(monkeypatch, tmp_path):
+    """A zip whose routes.txt is header-only parses to nothing. Merging that
+    silence would drop the other mode's routes, so it fails the refresh."""
+    monkeypatch.setenv(STATIC_KEY_ENV, "TESTKEY1234")
+    state = _seeded_state(tmp_path, _combined_cfg())
+    header_only = _raw_zip("route_id,route_short_name,route_long_name,route_type\n",
+                           STOPS_TXT.read_text())
+    good = _zip_bytes(BUS_ROUTES_TXT, BUS_STOPS_TXT)
+
+    def fake_get(url, params=None, **kwargs):
+        return _ZipResponse(header_only if url == RAIL_STATIC_URL else good)
+
+    monkeypatch.setattr(proxy.httpx, "get", fake_get)
+    with pytest.raises(RuntimeError, match="parsed to"):
+        proxy.refresh_routes(None, state, quiet=True)
+    assert set(state.routes) == {"OLD"}
+
+
+def test_merge_precedence_on_a_colliding_route_key(monkeypatch, tmp_path, capsys):
+    """Last zip wins, and it says so. Today's feeds share no key, but the
+    registry list order is now semantically load-bearing."""
+    monkeypatch.setenv(STATIC_KEY_ENV, "TESTKEY1234")
+    state = proxy.AgencyState("wmata_test", _combined_cfg())
+    state.routes_path = tmp_path / "routes_wmata_test.json"
+    state.stations_path = tmp_path / "stations_wmata_test.json"
+
+    rail_first = _raw_zip(
+        "route_id,route_short_name,route_long_name,route_type,route_color\n"
+        "RED,R,Red,1,C80F2D\n", "stop_id,stop_lat,stop_lon\nSTN_A,39.0,-77.0\n")
+    bus_second = _raw_zip(
+        "route_id,route_short_name,route_long_name,route_type,route_color\n"
+        "RED,RED,Red Line Replacement,3,0091c8\n",
+        "stop_id,stop_lat,stop_lon\n1001,38.9,-77.1\n")
+
+    def fake_get(url, params=None, **kwargs):
+        return _ZipResponse(rail_first if url == RAIL_STATIC_URL else bus_second)
+
+    monkeypatch.setattr(proxy.httpx, "get", fake_get)
+    proxy.refresh_routes(None, state, quiet=True)
+
+    assert state.routes["RED"]["type"] == 3  # later zip wins
+    assert proxy.classify("RED", state.routes)["key"] == "B"
+    assert "WARNING" in capsys.readouterr().err
+
+
+def test_refresh_log_counts_routes_not_table_keys(monkeypatch, tmp_path, capsys):
+    """The operator's only telemetry: 132 routes (6 rail + 126 bus) out of a
+    table whose key count is 244, and the zip count on the multi-zip line."""
+    monkeypatch.setenv(STATIC_KEY_ENV, "TESTKEY1234")
+    state = proxy.AgencyState("wmata_test", _combined_cfg())
+    state.routes_path = tmp_path / "routes_wmata_test.json"
+    state.stations_path = tmp_path / "stations_wmata_test.json"
+    payloads = {RAIL_STATIC_URL: _zip_bytes(ROUTES_TXT, STOPS_TXT),
+                BUS_STATIC_URL: _zip_bytes(BUS_ROUTES_TXT, BUS_STOPS_TXT)}
+
+    def fake_get(url, params=None, **kwargs):
+        return _ZipResponse(payloads[url])
+
+    monkeypatch.setattr(proxy.httpx, "get", fake_get)
+    proxy.refresh_routes(None, state, quiet=True)
+    assert "cached 132" in capsys.readouterr().err
+    assert proxy.distinct_routes(state.routes) == 132
+
+    single = proxy.AgencyState("one_zip", {**_combined_cfg(),
+                                           "static_gtfs": RAIL_STATIC_URL})
+    single.routes_path = tmp_path / "routes_one.json"
+    single.stations_path = tmp_path / "stations_one.json"
+    proxy.refresh_routes(None, single, quiet=True)
+    line = capsys.readouterr().err
+    assert "cached 6 " in line and "from 2 zips" not in line
+
+
+def test_snapshot_sends_the_key_to_every_feed(monkeypatch):
+    """The entry has two feeds now: a key on only the first would 401 the
+    second and, before the per-feed guard, blank the whole agency."""
+    monkeypatch.setenv(STATIC_KEY_ENV, "TESTKEY1234")
+    state = proxy.AgencyState("wmata_test", _combined_cfg())
+    state.stations = {"PF_G05_C": (38.9, -76.84), "783": (38.9, -77.0)}
+    payloads = {"https://example.invalid/rail.pb": VP.read_bytes(),
+                "https://example.invalid/bus.pb": BUS_VP.read_bytes()}
+    seen = []
+
+    def fake_get(url, params=None, **kwargs):
+        seen.append((url, params))
+        return _ZipResponse(payloads[url])
+
+    monkeypatch.setattr(proxy.httpx, "get", fake_get)
+    proxy.fetch_station_snapshot(state)
+    assert seen == [("https://example.invalid/rail.pb",
+                     {"api_key": "TESTKEY1234"}),
+                    ("https://example.invalid/bus.pb",
+                     {"api_key": "TESTKEY1234"})]
+
+
+def test_one_failed_feed_keeps_the_other_mode(monkeypatch):
+    """Rail and bus are independent upstreams: a bus outage must not blank
+    the subway half, and only a total failure raises."""
+    monkeypatch.setenv(STATIC_KEY_ENV, "TESTKEY1234")
+    state = proxy.AgencyState("wmata_test", _combined_cfg())
+    state.stations = {"PF_G05_C": (38.9, -76.84), "783": (38.9, -77.0)}
+
+    def fake_get(url, params=None, **kwargs):
+        if url.endswith("bus.pb"):
+            raise _StatusError("503 Service Unavailable")
+        return _ZipResponse(VP.read_bytes())
+
+    monkeypatch.setattr(proxy.httpx, "get", fake_get)
+    rows = proxy.fetch_station_snapshot(state)
+    assert rows, "the healthy rail feed must still be served"
+    assert {r["line"] for r in rows} & {"RED", "BLUE", "SILVER"}
+
+
+def test_every_feed_failing_raises(monkeypatch):
+    monkeypatch.setenv(STATIC_KEY_ENV, "TESTKEY1234")
+    state = proxy.AgencyState("wmata_test", _combined_cfg())
+    state.stations = {"PF_G05_C": (38.9, -76.84)}
+
+    def fake_get(url, params=None, **kwargs):
+        raise _StatusError("503 Service Unavailable")
+
+    monkeypatch.setattr(proxy.httpx, "get", fake_get)
+    with pytest.raises(RuntimeError, match="every feed failed"):
+        proxy.fetch_station_snapshot(state)

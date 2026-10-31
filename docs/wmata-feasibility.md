@@ -157,8 +157,8 @@ MTA subway at 503-584 trains observed.
 
 Wire size, measured not estimated: the 71 rows of the 21:12 probe
 serialize to 2,857 bytes of rows and 3,128 bytes for the whole payload
-with bbox and palette. At 105 rows a peak wall is about 4 KB. That is
-13 percent of the shipped MTA payload.
+with bbox and palette. At 105 rows a peak wall is about 4 KB — roughly a
+fifth of the shipped MTA payload (19.5 KB).
 
 ## Viewport
 
@@ -247,11 +247,12 @@ agency in the registry so far.
   data that you have provided", an ability to block third parties on
   request, and user data on request. Contact `api-support@wmata.com`.
 
-Read plainly: a WMATA wall that Jade hosts for herself is fine. Exposing
-`wmata` on the public hosted proxy so other people's walls consume it is
-not, until WMATA says yes in writing. The `sf`, `mta`, `metro` entries
-have no such restriction, so the registry can carry `wmata` while the
-hosted deployment leaves it out of `SERVED_AGENCIES`.
+Read plainly: a WMATA wall that Jade hosts for herself is fine. Serving
+`wmata` from the shared hosted proxy is legitimate only while that endpoint
+backs her own walls — it needs WMATA's written yes before other people's
+walls read it. (Verified 2026-10-31: the hosted proxy does serve `wmata`;
+`/agencies` lists it and `/vehicles?agency=wmata` returns rows.) The `sf`,
+`mta`, `metro` entries carry no such restriction.
 
 Two smaller obligations: the GTFS license is CC-BY 4.0, so credit WMATA
 in the README and the docs, and the wall shows no WMATA marks (section
@@ -328,10 +329,10 @@ Rail and bus are one agency entry, the Muni shape (PR #14):
   so one poll classifies both modes: the six subway lines key `M:<LINE>`,
   every bus route keys `B`.
 - Fleet and wire size, measured live 2026-10-31 23:35 UTC (Saturday
-  19:35 ET): 611 rows (545 bus + 66 rail), payload 22,163 B, palette of
-  seven keys. Weekday peak estimate ~1,039 rows at ~35.7 KB against
-  `MAX_VEHICLES` 1200 — 13 percent headroom, and the largest payload this
-  project would parse on a wall.
+  19:35 ET): 611 rows (545 bus + 66 rail), payload 22,163 B (36.3 B/row),
+  palette of seven keys. Weekday peak estimate ~1,039 rows at ~37 KB
+  against `MAX_VEHICLES` 1200 — 13 percent headroom, and the largest
+  payload this project would parse on a wall.
 - The viewport did not change: the B frame keeps 98 percent of the buses
   and clips only the Loudoun rail tail plus bus runs beyond the north and
   south edges (14 bus rows and 2 Silver rows at that probe).
