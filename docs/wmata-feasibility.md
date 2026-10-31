@@ -1,9 +1,10 @@
 # WMATA Metrorail as an agency: feasibility scope
 
-Status: scoped 2026-10-31. Live probes ran 2026-10-31 21:08-21:14 UTC
+Status: scoped and implemented 2026-10-31 (branch
+`wmata-implementation`). Live probes ran 2026-10-31 21:08-21:14 UTC
 (Saturday 14:08-14:14 PT, 17:08-17:14 ET). Static numbers come from the
 rail static GTFS zip current at that date (internal file timestamps
-2026-10-30 13:45).
+2026-10-30 13:45). See "What shipped" at the end.
 
 ## Verdict
 
@@ -99,12 +100,13 @@ They split into two measurable kinds at the probe:
   minutes, at bearing 294, 0.5-1.1 km past East Falls Church. Stale or
   stabled positions, not traffic.
 
-Recommendation: drop them. They carry no riders, four of the six draw
-frozen dots on a single pixel, and the fleet cap does not need the
-headroom. The clean way is a registry `drop_route_ids: ["NR"]` list
-(~8 lines, mirroring the `route_types` filter the CTA entry already
-carries). The zero-code alternative is a `palette` override on the `B`
-key to dim gray, which recolors them but still draws them.
+Recommendation, and what shipped: drop them. They carry no riders, four
+of the six draw frozen dots on a single pixel, and the fleet cap does not
+need the headroom. The mechanism is a registry `drop_route_ids: ["NR"]`
+list, applied after classification, so the wall never relies on a route
+being absent from the static GTFS (a new line looks exactly the same).
+The zero-code alternative is a `palette` override on the `B` key to dim
+gray, which recolors them but still draws them.
 
 ### Rail static GTFS — keyed, one zip, flat files
 
@@ -167,19 +169,23 @@ measured, not eyeballed:
 
 | | Box | Side | m/px | Stations in frame | Live rows clipped | In-frame dot span | Dot-mass center |
 |---|---|---|---|---|---|---|---|
-| **B (chosen)** | lat 38.7501-39.1364, lon -77.3403--76.8435 | 43.0 km | 672 | 92/98 | 3 (Silver, west edge) | x 12-63, y 2-60 | x 34.5, y 35.2 |
+| **B (chosen)** | lat 38.7370-39.1494, lon -77.3569--76.8267 | 45.9 km | 717 | 92/98 | 3 (Silver, west edge) | x 1-61, y 4-58 | x 35.5, y 34.3 |
 | A (rejected) | lat 38.6895-39.1969, lon -77.4940--76.8435 | 56.5 km | 883 | 98/98 | 0 | x 0-62, y 9-53 | x 41.0, y 34.2 |
 
 Jade picked B on 2026-10-31. It crops west of Wiehle-Reston East,
 dropping six stations (Reston Town Center, Herndon, Innovation Center,
-Dulles Airport, Loudoun Gateway, Ashburn) and clipping the three Silver
-trains that happen to be on that tail, at the west edge. It buys 24
-percent more detail and lands the mass center 3 px from panel center.
-Its east edge is as tight as A's (column 63), so the gain is the
-vertical bands, not the horizontal margin; the westernmost in-frame
-column moves to 12. The tail cannot be un-polled the way the Staten
-Island Railway was: one feed carries the whole rail system, so the
-crop is viewport-only and a later widening is a bbox edit.
+Dulles Airport, Loudoun Gateway, Ashburn) and the three Silver trains
+that are on that tail at the west edge. It buys detail over A and lands
+the mass center 4 px right of panel center. Its east edge is as tight as
+A's, so the gain is the vertical bands: the in-frame span moves from
+y 9-53 to y 4-58.
+
+The first B candidate put the west edge at Wiehle-Reston East's own
+longitude, which left the station 1.4 m outside the box and its trains
+on column 0 — measured, not seen. The shipped box is 2 px wider each
+side (45.9 km against 43.0 km, 717 m/px against 672): Wiehle now sits on
+column 1, Downtown Largo on column 60 with the Largo overshoot row on
+61, Shady Grove on row 4 and Franconia-Springfield on row 58.
 
 A was rejected for the 9-10 px of black band at the top and bottom and
 a dot mass 9.5 px right of panel center, with no detail gained for the
@@ -200,7 +206,7 @@ written on the open CTA and TriMet PRs.
 | Component | Change | Size |
 |---|---|---|
 | `agencies.json` | One `gtfs-rt` entry `wmata`: `feeds` = the rail VehiclePositions URL, `api_key_env` = `WMATA_API_KEY`, `api_key_param` = `api_key`, `static_gtfs` = the rail static zip, `allowance_note` = the Default-tier limits, `bbox` = the chosen B frame (with `drop_route_ids` once decided) | small |
-| `proxy.py` | Apply `api_key_env`/`api_key_param` to the `static_gtfs` fetch in `refresh_routes`, not only to the feeds (today's CTA work keys the feeds only). Optional palette override for `NR`, or a `drop_route_ids` field | ~10 lines + one test |
+| `proxy.py` | Apply `api_key_env`/`api_key_param` to the `static_gtfs` fetch in `refresh_routes`, not only to the feeds (today's CTA work keys the feeds only). One `drop_route_ids` registry field, filtered in `compact_vehicles` | ~15 lines + tests |
 | `server/.env.example` | `WMATA_API_KEY` line and its role | trivial |
 | `gtfs_rt.py` | None. Position-first and `vehicle.id`-first already shipped with Metro Transit | none |
 | `classify.py` | None. `route_type 1` plus `route_color` gives the six official colors through the existing `M:<LINE>` path | none |
@@ -272,32 +278,49 @@ recorded with it; a live deployment needs the free personal key.
 - No firmware secret and no compiled endpoint, unchanged: the key lives
   in the proxy's environment.
 
-## Phasing
+## What shipped (2026-10-31)
 
-1. Register a developer account and subscribe to the free Default tier
-   (it lists the GTFS API). Take one keyed probe with the personal key
-   to confirm the same field shapes. Minutes, self-service.
-2. Land PR #7 (registry key fields) or branch off PR #10. Add the
-   static-zip key change, the `wmata` registry entry, and the fixture
-   test. Half a day.
-3. Verify the chosen B box on live data: every served row inside, and
-   any row past the west edge named as the documented Loudoun clip.
-   Quarter day.
-4. Apply the `NR` rule. Recommend `drop_route_ids: ["NR"]`; a palette
-   override on `B` is the zero-code fallback. Ten minutes plus a test
-   asserting an `NR` row never reaches the wire.
-5. Deploy to Jade's own wall. Skip the hosted multi-tenant proxy until
-   WMATA authorizes it in writing.
+Branch `wmata-implementation`, based on `trimet-implementation` (the open
+PR #10) because the registry key fields live there and not on `main`.
 
-## Blocking unknowns
+- `server/agencies.json`: the `wmata` entry — one rail VehiclePositions
+  feed, `api_key_env` `WMATA_API_KEY`, `api_key_param` `api_key`,
+  `requests_per_day_limit` 50000, the keyed rail static zip, the B frame,
+  and `drop_route_ids: ["NR"]`.
+- `server/proxy.py`: three changes. `refresh_routes` passes the registry
+  key on the `static_gtfs` fetch (new — the keyed-CTA work keys the feeds
+  only). `compact_vehicles` takes `drop_route_ids` and skips those route
+  ids after classification. `load_registry` validates the new field.
+- `server/.env.example`: the `WMATA_API_KEY` block, including the terms
+  warning about re-serving.
+- `fixtures/wmata_rail_vp.pb` (4.9 KB, 34 of the 77 probed entities,
+  every line plus two NR rows and one trip-less yard row),
+  `fixtures/wmata_rail_routes.txt` (the 6-route file),
+  `fixtures/wmata_rail_stops.txt` (98 parent stations plus the platforms
+  the fixture rows reference).
+- `server/tests/test_wmata.py`, 12 tests: the registry contract,
+  position-first placement with every reported stop id resolving, the
+  three-digit fleet identity, the six official colors through `M:<LINE>`,
+  the NR drop (and the `B` key it avoids), the exact west-edge clip set,
+  the station pixel margins, the wire shape, the keyed static fetch and
+  the unkeyed static fetch, and `drop_route_ids` validation.
 
-1. A weekday peak live count. The static bound is 105; one probe between
+Verified live on 2026-10-31 21:38 UTC with WMATA's public use key:
+`[routes] cached 6 WMATA Metrorail (DC) routes + 2176 stations`, 67
+vehicles served, palette of six `M:` keys and no `B`, 2,993-byte payload,
+and exactly 3 rows outside the frame — all Silver at the Loudoun tail
+(Dulles, Innovation Center, Ashburn), the documented crop.
+
+Gates: `ruff check server tools` clean, 59 tests pass, native sim frame
+rendered from the live payload (64 of 67 dots inside the box).
+
+## Still open
+
+1. A personal `WMATA_API_KEY`. The public use key is for testing only
+   (their terms, section 4). Register at developer.wmata.com and confirm
+   the free Default subscription includes the GTFS product, then re-run
+   `SERVED_AGENCIES=wmata server/proxy.py --once` with the personal key.
+2. A weekday peak live count. The static bound is 105; one probe between
    08:00 and 09:00 ET settles it. It cannot change the cap verdict.
-2. Whether the free Default subscription includes the GTFS product for a
-   personal key. The public use key reaches every GTFS endpoint, which
-   proves the endpoints; the product list on the signup page is the
-   place to confirm the subscription covers them, and the first keyed
-   probe is the proof.
-3. WMATA's answer on section 8(b), if a public wall is wanted.
-
-None of the three blocks a wall for the operator's own panel.
+3. WMATA's answer on section 8(b), if a public multi-tenant wall is
+   wanted. A wall for the operator's own panel needs nothing further.
