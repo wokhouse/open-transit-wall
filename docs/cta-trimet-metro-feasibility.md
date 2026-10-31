@@ -157,9 +157,11 @@ not CTA code:
   `stop_lat`/`stop_lon` — the first routes refresh cached 11,138
   stations live on 2026-10-31.
 
-What is not proven yet: a poll with a real Developer Center key. The
-live smoke test used a deliberately invalid key and saw the named
-`errCd 101` on both polls.
+What is not proven yet: a poll with a real Developer Center key. A key
+supplied 2026-10-31 is sent correctly (`?key=` gets `errCd 101`, not
+the keyless `errCd 100`) but both the portal `.pb` and `.json` routes
+reject its value: "Invalid API key." Re-test after the Developer
+Center registration completes.
 
 ## Fleet size against MAX_VEHICLES 1200
 
