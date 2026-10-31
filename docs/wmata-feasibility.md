@@ -24,9 +24,9 @@ Three things are new, none of them large:
    API. A wall that the operator runs for herself is inside the license.
    A public multi-tenant proxy is not — see "Licensing" below. This is
    the only item on this page that can block a deployment shape.
-3. Six percent of the live rows are non-revenue trains on route `NR`,
-   which has no entry in the static `routes.txt`. They classify as
-   ordinary bus blue. One decision, not one bug.
+3. Six to seven percent of the live rows are non-revenue trains on route
+   `NR`, which has no entry in the static `routes.txt`. They classify as
+   ordinary bus blue. One registry field, not one bug.
 
 ## Measured live feeds (2026-10-31, times UTC)
 
@@ -75,11 +75,36 @@ terms section 4). A developer key is required for anything but testing.
     at all, so no route. They are yard moves (`PM49`, `BV01` style
     labels). The existing no-route drop rule already removes them, the
     same way it handles TTC carhouse rows.
-  - 6-7 of the routed entities carry `route_id` `NR` with trips `NR084`,
-    `NR090`, `NR213`, `NR223`, `NR243`, `NR262`. `NR` is not in the
-    static `routes.txt` (6 routes), so they fall through `classify` to
-    the generic bus-blue `B` key. At the probe they clustered around the
-    Arlington yards and one sat stopped at Rockville.
+  - 6-7 of the routed entities carry `route_id` `NR` (non-revenue) with
+    trips `NR084`, `NR089`, `NR090`, `NR093`, `NR213`, `NR223`, `NR243`,
+    `NR262`. `NR` is not in the static `routes.txt` (6 routes), so they
+    fall through `classify` to the generic bus-blue `B` key. See
+    "Non-revenue trains" below.
+
+### Non-revenue trains (`route_id` `NR`)
+
+`NR` is WMATA's non-revenue class: trains on the network that carry no
+passengers. The RT feed reports them like any other train — position,
+fleet number, a `label` that is the internal run designator — but their
+trip ids are `NR<number>`, they carry no `stop_id` and no
+`current_stop_sequence`, and no `NR` route exists in the static feed.
+They split into two measurable kinds at the probe:
+
+- Moving pull-outs. Train `084` (label `831`) travelled Naylor Rd ->
+  Anacostia -> Navy Yard-Ballpark across the three probes, and `089`
+  (label `830`) came off the Branch Av end. These run along passenger
+  track from a yard into the line.
+- Parked units. Four trains — `213` (`pm50`), `223` (`T006`), `243`
+  (`P47`), `262` (`TR06`) — held the same coordinates for the whole six
+  minutes, at bearing 294, 0.5-1.1 km past East Falls Church. Stale or
+  stabled positions, not traffic.
+
+Recommendation: drop them. They carry no riders, four of the six draw
+frozen dots on a single pixel, and the fleet cap does not need the
+headroom. The clean way is a registry `drop_route_ids: ["NR"]` list
+(~8 lines, mirroring the `route_types` filter the CTA entry already
+carries). The zero-code alternative is a `palette` override on the `B`
+key to dim gray, which recolors them but still draws them.
 
 ### Rail static GTFS — keyed, one zip, flat files
 
@@ -133,40 +158,39 @@ serialize to 2,857 bytes of rows and 3,128 bytes for the whole payload
 with bbox and palette. At 105 rows a peak wall is about 4 KB. That is
 13 percent of the shipped MTA payload.
 
-## Viewport candidates
+## Viewport
 
 The network is wide: 98 parent stations span 39.3 km north-south
 (38.7665-39.1199) and 56.0 km east-west (-77.4914 to -76.8447). A true
-square at 64x64 therefore forces a choice. Two candidates, both
-measured rather than eyeballed:
+square at 64x64 therefore forces a choice. Two candidates were
+measured, not eyeballed:
 
 | | Box | Side | m/px | Stations in frame | Live rows clipped | In-frame dot span | Dot-mass center |
 |---|---|---|---|---|---|---|---|
-| A full system | lat 38.6895-39.1969, lon -77.4940--76.8435 | 56.5 km | 883 | 98/98 | 0 | x 0-62, y 9-53 | x 41.0, y 34.2 |
-| B no Loudoun tail | lat 38.7501-39.1364, lon -77.3403--76.8435 | 43.0 km | 672 | 92/98 | 3 (Silver, west edge) | x 12-63, y 2-60 | x 34.5, y 35.2 |
+| **B (chosen)** | lat 38.7501-39.1364, lon -77.3403--76.8435 | 43.0 km | 672 | 92/98 | 3 (Silver, west edge) | x 12-63, y 2-60 | x 34.5, y 35.2 |
+| A (rejected) | lat 38.6895-39.1969, lon -77.4940--76.8435 | 56.5 km | 883 | 98/98 | 0 | x 0-62, y 9-53 | x 41.0, y 34.2 |
 
-- A contains every station and clips nothing. Its cost is 9-10 px of
-  black band at the top and bottom, and a dot mass that sits 9.5 px
-  right of panel center because downtown DC is west of the box center.
-  Both horizontal edges are tight by design: the westernmost train
-  (Ashburn) lands on column 0 and the easternmost (Downtown Largo) on
-  column 62. Both Silver/Blue rows east of Downtown Largo and one Silver
-  train west of Ashburn sit just outside the station extents, so the box
-  above is widened by ~2 px beyond them to hold those rows.
+Jade picked B on 2026-10-31. It crops west of Wiehle-Reston East,
+dropping six stations (Reston Town Center, Herndon, Innovation Center,
+Dulles Airport, Loudoun Gateway, Ashburn) and clipping the three Silver
+trains that happen to be on that tail, at the west edge. It buys 24
+percent more detail and lands the mass center 3 px from panel center.
+Its east edge is as tight as A's (column 63), so the gain is the
+vertical bands, not the horizontal margin; the westernmost in-frame
+column moves to 12. The tail cannot be un-polled the way the Staten
+Island Railway was: one feed carries the whole rail system, so the
+crop is viewport-only and a later widening is a bbox edit.
 
-- B crops west of Wiehle-Reston East. It drops six stations (Reston Town
-  Center, Herndon, Innovation Center, Dulles Airport, Loudoun Gateway,
-  Ashburn) and clips the three Silver trains that happen to be on that
-  tail, at the west edge. It buys 24 percent more detail and lands the
-  mass center 3 px from the panel center. Its east edge is as tight as
-  A's (column 63), so only the vertical bands get better, not the
-  horizontal margin. The tail cannot be un-polled the way the Staten
-  Island Railway was: one feed carries the whole rail system.
+A was rejected for the 9-10 px of black band at the top and bottom and
+a dot mass 9.5 px right of panel center, with no detail gained for the
+space. Recorded here because it is the box to restore if the Loudoun
+tail is ever wanted back.
 
 Both frames were rendered from one 21:08 payload, with the static-GTFS
 network skeleton beside the live dots, and the pixel stats above come
-from those rasters. The frame is Jade's pick; B is the one this page
-recommends.
+from those rasters. At implementation time the box must be re-verified
+on live data: every served row inside, and any row past the west edge
+named as the documented Loudoun clip.
 
 ## Per-component changes
 
@@ -175,7 +199,7 @@ written on the open CTA and TriMet PRs.
 
 | Component | Change | Size |
 |---|---|---|
-| `agencies.json` | One `gtfs-rt` entry `wmata`: `feeds` = the rail VehiclePositions URL, `api_key_env` = `WMATA_API_KEY`, `api_key_param` = `api_key`, `static_gtfs` = the rail static zip, `allowance_note` = the Default-tier limits, `bbox` per the chosen frame | small |
+| `agencies.json` | One `gtfs-rt` entry `wmata`: `feeds` = the rail VehiclePositions URL, `api_key_env` = `WMATA_API_KEY`, `api_key_param` = `api_key`, `static_gtfs` = the rail static zip, `allowance_note` = the Default-tier limits, `bbox` = the chosen B frame (with `drop_route_ids` once decided) | small |
 | `proxy.py` | Apply `api_key_env`/`api_key_param` to the `static_gtfs` fetch in `refresh_routes`, not only to the feeds (today's CTA work keys the feeds only). Optional palette override for `NR`, or a `drop_route_ids` field | ~10 lines + one test |
 | `server/.env.example` | `WMATA_API_KEY` line and its role | trivial |
 | `gtfs_rt.py` | None. Position-first and `vehicle.id`-first already shipped with Metro Transit | none |
@@ -256,11 +280,12 @@ recorded with it; a live deployment needs the free personal key.
 2. Land PR #7 (registry key fields) or branch off PR #10. Add the
    static-zip key change, the `wmata` registry entry, and the fixture
    test. Half a day.
-3. Pick the viewport from the two rendered candidates, then verify on
-   live data that every served row falls inside the box and name any
-   row that clips. Quarter day.
-4. Decide the `NR` rule: drop the six non-revenue rows, or recolor the
-   `B` fallback key to Metro gray (registry-only, no code). Ten minutes.
+3. Verify the chosen B box on live data: every served row inside, and
+   any row past the west edge named as the documented Loudoun clip.
+   Quarter day.
+4. Apply the `NR` rule. Recommend `drop_route_ids: ["NR"]`; a palette
+   override on `B` is the zero-code fallback. Ten minutes plus a test
+   asserting an `NR` row never reaches the wire.
 5. Deploy to Jade's own wall. Skip the hosted multi-tenant proxy until
    WMATA authorizes it in writing.
 
