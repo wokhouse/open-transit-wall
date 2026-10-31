@@ -95,6 +95,20 @@ Everything else is routine. Measured detail below.
 - Trap: the sibling `ttc-routes-and-schedules` resource (the URL
   Transitland used through mid-2026) now returns a 22-byte EMPTY zip with
   HTTP 200. Fetch-by-header is blind to it. Use the merged package.
+- 2026-10-31 afternoon re-probe: the `ttc.ca/open_data` mirror of this
+  resource has gone 404 (it served 67.5 MB that morning). The CKAN
+  resource above did not move: 3/3 fetches at 67,548,989 bytes, ~2 s
+  each. The registry points at CKAN, never the mirror.
+- The city's other live surface static package (`SurfaceGTFS.zip`,
+  dataset `bd4809dd`) serves real bytes (66 MB) but nests every file
+  under a `GTFSExport - Copy/` directory inside the zip, so the proxy's
+  flat `routes.txt`/`stops.txt` reads would find nothing. Not usable
+  without new code; the merged package needs none.
+- Trap: live route ids `124`, `200`, `201`, `202`, `203` appear in the
+  vehicle feed at real road positions but in neither published static
+  package. `classify` treats an unknown id as an ordinary bus row, so
+  those vehicles stay on the wall as generic dots instead of vanishing.
+  Pinned by the fixture tests; no code.
 - One agency (`TTC`, `America/Toronto`). 230 routes, every one with
   `route_short_name` and `route_color`. Route types: 3 subway (Line 1
   `D5C82B`, Line 2 `008000`, Line 4 `B300B3`), 18 streetcar/LRT (Line 5
@@ -159,21 +173,44 @@ pass follows the usual preview process):
   -79.65..-79.12 W). The bus network reaches far into Mississauga,
   Markham, Vaughan, and Scarborough.
 
-A core-city frame near 20 km keeps every streetcar and most peak buses.
+A core-city frame near 20 km keeps every streetcar; it keeps a measured
+59% of Saturday peak buses, not "most" — the outer branches (Vaughan,
+Scarborough, Pearson, Mississauga) are a third of the live fleet.
 The cap, not the frame, is what counts rows: the proxy serves every
 vehicle the agency reports, and the firmware counts payload rows, not
 in-frame rows. A deliberately cropped TTC configuration cannot dodge the
 cap without new code.
 
+### The shipped v1 frame
+
+The registry bbox is a 23 km true square centered on the recorded
+streetcar span (live 2026-10-31 14:36: 10.5 km N-S x 20.4 km E-W,
+185 cars): `43.53828..43.74489 N, -79.55065..-79.26514 W`. The
+streetcar network sizes the frame; it must stay wholly inside
+(3.8 px minimum margin), and the test pins that.
+
+Measured against the same full recording: 712/1,212 rows in frame
+(59%), streetcars 185/185. Clipping is intentional at three edges —
+north 392 rows (max 51 px beyond), west 65 (21 px), east 43 (8 px) —
+and zero rows sit south of the south edge; the test encodes exactly
+that shape. A live `--once --agency ttc` at 16:35 served 1,209 wire
+rows (48.6 KB); the simulator drew 707 in-frame and reported 502
+outside, matching the sweep. The rasterized grid check passed: px rows
+30-37 carry the King/Queen/Dundas streetcar bands and px cols 32-35
+carry the Yonge/University corridor. At 359 m/px the streetcar lines
+resolve one pixel per corridor and the surface fleet reads sparse; a
+full-network frame (41.4 km) was rejected — it would put every corridor
+inside one pixel and cost nothing on the cap.
+
 ## Per-component changes
 
 | Component | Change | Size |
 |---|---|---|
-| `agencies.json` | One `ttc` `gtfs-rt` entry: `feeds` = the single vehicle-positions URL, `static_gtfs` = the merged CKAN zip, bbox from the viewport pass | small |
+| `agencies.json` | Landed: one `ttc` `gtfs-rt` entry: `feeds` = the single vehicle-positions URL, `static_gtfs` = the merged CKAN zip, bbox = the shipped v1 frame above | small |
 | `gtfs_rt.py` | None. Position-first and `vehicle.id`-first (PR #5) already fit this feed exactly | none |
 | `proxy.py` | None. Keyless, `application/x-protobuf`, decode-by-content already handled | none |
 | `classify.py` | None; verified against the static routes.txt and live ids above | none |
-| Fixtures + tests | Record the vehicle-positions bytes now (already probed, no key needed) plus a small static slice; same offline rule as MTA/Metro | small |
+| Fixtures + tests | Landed: `fixtures/ttc_vehiclepositions.pb` (subset re-encode of one recorded feed response, 2026-10-31) + `fixtures/ttc_routes.txt` slice; offline rule same as MTA/Metro | small |
 | Cached tables | `routes_ttc.json` and `stations_ttc.json` generate from the merged zip at runtime | automatic |
 | Firmware | Raised `MAX_VEHICLES` + on-wall heap measurement at ~1,600 rows. Shared with the MTA bus and CTA bus phases; that work is the gate, and this doc adds a third stakeholder | shared risk |
 | Flasher | Nothing; the dropdown reads `/agencies` | none |
@@ -181,14 +218,15 @@ cap without new code.
 
 ## Phasing
 
-1. Do not register the TTC before the shared cap/heap spike lands (the
-   MTA bus phase owns it). Until then, a registered TTC wall silently
-   loses rows past the compiled cap at peak.
-2. After the cap lands: registry entry + fixture test, then the viewport
-   pass. About half a day, because the parser needs nothing. No keyed
-   probe or manual key application is needed at any step - that is what
-   makes the TTC cheaper to land than CTA or TriMet, if the cap work is
-   already done.
+1. The registry entry, fixtures, tests, and v1 frame landed on this
+   branch; the parser needed nothing. What still waits on the shared
+   cap/heap spike (the MTA bus phase owns it) is the DEPLOY step: until
+   the cap moves, an enabled TTC wall silently loses rows past the
+   compiled cap at peak (Saturday already exceeds it: 1,212 live rows).
+2. Deploy after the cap lands: add `ttc` to `SERVED_AGENCIES` in the
+   DigitalOcean console. No key, no other config. The frame was set and
+   verified before deploy; composition changes (a tighter core, per-mode
+   filters) are post-cap decisions behind the usual preview pass.
 3. Subway: watch `gtfsrt.ttc.ca/release-notes` for a future subway
    vehicle-positions release. Nothing to build today.
 4. Line 5 Eglinton and Line 6 Finch West LRT: already classified

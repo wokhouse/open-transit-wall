@@ -1,0 +1,27 @@
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
+29,1,29,Dufferin,,3,,ED1C24,FFFFFF
+38,1,38,Highland Creek,,3,,ED1C24,FFFFFF
+52,1,52,Lawrence West,,3,,ED1C24,FFFFFF
+84,1,84,Sheppard West,,3,,ED1C24,FFFFFF
+85,1,85,Sheppard East,,3,,ED1C24,FFFFFF
+86,1,86,Scarborough,,3,,ED1C24,FFFFFF
+95,1,95,York Mills,,3,,ED1C24,FFFFFF
+96,1,96,Wilson,,3,,ED1C24,FFFFFF
+102,1,102,Markham Rd,,3,,ED1C24,FFFFFF
+116,1,116,Morningside,,3,,ED1C24,FFFFFF
+129,1,129,McCowan North,,3,,ED1C24,FFFFFF
+133,1,133,Neilson,,3,,ED1C24,FFFFFF
+165,1,165,Weston Rd North,,3,,ED1C24,FFFFFF
+501,1,501,Queen,,0,,ED1C24,FFFFFF
+503,1,503,Kingston Rd,,0,,ED1C24,FFFFFF
+504,1,504,King,,0,,ED1C24,FFFFFF
+505,1,505,Dundas,,0,,ED1C24,FFFFFF
+506,1,506,Carlton,,0,,ED1C24,FFFFFF
+507,1,507,Long Branch,,0,,ED1C24,FFFFFF
+509,1,509,Harbourfront,,0,,ED1C24,FFFFFF
+510,1,510,Spadina,,0,,ED1C24,FFFFFF
+511,1,511,Bathurst,,0,,ED1C24,FFFFFF
+512,1,512,St Clair,,0,,ED1C24,FFFFFF
+905,1,905,Eglinton East Express,,3,,00A651,FFFFFF
+906,1,906,Airport-Humber College Express,,3,,00A651,FFFFFF
+927,1,927,Highway 27 Express,,3,,00A651,FFFFFF

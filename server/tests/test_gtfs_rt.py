@@ -1,9 +1,13 @@
-"""Tests for the gtfs-rt upstream (MTA NYCT and Metro Transit).
+"""Tests for the gtfs-rt upstream (MTA NYCT, Metro Transit, and the TTC).
 
 Fixtures are recorded live responses: division feeds and the Metro
 vehicle-positions feed (raw protobuf), and static routes.txt/stops.txt.
 Metro is placed by its reported coordinates, so no Metro stops fixture is
 needed; the station-snap path is exercised through the MTA fixtures.
+The TTC fixture re-encodes a subset of one recorded feed response
+(header preserved; all 185 then-live streetcar rows, 30 sampled buses,
+two rows beyond each cropping edge, and the one route-less entity the
+probe contained) — see docs/ttc-toronto-feasibility.md.
 No test touches the network.
 """
 
@@ -241,3 +245,124 @@ def test_metro_compact_wire_rows():
     assert len({v["i"] for v in vehicles}) == len(vehicles)  # one dot per fleet number
     wire = to_wire(vehicles)
     assert all(len(row) == 4 and isinstance(row[3], int) for row in wire)
+
+
+# --- TTC (Toronto): surface-only and position-first, with no API key at
+#     any endpoint (docs/ttc-toronto-feasibility.md) ---
+
+def test_ttc_registry_entry():
+    cfg = load_registry()["ttc"]
+    assert cfg["source"] == "gtfs-rt"
+    assert all(url.startswith("https://gtfsrt.ttc.ca/") for url in cfg["feeds"].values())
+    # the city's CKAN: the ttc.ca/open_data mirror of this resource 404s
+    assert cfg["static_gtfs"].startswith("https://ckan0.cf.opendata.inter.prod-toronto.ca/")
+
+
+def _ttc_records():
+    return gtfs_rt.parse_rt((FIXTURES / "ttc_vehiclepositions.pb").read_bytes())
+
+
+def test_parse_rt_ttc_keeps_geolocated_fleet():
+    records = _ttc_records()
+    assert len(records) >= 200
+    assert all(r["line"] and r["id"] and r["lat"] is not None for r in records)
+    # the recorded response carried exactly one entity with no trip and no
+    # route: a surface vehicle outside any recorded trip. parse_rt drops it.
+    feed = gtfs_realtime_pb2.FeedMessage()
+    feed.ParseFromString((FIXTURES / "ttc_vehiclepositions.pb").read_bytes())
+    routeless = [e for e in feed.entity
+                 if e.HasField("vehicle")
+                 and not (e.vehicle.trip.trip_id or e.vehicle.trip.route_id)]
+    assert len(routeless) == 1
+    assert len(records) == len(feed.entity) - len(routeless)
+
+
+def test_parse_rt_ttc_identity_is_the_fleet_number():
+    """Output ids come from vehicle.id, never trip_id: one TTC car keeps
+    one dot across trips. Decode the raw feed to compare the id sources.
+    The ids are plain car numbers (<= 6 digits)."""
+    feed = gtfs_realtime_pb2.FeedMessage()
+    feed.ParseFromString((FIXTURES / "ttc_vehiclepositions.pb").read_bytes())
+    vehicle_ids = {e.vehicle.vehicle.id for e in feed.entity
+                   if e.HasField("vehicle") and e.vehicle.vehicle.id}
+    trip_ids = {e.vehicle.trip.trip_id for e in feed.entity
+                if e.HasField("vehicle") and e.vehicle.trip.trip_id}
+    ids = {r["id"] for r in _ttc_records()}
+    assert len(ids) >= 200
+    assert ids <= vehicle_ids
+    assert not (ids & trip_ids)
+    assert all(i.isdigit() and len(i) <= 6 for i in ids)
+
+
+def test_ttc_frame_holds_the_streetcar_network_inside():
+    """The shipped bbox is a 23 km true square centered on the recorded
+    streetcar span: the streetcar network sizes the frame, and it must
+    stay wholly inside. The bus network reaches past three named edges
+    (over the full 1,212-row recording: north 392 rows up to 51 px
+    beyond, west 65 up to 21 px, east 43 up to 8 px); no recorded row
+    is south of the south edge at all. Those rows still count against
+    MAX_VEHICLES on the wall; the frame only hides them (see the doc)."""
+    bbox = load_registry()["ttc"]["bbox"]
+    routes = parse_routes_txt((FIXTURES / "ttc_routes.txt").read_text())
+    km_per_px = 23.0 / 64
+    out = {"N": 0, "S": 0, "W": 0, "E": 0}
+    far = {"N": 0.0, "W": 0.0, "E": 0.0}
+    streetcars = kept = 0
+    for r in _ttc_records():
+        kept += 1
+        if routes.get(r["line"], {}).get("type") == 0:  # streetcar
+            streetcars += 1
+            assert bbox["lat_min"] < r["lat"] < bbox["lat_max"]
+            assert bbox["lon_min"] < r["lon"] < bbox["lon_max"]
+            continue
+        if r["lat"] > bbox["lat_max"]:
+            out["N"] += 1
+            far["N"] = max(far["N"], (r["lat"] - bbox["lat_max"]) * 111.32)
+        elif r["lat"] < bbox["lat_min"]:
+            out["S"] += 1
+        elif r["lon"] < bbox["lon_min"]:
+            out["W"] += 1
+            far["W"] = max(far["W"], (bbox["lon_min"] - r["lon"]) * 80.6)
+        elif r["lon"] > bbox["lon_max"]:
+            out["E"] += 1
+            far["E"] = max(far["E"], (r["lon"] - bbox["lon_max"]) * 80.6)
+    assert kept >= 200
+    assert streetcars >= 180
+    assert out["S"] == 0
+    assert out["N"] and out["W"] and out["E"]
+    assert far["N"] <= 55 * km_per_px
+    assert far["W"] <= 25 * km_per_px
+    assert far["E"] <= 12 * km_per_px
+
+
+def test_ttc_route_colors_and_style_keys():
+    routes = parse_routes_txt((FIXTURES / "ttc_routes.txt").read_text())
+    # 505: a GTFS type 0 route with its own published color, so it takes
+    # the metro-style code like the subway and the Twin Cities lines.
+    q = classify("505", routes)
+    assert q["code"] == "M" and q["key"] == "M:505"
+    assert q["rgb"] == (0xED, 0x1C, 0x24)
+    # 905/927: buses whose static long names carry "EXPRESS" -> red
+    assert classify("905", routes)["key"] == "R"
+    assert classify("927", routes)["key"] == "R"
+    # 29: an ordinary bus
+    assert classify("29", routes)["code"] == "B"
+
+
+def test_ttc_compact_wire_rows_including_rt_only_ids():
+    """Full compact pass: position-first placement, no station snap.
+    Route ids 124 and 200-203 appear in the live vehicle feed but in
+    neither published static package (measured 2026-10-31); classify
+    treats an unknown id as an ordinary bus, so a positionally known
+    vehicle stays on the wall as a generic row instead of vanishing."""
+    routes = parse_routes_txt((FIXTURES / "ttc_routes.txt").read_text())
+    raw = [{"line": r["line"], "lat": r["lat"], "lon": r["lon"],
+            "bearing": None, "direction": "", "id": r["id"]}
+           for r in _ttc_records()]
+    vehicles = compact_vehicles(raw, routes)
+    assert len(vehicles) == len(raw)
+    by = {v["r"]: v for v in vehicles}
+    assert by["200"]["t"] == "B" and by["201"]["t"] == "B"
+    assert by["505"]["t"] == "M:505" and by["501"]["t"] == "M:501"
+    wire = to_wire(vehicles)
+    assert all(len(row) == 4 and row[3] >= 0 for row in wire)
