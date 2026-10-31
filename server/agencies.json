@@ -4,6 +4,11 @@
     "siri_agency": "SF",
     "bbox": {"lat_min": 37.705, "lat_max": 37.810, "lon_min": -122.512, "lon_max": -122.385}
   },
+  "mta": {
+    "name": "NYC Subway (MTA)",
+    "source": "mta-rt",
+    "bbox": {"lat_min": 40.5093, "lat_max": 40.9066, "lon_min": -74.2658, "lon_max": -73.7416}
+  },
   "ct": {
     "name": "Caltrain",
     "siri_agency": "CT",

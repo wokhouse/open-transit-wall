@@ -98,7 +98,9 @@
 #define POLL_INTERVAL_MS 12000UL  // ESP32-side refresh; proxy rate-limits 511 itself
 #define STALE_AFTER_POLLS 3       // status pixel goes amber after this many failed polls
 
-#define MAX_VEHICLES 800          // live SFMTA feed observed ~676 vehicles
+#define MAX_VEHICLES 1200         // sized for the largest served fleet: MTA NYC subway
+                                  // observed 584 trains off-peak, weekday peak order ~1k
+                                  // (SFMTA, the other reference fleet, runs ~676)
 
 // --- Per-vehicle motion ------------------------------------------------------
 // The proxy publishes positions every POLL_SECONDS and advertises the exact

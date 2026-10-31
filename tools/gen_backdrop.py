@@ -120,13 +120,32 @@ def point_in_land(polygon, lat, lon):
     return inside
 
 
+def _as_polygons(polygon):
+    """Normalize any geo.py LAND_POLYGONS shape to a list of polygons, each a
+    list of rings (outer first, then holes). Accepts a bare ring (sf), a list
+    of rings, or a list of ring-lists (NYC)."""
+    if isinstance(polygon[0], tuple):
+        return [[polygon]]
+    if isinstance(polygon[0][0], tuple):
+        return [polygon]
+    return list(polygon)
+
+
 def rasterize(bbox, polygon, width, height, stretch=False):
+    """Land=0 / water=1 index per pixel. Holes are honored: a pixel is land
+    when it falls inside an odd number of rings of any one polygon."""
     if polygon is None:
         return [1] * (width * height)  # no shoreline traced: all water
-    return [
-        0 if point_in_land(polygon, *pixel_to_latlon(bbox, width, height, px, py, stretch)) else 1
-        for py in range(height) for px in range(width)
-    ]
+    polygons = _as_polygons(polygon)
+    out = []
+    for py in range(height):
+        for px in range(width):
+            lat, lon = pixel_to_latlon(bbox, width, height, px, py, stretch)
+            land = any(
+                sum(point_in_land(ring, lat, lon) for ring in rings) % 2 == 1
+                for rings in polygons)
+            out.append(0 if land else 1)
+    return out
 
 
 def rle_encode(indices):
