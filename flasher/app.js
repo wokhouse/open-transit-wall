@@ -12,6 +12,7 @@ const els = {
   serverUrl: $('server-url'), serverPreset: $('server-preset'),
   btnDiscover: $('btn-discover'), discoverState: $('discover-state'),
   agency: $('agency'), agencyManual: $('agency-manual'),
+  rot: $('rot'), rotwrap: $('rotwrap'),
   ssid: $('ssid'), pass: $('pass'),
   mqttSection: $('mqtt-section'),
   mhost: $('mhost'), mport: $('mport'), muser: $('muser'), mpass: $('mpass'),
@@ -149,7 +150,9 @@ async function ask(cmd, idleMs, maxMs) {
 
 // ---------- banner / board state ----------
 
-let board = null;  // { fw, stored: {ssid, passSet, host, scheme, port, agency, mhost, mport, muser} | null }
+let board = null;  // { fw, stored: {ssid, passSet, host, scheme, port, agency, mhost, mport, muser, rot} | null }
+
+const ROTATIONS = ['0', '90', '180', '270'];
 
 async function readBanner() {
   await sendLine('');  // any serial activity makes the firmware print the banner
@@ -161,14 +164,15 @@ async function readBanner() {
     if (m) { board.fw = Number(m[1]); sawBanner = true; }
     if (line.startsWith('UNPROVISIONED') || line === 'STORED none') board.stored = null;
     // scheme/port/agency can be empty strings in the firmware's printf.
-    // The m*/b* tail only appears on protocol v3+ boards (bmin/bmax on v4).
-    m = line.match(/^STORED ssid=(.*?) pass=(set|empty) host=(\S*) scheme=(\S*) port=(\d*) agency=(\S*)(?: mhost=(\S*) mport=(\d*) muser=(\S*) mpass=(set|empty)(?: bmin=(\d*) bmax=(\d*))?)?$/);
+    // The m*/b*/rot tail only appears on protocol v3+ boards (bmin/bmax on
+    // v4, rot on v6).
+    m = line.match(/^STORED ssid=(.*?) pass=(set|empty) host=(\S*) scheme=(\S*) port=(\d*) agency=(\S*)(?: mhost=(\S*) mport=(\d*) muser=(\S*) mpass=(set|empty)(?: bmin=(\d*) bmax=(\d*)(?: rot=(\d*))?)?)?$/);
     if (m) {
       board.stored = {
         ssid: m[1], passSet: m[2] === 'set', host: m[3],
         scheme: m[4], port: Number(m[5]), agency: m[6],
         mhost: m[7] ?? '', mport: Number(m[8] || 0), muser: m[9] ?? '',
-        bmin: m[11] ?? '', bmax: m[12] ?? '',
+        bmin: m[11] ?? '', bmax: m[12] ?? '', rot: Number(m[13] || 0),
       };
     }
   }
@@ -193,6 +197,11 @@ async function readBanner() {
       }
       m = line.match(/^STATUS agency=([a-z0-9]+|\(unset\))$/);
       if (m && board.stored) board.stored.agency = m[1] === '(unset)' ? '' : m[1];
+      m = line.match(/^STATUS rot=(\d+)$/);
+      if (m) {
+        board.stored = board.stored || {};
+        board.stored.rot = Number(m[1]);
+      }
       m = line.match(/^STATUS mqtt=(\S+):(\d+) (connected|down)$/);
       if (m && board.stored) {
         board.stored.mhost = m[1];
@@ -233,6 +242,10 @@ async function readBanner() {
     if (board.stored.bmax && Number(board.stored.bmax) !== 255) {
       els.bmax.value = String(Math.round((Number(board.stored.bmax) * 100) / 255));
     }
+    // Rotation is stored in degrees, and the select's option values are the
+    // same strings — prefill, but ignore anything that is not a quarter turn.
+    const rot = String(board.stored.rot ?? 0);
+    if (ROTATIONS.includes(rot)) els.rot.value = rot;
     provLog('prefilled from the board — change anything and send.');
   } else {
     provLog('board is unprovisioned — fill the form and send.');
@@ -240,9 +253,11 @@ async function readBanner() {
   // The section is open to everyone (the settings are part of the page, and
   // Save stays disabled until a board is connected). It only closes itself
   // for a board that speaks protocol v2 or older: that firmware answers
-  // ERR unknown key to the m* keys. The brightness window needs v4.
+  // ERR unknown key to the m* keys. The brightness window needs v4, the
+  // rotation select v6.
   els.mqttSection.hidden = board.fw < 3;
   els.bwindow.hidden = board.fw < 4;
+  els.rotwrap.hidden = board.fw < 6;
   enableProvisioning();
 }
 
@@ -345,6 +360,15 @@ els.btnSave.onclick = async () => {
       setBusy(false); return;
     }
     cmds.push(`set agency=${agency}`);
+  }
+  // Panel rotation (protocol v6). Not a network setting, but it travels with
+  // them: `set` turns the wall at once and `save` keeps it across reboots.
+  if (board && board.fw >= 6) {
+    if (!ROTATIONS.includes(els.rot.value)) {
+      provLog(`rotation "${els.rot.value}" is not 0, 90, 180 or 270.`);
+      setBusy(false); return;
+    }
+    cmds.push(`set rot=${els.rot.value}`);
   }
   // Optional Home Assistant link (protocol v3+; v5 finds the broker via
   // mDNS when mhost is empty). Only send what differs from what the

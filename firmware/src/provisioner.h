@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-#define OTW_FW_VERSION 5
+#define OTW_FW_VERSION 6
 
 // Load the stored values into RAM (call once, before any WiFi use).
 void provLoad();
@@ -38,3 +38,6 @@ const char *provMqttPass();
 // range. See docs/brightness-plan.md.
 uint8_t provBmin();
 uint8_t provBmax();
+// How the panel is mounted, in degrees clockwise: 0 (default), 90, 180 or
+// 270. The screen layer turns every pixel by this much; see screen.h.
+uint16_t provRotation();

@@ -2,8 +2,9 @@
 //
 // ESP32-WROOM-32E + Waveshare RGB-Matrix-Px-64x64 (HUB75). Polls the mini-
 // proxy for compact vehicle positions and plots them on the LED wall. One
-// binary is flashed to every wall: WiFi credentials, the proxy endpoint, and
-// the agency id are provisioned over WebSerial and kept in NVS
+// binary is flashed to every wall: WiFi credentials, the proxy endpoint, the
+// agency id, the Home Assistant link, and the panel's mounting rotation are
+// provisioned over WebSerial and kept in NVS
 // (src/provisioner.h, docs/provisioning-protocol.md). No secrets.h, no
 // per-wall build.
 //
@@ -69,7 +70,22 @@ static_assert(DISPLAY_W <= 127 && DISPLAY_H <= 127,
 static bool seen[MAX_VEHICLES];
 static int16_t slotOrder[MAX_VEHICLES];  // shuffled glide-slot assignment
 
+// The payload's bbox is the projection's source of truth (agency re-provision
+// or a registry edit server-side). Kept at file scope so a rotation change —
+// which reshapes the logical frame on a non-square wall — can re-init the
+// projection without waiting for the next poll.
+static float curBbox[4] = {0, 0, 0, 0};
+static bool haveBbox = false;
+
 static void drawStatusPixel();
+
+// (Re)initialize the projection from the last bbox onto the current logical
+// frame. A 90/270 turn on a non-square tiled wall swaps that frame's width
+// and height, so this runs on a bbox change and on a rotation change.
+static void beginProjection() {
+  BBox bbox = {curBbox[0], curBbox[1], curBbox[2], curBbox[3]};
+  projection.begin(bbox, screen.width(), screen.height(), MAP_STRETCH_TO_FILL);
+}
 
 // Brightness setter handed to ha_link: MQTT commands land here.
 // Brightness last commanded to the panel. 0 means "off": the map goes dark
@@ -118,7 +134,7 @@ static void drawSplashFrame();  // defined with the screen helpers below
 // is one write. (1,0) belongs to the data status pixel — a dot landing
 // there is overpainted by the per-frame drawStatusPixel() anyway.
 static void clearMapPixel(int x, int y) {
-  if (x < 0 || y < 0 || x >= DISPLAY_W || y >= DISPLAY_H) {
+  if (x < 0 || y < 0 || x >= screen.width() || y >= screen.height()) {
     return;
   }
   screen.drawPixel(x, y, 0, 0, 0);
@@ -428,6 +444,42 @@ static void showScreen(ErrorKind kind) {
   }
 }
 
+// Re-lay the whole frame after the orientation changed. Every pixel's
+// physical position moved, so nothing on the panel can be patched
+// incrementally: wipe and draw whatever the wall was showing again.
+static void repaintAfterRotation() {
+  screen.clear();
+  switch (shownError) {
+    case ERR_SPLASH:
+      showSplashFrame(putScreenPixel, nullptr, &splashState);
+      break;
+    case ERR_PROVISION:
+      showSetupNeeded(putScreenPixel, nullptr);
+      break;
+    case ERR_WIFI:
+      showWifiError(putScreenPixel, nullptr);
+      break;
+    case ERR_SERVER:
+      showServerError(putScreenPixel, nullptr);
+      break;
+    case ERR_AGENCY:
+      showAgencyError(putScreenPixel, nullptr);
+      break;
+    case ERR_NONE:
+    default:
+      // Map: the dots were painted under the old orientation. Drop them and
+      // re-merge the current snapshot so the wall is right at once instead
+      // of waiting for the next poll.
+      activeCount = 0;
+      if (panelBrightness == 0) {
+        break;  // off frame: it repaints itself every frame, and mapDirty
+                // brings the map back when brightness returns
+      }
+      mergeVehicles(millis(), 0.0f, 60);
+      break;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(200);
@@ -447,6 +499,12 @@ void setup() {
   drawSplashFrame();
 
   provLoad();
+  // Mounting orientation comes from NVS as well. If it is not 0 the splash
+  // just drawn is sideways — wipe it and draw it again.
+  if (screen.setRotation(provRotation())) {
+    screen.clear();
+    drawSplashFrame();
+  }
   // The panel brightness the user last set from Home Assistant (if ever)
   // lives in NVS; restore it before anything is drawn. With no stored
   // value this is DISPLAY_BRIGHTNESS again — no behavior change for walls
@@ -479,6 +537,17 @@ void loop() {
   // while the wall runs (a corrected password takes effect on the next
   // connect attempt without a reboot).
   provPumpSerial();
+
+  // A live `set rot=` takes effect here, before any early return (the setup
+  // screen can be rotated too): Screen reports the change and the whole
+  // frame is re-laid.
+  if (screen.setRotation(provRotation())) {
+    Serial.printf("[screen] rotation %u deg\n", (unsigned)screen.rotation());
+    if (haveBbox) {
+      beginProjection();  // a quarter turn can reshape the logical frame
+    }
+    repaintAfterRotation();
+  }
 
   // Home Assistant link: no-op unless a broker was provisioned. Runs every
   // loop so keepalive and brightness commands land between polls.
@@ -532,12 +601,11 @@ void loop() {
     // The payload's bbox is the projection's source of truth. Re-init when
     // it changes (agency re-provision, or a registry edit server-side);
     // pixel positions under the old bbox are no longer meaningful.
-    static float curBbox[4] = {0, 0, 0, 0};
-    bool bboxChanged = memcmp(curBbox, poll.bbox, sizeof(curBbox)) != 0;
+    bool bboxChanged = !haveBbox || memcmp(curBbox, poll.bbox, sizeof(curBbox)) != 0;
     if (bboxChanged) {
       memcpy(curBbox, poll.bbox, sizeof(curBbox));
-      BBox bbox = {poll.bbox[0], poll.bbox[1], poll.bbox[2], poll.bbox[3]};
-      projection.begin(bbox, DISPLAY_W, DISPLAY_H, MAP_STRETCH_TO_FILL);
+      haveBbox = true;
+      beginProjection();
       if (activeCount > 0) {
         // Old dots sit at pixels from the previous bbox: wipe them all.
         for (int i = 0; i < activeCount; i++) {

@@ -47,6 +47,9 @@ static char curMport[8] = "";
 // src/ha_link.cpp and docs/brightness-plan.md.
 static char curBmin[4] = "";
 static char curBmax[4] = "";
+// Panel mounting orientation in degrees clockwise: 0 / 90 / 180 / 270, with
+// anything else (including empty) meaning 0. Screen applies it per pixel.
+static char curRot[4] = "";
 
 // A line buffer with no complete line yet.
 static String partial;
@@ -82,6 +85,15 @@ static uint8_t bvalOf(const char *b, uint8_t dflt) {
   return (uint8_t)v;
 }
 
+// Parse a stored/live rotation; anything that is not a quarter turn is 0.
+static uint16_t rotOf(const char *r) {
+  int v = String(r).toInt();
+  if (v == 90 || v == 180 || v == 270) {
+    return (uint16_t)v;
+  }
+  return 0;
+}
+
 static void printStored() {
   String ssid = prefs.getString("ssid", "");
   if (ssid.length() == 0) {
@@ -89,7 +101,7 @@ static void printStored() {
     return;
   }
   Serial.printf("STORED ssid=%s pass=%s host=%s scheme=%s port=%s agency=%s"
-                " mhost=%s mport=%s muser=%s mpass=%s bmin=%s bmax=%s\n",
+                " mhost=%s mport=%s muser=%s mpass=%s bmin=%s bmax=%s rot=%u\n",
                 ssid.c_str(),
                 prefs.getString("pass", "").length() ? "set" : "empty",
                 prefs.getString("host", "").c_str(),
@@ -101,7 +113,8 @@ static void printStored() {
                 prefs.getString("muser", "").c_str(),
                 prefs.getString("mpass", "").length() ? "set" : "empty",
                 prefs.getString("bmin", "").c_str(),
-                prefs.getString("bmax", "").c_str());
+                prefs.getString("bmax", "").c_str(),
+                (unsigned)rotOf(prefs.getString("rot", "").c_str()));
 }
 
 static void printHelp() {
@@ -117,7 +130,8 @@ static void printHelp() {
   Serial.println("CMD set mpass=<mqtt password>");
   Serial.println("CMD set bmin=<brightness floor 0-255, empty means 0>");
   Serial.println("CMD set bmax=<brightness ceiling 0-255, empty means 255>");
-  Serial.println("CMD get ssid|pass|host|scheme|port|agency|mhost|mport|muser|mpass|bmin|bmax|all");
+  Serial.println("CMD set rot=<0|90|180|270, degrees clockwise, empty means 0>");
+  Serial.println("CMD get ssid|pass|host|scheme|port|agency|mhost|mport|muser|mpass|bmin|bmax|rot|all");
   Serial.println("CMD status | save | erase | reboot | help");
 }
 
@@ -136,6 +150,7 @@ static void printStatus() {
     Serial.println("STATUS proxy=(unset)");
   }
   Serial.printf("STATUS agency=%s\n", curAgency[0] ? curAgency : "(unset)");
+  Serial.printf("STATUS rot=%u\n", (unsigned)provRotation());
   if (curMhost[0]) {
     Serial.printf("STATUS mqtt=%s:%u %s\n", curMhost, mqttPortOf(curMport),
                   haConnected() ? "connected" : "down");
@@ -267,8 +282,17 @@ static void cmdSet(const String &arg) {
     val.toCharArray(dst, cap);
     Serial.printf("OK %s=%s (send save to persist)\n", isMin ? "bmin" : "bmax",
                   dst);
+  } else if (key == "rot") {
+    // Only the four mounts a panel can have. Empty restores 0.
+    if (n && val != "0" && val != "90" && val != "180" && val != "270") {
+      Serial.println("ERR rot must be 0, 90, 180 or 270 (empty means 0)");
+      return;
+    }
+    val.toCharArray(curRot, sizeof(curRot));
+    Serial.printf("OK rot=%u (send save to persist)\n",
+                  (unsigned)rotOf(curRot));
   } else {
-    Serial.println("ERR unknown key (try: ssid pass host scheme port agency mhost mport muser mpass bmin bmax)");
+    Serial.println("ERR unknown key (try: ssid pass host scheme port agency mhost mport muser mpass bmin bmax rot)");
   }
 }
 
@@ -303,6 +327,8 @@ static void cmdGet(const String &arg) {
     Serial.printf("VAL bmin=%u\n", (unsigned)bvalOf(curBmin, 0));
   } else if (arg == "bmax") {
     Serial.printf("VAL bmax=%u\n", (unsigned)bvalOf(curBmax, 255));
+  } else if (arg == "rot") {
+    Serial.printf("VAL rot=%u\n", (unsigned)rotOf(curRot));
   } else if (arg == "all" || arg.length() == 0) {
     cmdGet("ssid");
     cmdGet("pass");
@@ -316,8 +342,9 @@ static void cmdGet(const String &arg) {
     cmdGet("mpass");
     cmdGet("bmin");
     cmdGet("bmax");
+    cmdGet("rot");
   } else {
-    Serial.println("ERR unknown key (try: ssid pass host scheme port agency mhost mport muser mpass bmin bmax all)");
+    Serial.println("ERR unknown key (try: ssid pass host scheme port agency mhost mport muser mpass bmin bmax rot all)");
   }
 }
 
@@ -351,6 +378,7 @@ static void handleLine(String line) {
     prefs.putString("mpass", curMpass);
     prefs.putString("bmin", curBmin);
     prefs.putString("bmax", curBmax);
+    prefs.putString("rot", curRot);
     storedSsidSet = curSsid[0] != '\0';
     Serial.println("OK saved");
   } else if (cmd == "erase") {
@@ -392,6 +420,7 @@ void provLoad() {
   prefs.getString("mpass", "").toCharArray(curMpass, sizeof(curMpass));
   prefs.getString("bmin", "").toCharArray(curBmin, sizeof(curBmin));
   prefs.getString("bmax", "").toCharArray(curBmax, sizeof(curBmax));
+  prefs.getString("rot", "").toCharArray(curRot, sizeof(curRot));
 }
 
 // Provisioning is complete only with an SSID and a host: the binary has no
@@ -464,3 +493,6 @@ const char *provMqttPass() { return curMpass; }
 // 0-255 range — the mapping is then the identity.
 uint8_t provBmin() { return bvalOf(curBmin, 0); }
 uint8_t provBmax() { return bvalOf(curBmax, 255); }
+// Panel mounting orientation, degrees clockwise. Unset means 0 (the panel as
+// wired), so a wall that never sets `rot` renders exactly as before.
+uint16_t provRotation() { return rotOf(curRot); }

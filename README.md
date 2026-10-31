@@ -124,7 +124,7 @@ save
 provisioned agency, and any firmware build can serve any agency: nothing
 per-agency is compiled.
 
-The firmware prints a banner on connect (`OTW-FW 5` + `UNPROVISIONED` or
+The firmware prints a banner on connect (`OTW-FW 6` + `UNPROVISIONED` or
 `STORED ...`), applies each `set` live, and `save` persists to NVS. The
 full command set is specified in [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
 — the web flasher in `flasher/` is built against exactly that spec.
@@ -142,6 +142,7 @@ The protocol is line-based text over the USB serial bridge (115200):
 | `set ssid=…` / `set pass=…` / `set host=…` / `set agency=…` | `OK …` — takes effect immediately |
 | `set muser=…` / `set mpass=…` (optional) | `OK …` — Home Assistant MQTT credentials; the wall finds the broker itself; see [Brightness from Home Assistant](#brightness-from-home-assistant) |
 | `set bmin=…` / `set bmax=…` (optional) | `OK …` — brightness floor/ceiling: the HA slider's 0% dims only to `bmin`, its 100% reaches only `bmax` |
+| `set rot=0\|90\|180\|270` (optional) | `OK rot=…` — how the panel is mounted, degrees clockwise; the wall turns at once |
 | `save` | `OK saved` — persists to NVS, survives power loss |
 | `get all` / `status` | current values / live health |
 | `erase` / `reboot` | wipe NVS copy / restart |
@@ -252,6 +253,15 @@ the same pin map (`firmware/include/config.h`).
   With an MQTT broker provisioned, the live value comes from Home Assistant
   instead and this constant is only the boot fallback (see
   [Brightness from Home Assistant](#brightness-from-home-assistant)).
+
+### Mounting
+
+The panel can hang in any orientation. Set it once over WebSerial —
+`set rot=90`, then `save` — or pick it in the web flasher's **Panel
+rotation** field; the four values are quarter turns clockwise (0, 90, 180,
+270) and the wall repaints the moment the value changes. Rotation is a
+provisioned setting kept in NVS, never a build constant, so one binary and
+one flash serve every mount.
 
 ### USB serial
 
