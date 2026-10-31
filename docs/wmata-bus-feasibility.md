@@ -1,7 +1,8 @@
 # WMATA Metrobus as an agency: feasibility scope
 
-Status: scoped 2026-10-31. Live probe ran 2026-10-31 22:05 UTC (Saturday
-18:05 ET, evening shoulder). Static numbers come from the keyed bus GTFS
+Status: scoped and shipped 2026-10-31, as a combined rail+bus entry
+(PR #14). Live probe ran 2026-10-31 22:05 UTC (Saturday 18:05 ET, evening
+shoulder). Static numbers come from the keyed bus GTFS
 zip current at that date (`feed_version S1000251`, service window
 2026-09-13 to 2027-03-27; the zip's internal file timestamps are
 2026-08-28).
@@ -130,7 +131,8 @@ both recorded probes merged through one route table:
 That is the Muni palette shape on one wall, with one viewport that needs
 no new tuning: the shipped rail B box keeps 98 percent of the buses.
 
-The blocker is the static GTFS. One entry carries one `static_gtfs`, and
+The static GTFS was the blocker, and the code now answers it: one entry
+carries one `static_gtfs` today, and
 WMATA's rail routes (`route_type 1`) and bus routes (`route_type 3`) live
 in two separate zips. With only the bus zip loaded, the six rail lines
 would classify as generic bus blue. Two ways out:
@@ -160,6 +162,10 @@ Trade-off, stated plainly:
 - Separate entries as scoped: the subway wall keeps its proven 19.5 KB,
   the bus wall can take a tighter, denser frame, and each fleet stays
   well inside measured territory.
+
+Jade chose combined on 2026-10-31. Option 2 shipped (the `static_gtfs`
+list), so the wall does not depend on finding WMATA's combined zip: the
+two zips are fetched and merged on every refresh.
 
 ## Viewport candidates
 
@@ -248,14 +254,47 @@ Terms of Use (2019-11-19, sections 6.6 and 8) forbid serving their data
 through your own API to third parties without prior written authorization
 (`api-support@wmata.com`), while section 7's grant covers the operator's
 own application. Bus data is the same data family under the same terms.
-A bus wall for Jade's own panel is inside the grant; adding `wmatabus` to
-the shared hosted proxy for other people's walls is not, and needs the
-same written yes the rail entry would.
+A wall for Jade's own panel is inside the grant. The combined `wmata`
+entry is already served by the shared hosted proxy, which is the rail
+entry's existing situation: fine while it backs her own walls, and needing
+WMATA's written yes before other people's walls read it.
 
 Attribution: the GTFS license is CC-BY 4.0, so credit WMATA in the README
 and docs, and ship no WMATA marks.
 
-## Phasing
+## What shipped (2026-10-31)
+
+PR #14, folded into the existing `wmata` entry rather than a second id:
+
+- `server/agencies.json`: `wmata` gained the bus VehiclePositions feed and
+  a two-entry `static_gtfs` list (rail zip, bus zip); name now reads
+  "WMATA (DC Metrorail + Metrobus)". Frame unchanged.
+- `server/proxy.py`: `static_gtfs` accepts one URL or a list
+  (`load_registry` normalises, `AgencyState` stores a tuple) and
+  `refresh_routes` downloads each zip, merging route and station tables.
+  The shared key rides every zip request. The route-count log line now
+  counts distinct routes instead of half the dict length, which
+  under-reported for the 126 bus routes whose id equals their short name.
+- `fixtures/wmata_bus_vp.pb` (11 KB, 108 entities covering 104 of the 126
+  routes plus three out-of-frame rows and one trip-less row),
+  `fixtures/wmata_bus_routes.txt` (the whole 126-route file),
+  `fixtures/wmata_bus_stops.txt` (118 rows: referenced stops plus the
+  network's coordinate edges).
+- `server/tests/test_wmata.py` grew 5 tests (17 in the file, 64 in the
+  suite): the combined registry shape, the two-zip merge with each mode
+  keeping its route type, a two-feed snapshot producing the seven-key
+  palette, the bus fixture's exact edge clips, and acceptance of a single
+  `static_gtfs` URL plus rejection of bad list shapes.
+
+Verified live on 2026-10-31 23:35 UTC with the public use key:
+`[routes] cached 132 WMATA (DC Metrorail + Metrobus) routes + 9716
+stations from 2 zips`, 611 rows (545 bus, 66 rail), 22,163-byte payload,
+seven palette keys, and 16 rows outside the frame (14 bus, 2 Silver) —
+the documented edge crops. Native sim draws 595 of 611.
+
+Open: the weekday peak probe and the on-wall heap log at ~1,040 rows.
+
+## Phasing (as scoped)
 
 1. Registry entry with the chosen frame, plus the fixture test. Half a
    day, and it is a registry edit plus fixtures: no Python changes.
@@ -272,8 +311,9 @@ and docs, and ship no WMATA marks.
    ratio says ~934; one weekday morning probe settles it. Nothing in the
    pipeline changes if the answer is higher — only whether the compiled
    cap holds.
-2. The on-wall heap at ~950 rows and a 33 KB payload. The largest payload
-   proven on hardware is the MTA subway's 19.5 KB. This is the gate for
-   calling a bus wall shipped, exactly as it was for MTA bus.
+2. The on-wall heap at the combined peak: ~1,040 rows and ~35.7 KB. The
+   largest payload proven on hardware is the MTA subway's 19.5 KB. This is
+   the gate for calling the combined wall shipped, exactly as it was for
+   the MTA bus phase.
 3. Whether the four published route-color families are wanted. A taste
    call, not a risk.

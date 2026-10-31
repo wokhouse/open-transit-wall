@@ -72,14 +72,23 @@ def stop_rows():
 
 
 def test_registry_entry_shape():
+    """One entry carries both modes: two RT feeds and the two static zips
+    the modes ship separately (the Muni shape from one WMATA key)."""
     cfg = load_registry()["wmata"]
     assert cfg["source"] == "gtfs-rt"
-    assert list(cfg["feeds"].values()) == [
-        "https://api.wmata.com/gtfs/rail-gtfsrt-vehiclepositions.pb"]
+    assert cfg["feeds"] == {
+        "rail-vehicle-positions":
+            "https://api.wmata.com/gtfs/rail-gtfsrt-vehiclepositions.pb",
+        "bus-vehicle-positions":
+            "https://api.wmata.com/gtfs/bus-gtfsrt-vehiclepositions.pb",
+    }
     assert cfg["api_key_env"] == "WMATA_API_KEY"
     assert cfg["api_key_param"] == "api_key"
     assert cfg["requests_per_day_limit"] == 50_000
-    assert cfg["static_gtfs"] == "https://api.wmata.com/gtfs/rail-gtfs-static.zip"
+    assert cfg["static_gtfs"] == [
+        "https://api.wmata.com/gtfs/rail-gtfs-static.zip",
+        "https://api.wmata.com/gtfs/bus-gtfs-static.zip",
+    ]
     assert cfg["drop_route_ids"] == ["NR"]
 
 
@@ -228,6 +237,11 @@ class _ZipResponse:
         pass
 
 
+# The RT feeds and the static zips share one response shape here: both are
+# fetched through proxy.httpx.get and only .content is read.
+_EmptyFeedResponse = _ZipResponse
+
+
 def _static_zip_bytes():
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
@@ -295,3 +309,145 @@ def test_registry_rejects_a_bad_drop_list(tmp_path):
     load(lambda cfg: cfg.__setitem__("drop_route_ids", "NR"))
     load(lambda cfg: cfg.__setitem__("drop_route_ids", [""]))
     load(lambda cfg: cfg.__setitem__("drop_route_ids", [7]))
+
+
+# --- The combined entry: rail + bus through one registry entry ---------------
+#
+# WMATA ships rail and bus as separate real-time feeds and separate static
+# zips, so one entry lists two of each. This is the SFMTA/Muni shape: the six
+# subway lines key as M:<LINE> and every bus route keys as B on one wall.
+
+BUS_VP = FIXTURES / "wmata_bus_vp.pb"
+BUS_ROUTES_TXT = FIXTURES / "wmata_bus_routes.txt"
+BUS_STOPS_TXT = FIXTURES / "wmata_bus_stops.txt"
+
+RAIL_STATIC_URL = "https://example.invalid/rail-static.zip"
+BUS_STATIC_URL = "https://example.invalid/bus-static.zip"
+
+
+def _zip_bytes(routes_path, stops_path):
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("routes.txt", Path(routes_path).read_text())
+        archive.writestr("stops.txt", Path(stops_path).read_text())
+    return buffer.getvalue()
+
+
+def _combined_cfg():
+    cfg = _keyed_cfg()
+    cfg["feeds"] = {"rail": "https://example.invalid/rail.pb",
+                    "bus": "https://example.invalid/bus.pb"}
+    cfg["static_gtfs"] = [RAIL_STATIC_URL, BUS_STATIC_URL]
+    return cfg
+
+
+def test_multi_zip_static_refresh_merges_both_modes(monkeypatch, tmp_path):
+    """Both zips ride one refresh, both carry the key, and the merged table
+    keeps each mode's route type: RED stays metro (M:RED), A11 stays bus (B).
+    Without the rail zip the subway would classify as generic bus blue."""
+    monkeypatch.setenv(STATIC_KEY_ENV, "TESTKEY1234")
+    state = proxy.AgencyState("wmata_test", _combined_cfg())
+    assert state.static_gtfs == (RAIL_STATIC_URL, BUS_STATIC_URL)
+    state.routes_path = tmp_path / "routes_wmata_test.json"
+    state.stations_path = tmp_path / "stations_wmata_test.json"
+
+    payloads = {RAIL_STATIC_URL: _zip_bytes(ROUTES_TXT, STOPS_TXT),
+                BUS_STATIC_URL: _zip_bytes(BUS_ROUTES_TXT, BUS_STOPS_TXT)}
+    seen = []
+
+    def fake_get(url, params=None, **kwargs):
+        seen.append((url, params))
+        return _ZipResponse(payloads[url])
+
+    monkeypatch.setattr(proxy.httpx, "get", fake_get)
+    proxy.refresh_routes(None, state, quiet=True)
+
+    assert seen == [(RAIL_STATIC_URL, {"api_key": "TESTKEY1234"}),
+                    (BUS_STATIC_URL, {"api_key": "TESTKEY1234"})]
+    assert state.routes["RED"]["type"] == 1
+    assert state.routes["A11"]["type"] == 3
+    assert proxy.classify("RED", state.routes)["key"] == "M:RED"
+    assert proxy.classify("A11", state.routes)["key"] == "B"
+    # Route ids do not collide across the two feeds, and neither do stops.
+    assert set(state.routes) >= {"RED", "BLUE", "SILVER", "A11", "C53"}
+    assert {"PF_G05_C", "783"} <= set(state.stations)
+
+
+def test_combined_snapshot_serves_both_modes(monkeypatch, tmp_path):
+    """Two feeds in one entry produce one snapshot: trains and buses together,
+    a palette of the six line keys plus the single bus key, and the NR drop
+    still applying to the rail half."""
+    monkeypatch.setenv(STATIC_KEY_ENV, "TESTKEY1234")
+    state = proxy.AgencyState("wmata_test", _combined_cfg())
+    state.routes = {**parse_routes_txt(ROUTES_TXT.read_text()),
+                    **parse_routes_txt(BUS_ROUTES_TXT.read_text())}
+    state.stations = {**gtfs_rt.parse_stops(STOPS_TXT.read_text()),
+                      **gtfs_rt.parse_stops(BUS_STOPS_TXT.read_text())}
+
+    payloads = {"https://example.invalid/rail.pb": VP.read_bytes(),
+                "https://example.invalid/bus.pb": BUS_VP.read_bytes()}
+
+    def fake_get(url, params=None, **kwargs):
+        return _EmptyFeedResponse(payloads[url])
+
+    monkeypatch.setattr(proxy.httpx, "get", fake_get)
+    raw = proxy.fetch_station_snapshot(state)
+
+    lines = {r["line"] for r in raw}
+    assert {"RED", "BLUE", "GREEN", "YELLOW", "ORANGE", "SILVER"} <= lines
+    assert {"A11", "C53"} & lines
+    vehicles = compact_vehicles(raw, state.routes, None, frozenset({"NR"}))
+    keys = {v["t"] for v in vehicles}
+    assert keys == {"M:RED", "M:BLUE", "M:GREEN", "M:YELLOW", "M:ORANGE",
+                    "M:SILVER", "B"}
+    assert all(v["r"] != "NR" for v in vehicles)
+
+
+def test_bus_fixture_parses_and_clips_only_named_edges():
+    """The bus half of the fixture: every row is position-first and classifies
+    to the single bus key, and the only rows outside the shared frame are
+    beyond the north and south edges (M22 north of the frame, F1X at the
+    south-west corner)."""
+    records = gtfs_rt.parse_rt(BUS_VP.read_bytes())
+    assert len(records) > 100
+    assert all(r["lat"] is not None for r in records)
+    routes = parse_routes_txt(BUS_ROUTES_TXT.read_text())
+    vehicles = compact_vehicles(records, routes, None)
+    assert {v["t"] for v in vehicles} == {"B"}
+
+    bbox = load_registry()["wmata"]["bbox"]
+
+    def inside(v):
+        return (bbox["lat_min"] <= v["la"] <= bbox["lat_max"]
+                and bbox["lon_min"] <= v["lo"] <= bbox["lon_max"])
+
+    outside = [v for v in vehicles if not inside(v)]
+    assert len(outside) == 3
+    north = [v for v in outside if v["la"] > bbox["lat_max"]]
+    south = [v for v in outside if v["la"] < bbox["lat_min"]]
+    assert len(north) == 2 and len(south) == 1
+    assert {v["r"] for v in north} == {"M22"}
+    assert {v["r"] for v in south} == {"F1X"}
+
+
+def test_registry_accepts_a_single_static_url(tmp_path):
+    """The list form is new; every existing agency still ships one URL and
+    the loader normalises it, so nothing else had to change."""
+    registry = load_registry()
+    registry["wmata"]["static_gtfs"] = RAIL_STATIC_URL
+    path = tmp_path / "agencies.json"
+    path.write_text(json.dumps(registry))
+    assert load_registry(path)["wmata"]["static_gtfs"] == RAIL_STATIC_URL
+    state = proxy.AgencyState("one_zip", {**registry["wmata"],
+                                          "static_gtfs": RAIL_STATIC_URL})
+    assert state.static_gtfs == (RAIL_STATIC_URL,)
+
+
+def test_registry_rejects_bad_static_lists(tmp_path):
+    for bad in ("", [], [""], [3], "example.invalid/x.zip"):
+        registry = load_registry()
+        registry["wmata"]["static_gtfs"] = bad
+        path = tmp_path / "agencies.json"
+        path.write_text(json.dumps(registry))
+        with pytest.raises(ValueError):
+            load_registry(path)

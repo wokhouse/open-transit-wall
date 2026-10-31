@@ -162,8 +162,16 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
                 raise ValueError(f"registry entry {agency_id!r} needs a non-empty "
                                  "'feeds' object of https URLs")
             static = cfg.get("static_gtfs")
-            if not isinstance(static, str) or not static.startswith("http"):
-                raise ValueError(f"registry entry {agency_id!r} needs a 'static_gtfs' URL")
+            # One URL, or a list of them when an agency splits its modes
+            # across separate static feeds (WMATA rail + bus). Every entry
+            # in the list is downloaded and merged into one routes/station
+            # table on each refresh.
+            urls = [static] if isinstance(static, str) else static
+            if (not isinstance(urls, list) or not urls
+                    or not all(isinstance(url, str) and url.startswith("http")
+                               for url in urls)):
+                raise ValueError(f"registry entry {agency_id!r} needs a 'static_gtfs' "
+                                 "URL or a list of URLs")
         for key in ("lat_min", "lat_max", "lon_min", "lon_max"):
             if not isinstance(cfg["bbox"].get(key), (int, float)):
                 raise ValueError(f"registry entry {agency_id!r} bbox.{key} missing or not a number")
@@ -207,7 +215,10 @@ class AgencyState:
         self.siri_agency = cfg.get("siri_agency", "")
         # gtfs-rt: the per-agency upstream endpoints named by the registry.
         self.feeds = dict(cfg.get("feeds") or {})
-        self.static_gtfs = cfg.get("static_gtfs", "")
+        # One static zip, or several when the modes ship separate feeds
+        # (WMATA rail + bus); refresh_routes merges them into one table.
+        static = cfg.get("static_gtfs", "")
+        self.static_gtfs = tuple([static] if isinstance(static, str) else static)
         # Keyed gtfs-rt feeds (TriMet): the registry names the env var and the
         # query parameter. Missing key at construction is not fatal — a
         # deployment may not serve this agency at all — so it is recorded and
@@ -400,33 +411,45 @@ def parse_routes_txt(routes_txt: str) -> dict[str, dict]:
 
 
 def refresh_routes(api_key: str | None, state: AgencyState, quiet: bool = False) -> None:
-    """Download the agency's GTFS static feed and cache route types/colors.
+    """Download the agency's GTFS static feed(s) and cache route types/colors.
 
     The upstream differs by source: 511 datafeeds (keyed) for member
-    agencies, and for gtfs-rt agencies the public static GTFS zip named
-    by their registry entry — which also supplies the station coordinate
-    table the RT feeds lack. quiet=True
-    logs to stderr so callers that print a payload on stdout (--once)
-    keep their output clean.
+    agencies, and for gtfs-rt agencies the public static GTFS zip(s) named
+    by their registry entry — which also supply the station coordinate
+    table the RT feeds lack. An entry may name several zips when the modes
+    ship separately (WMATA rail + bus): route tables are merged and so are
+    station ids, so one poll serves both modes through one classify path.
+    quiet=True logs to stderr so callers that print a payload on stdout
+    (--once) keep their output clean.
     """
     log = (lambda msg: print(msg, file=sys.stderr)) if quiet else print
     if state.source == "gtfs-rt":
         # Keyed agencies gate their static zip as well as their feeds
-        # (WMATA 401s on both), so the registry key rides this request too.
-        # MTA, Metro Transit, CTA and TriMet serve theirs keyless, where
+        # (WMATA 401s on both), so the registry key rides these requests too.
+        # MTA, Metro Transit, CTA and TriMet serve their zips keyless, where
         # feed_params is empty and no parameter is sent.
-        response = httpx.get(state.static_gtfs, params=state.feed_params or None,
-                             timeout=120.0, follow_redirects=True)
-        response.raise_for_status()
-        with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-            routes = parse_routes_txt(archive.read("routes.txt").decode("utf-8-sig"))
-            stations = gtfs_rt.parse_stops(archive.read("stops.txt").decode("utf-8-sig"))
+        routes: dict[str, dict] = {}
+        stations: dict[str, tuple[float, float]] = {}
+        for url in state.static_gtfs:
+            response = httpx.get(url, params=state.feed_params or None,
+                                 timeout=180.0, follow_redirects=True)
+            response.raise_for_status()
+            with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+                routes.update(parse_routes_txt(
+                    archive.read("routes.txt").decode("utf-8-sig")))
+                stations.update(gtfs_rt.parse_stops(
+                    archive.read("stops.txt").decode("utf-8-sig")))
         state.routes_path.write_text(json.dumps(routes, indent=0))
         state.routes = routes
         state.stations_path.write_text(json.dumps({k: list(v) for k, v in stations.items()}))
         state.stations = stations
-        log(f"[routes] cached {len(routes)//2} {state.name} routes + "
-            f"{len(stations)} stations")
+        # The table is keyed by route id AND short name pointing at one shared
+        # entry, and bus agencies often have both keys identical, so half the
+        # dict length is only the true route count for 511-style ids. Count the
+        # distinct entry objects instead.
+        log(f"[routes] cached {len({id(entry) for entry in routes.values()})} "
+            f"{state.name} routes + {len(stations)} stations"
+            + (f" from {len(state.static_gtfs)} zips" if len(state.static_gtfs) > 1 else ""))
         return
 
     if not api_key:
