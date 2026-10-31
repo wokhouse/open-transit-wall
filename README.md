@@ -283,9 +283,12 @@ in black PETG-HF.
 ## Attribution
 
 Vehicle location data provided by [511](https://511.org/open-data/) and the
-served transit agencies (SFMTA, Caltrain, AC Transit, VTA), and by the
+served transit agencies (SFMTA, Caltrain, AC Transit, VTA), by the
 Metropolitan Transportation Authority for NYC subway
-(`api-endpoint.mta.info`, open GTFS-RT — no key). Required
+(`api-endpoint.mta.info`, open GTFS-RT — no key), by Metro Transit, TriMet,
+and the Washington Metropolitan Area Transit Authority for Metrorail and
+Metrobus (`api.wmata.com`, GTFS and GTFS-RT under CC-BY 4.0 and the WMATA
+Transit Data Terms of Use — an API key is required). Required
 acknowledgment for 511 open data tokens; please keep this notice.
 
 ## Alternatives considered

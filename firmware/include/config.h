@@ -110,9 +110,10 @@
 #define SPLASH_FPS 10             // boot splash frame rate; the pump lives in
                                   // src/main.cpp (splashPumpStart/splashTick)
 
-#define MAX_VEHICLES 1200         // sized for the largest served fleet: MTA NYC subway
-                                  // observed 584 trains off-peak, weekday peak order ~1k
-                                  // (SFMTA, the other reference fleet, runs ~676)
+#define MAX_VEHICLES 1200         // sized for the largest served fleet: WMATA
+                                  // rail+bus at ~1,040 rows (~37 KB) on a weekday
+                                  // peak; the cap holds while live/scheduled stays
+                                  // under 1.35x. MTA subway ~584 trains, SFMTA ~676.
 
 // --- Per-vehicle motion ------------------------------------------------------
 // The proxy publishes positions every POLL_SECONDS and advertises the exact

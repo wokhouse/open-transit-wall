@@ -157,8 +157,8 @@ MTA subway at 503-584 trains observed.
 
 Wire size, measured not estimated: the 71 rows of the 21:12 probe
 serialize to 2,857 bytes of rows and 3,128 bytes for the whole payload
-with bbox and palette. At 105 rows a peak wall is about 4 KB. That is
-13 percent of the shipped MTA payload.
+with bbox and palette. At 105 rows a peak wall is about 4 KB — roughly a
+fifth of the shipped MTA payload (19.5 KB).
 
 ## Viewport
 
@@ -247,11 +247,12 @@ agency in the registry so far.
   data that you have provided", an ability to block third parties on
   request, and user data on request. Contact `api-support@wmata.com`.
 
-Read plainly: a WMATA wall that Jade hosts for herself is fine. Exposing
-`wmata` on the public hosted proxy so other people's walls consume it is
-not, until WMATA says yes in writing. The `sf`, `mta`, `metro` entries
-have no such restriction, so the registry can carry `wmata` while the
-hosted deployment leaves it out of `SERVED_AGENCIES`.
+Read plainly: a WMATA wall that Jade hosts for herself is fine. Serving
+`wmata` from the shared hosted proxy is legitimate only while that endpoint
+backs her own walls — it needs WMATA's written yes before other people's
+walls read it. (Verified 2026-10-31: the hosted proxy does serve `wmata`;
+`/agencies` lists it and `/vehicles?agency=wmata` returns rows.) The `sf`,
+`mta`, `metro` entries carry no such restriction.
 
 Two smaller obligations: the GTFS license is CC-BY 4.0, so credit WMATA
 in the README and the docs, and the wall shows no WMATA marks (section
@@ -282,6 +283,8 @@ recorded with it; a live deployment needs the free personal key.
 
 Branch `wmata-implementation`, based on `trimet-implementation` (the open
 PR #10) because the registry key fields live there and not on `main`.
+Merged as PR #13. The bus phase then folded both modes into this same
+entry — see "Combined with Metrobus" below.
 
 - `server/agencies.json`: the `wmata` entry — one rail VehiclePositions
   feed, `api_key_env` `WMATA_API_KEY`, `api_key_param` `api_key`,
@@ -298,12 +301,13 @@ PR #10) because the registry key fields live there and not on `main`.
   `fixtures/wmata_rail_routes.txt` (the 6-route file),
   `fixtures/wmata_rail_stops.txt` (98 parent stations plus the platforms
   the fixture rows reference).
-- `server/tests/test_wmata.py`, 12 tests: the registry contract,
-  position-first placement with every reported stop id resolving, the
-  three-digit fleet identity, the six official colors through `M:<LINE>`,
-  the NR drop (and the `B` key it avoids), the exact west-edge clip set,
-  the station pixel margins, the wire shape, the keyed static fetch and
-  the unkeyed static fetch, and `drop_route_ids` validation.
+- `server/tests/test_wmata.py`, 12 tests at that merge: the registry
+  contract, position-first placement with every reported stop id
+  resolving, the three-digit fleet identity, the six official colors
+  through `M:<LINE>`, the NR drop (and the `B` key it avoids), the exact
+  west-edge clip set, the station pixel margins, the wire shape, the keyed
+  static fetch and the unkeyed static fetch, and `drop_route_ids`
+  validation.
 
 Verified live on 2026-10-31 21:38 UTC with WMATA's public use key:
 `[routes] cached 6 WMATA Metrorail (DC) routes + 2176 stations`, 67
@@ -311,8 +315,31 @@ vehicles served, palette of six `M:` keys and no `B`, 2,993-byte payload,
 and exactly 3 rows outside the frame — all Silver at the Loudoun tail
 (Dulles, Innovation Center, Ashburn), the documented crop.
 
-Gates: `ruff check server tools` clean, 59 tests pass, native sim frame
-rendered from the live payload (64 of 67 dots inside the box).
+Gates at that merge: `ruff check server tools` clean, 59 tests pass,
+native sim frame rendered from the live payload (64 of 67 dots inside the
+box).
+
+## Combined with Metrobus (2026-10-31)
+
+Rail and bus are one agency entry, the Muni shape (PR #14):
+
+- `wmata` now lists **two feeds** (rail + bus VehiclePositions) and **two
+  static zips** (rail + bus GTFS). `refresh_routes` accepts a
+  `static_gtfs` list and merges route and station tables across the zips,
+  so one poll classifies both modes: the six subway lines key `M:<LINE>`,
+  every bus route keys `B`.
+- Fleet and wire size, measured live 2026-10-31 23:35 UTC (Saturday
+  19:35 ET): 611 rows (545 bus + 66 rail), payload 22,163 B (36.3 B/row),
+  palette of seven keys. Weekday peak estimate ~1,039 rows at ~37 KB
+  against `MAX_VEHICLES` 1200 — 13 percent headroom, and the largest
+  payload this project would parse on a wall.
+- The viewport did not change: the B frame keeps 98 percent of the buses
+  and clips only the Loudoun rail tail plus bus runs beyond the north and
+  south edges (14 bus rows and 2 Silver rows at that probe).
+- `[routes] cached 132 WMATA (DC Metrorail + Metrobus) routes + 9716
+  stations from 2 zips` — the count now reports distinct routes rather
+  than half the dict length, which under-reported for agencies whose route
+  id and short name are identical (all 126 bus routes).
 
 ## Still open
 

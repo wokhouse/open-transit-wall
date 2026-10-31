@@ -62,15 +62,19 @@
     }
   },
   "wmata": {
-    "name": "WMATA Metrorail (DC)",
+    "name": "WMATA (DC Metrorail + Metrobus)",
     "source": "gtfs-rt",
     "feeds": {
-      "rail-vehicle-positions": "https://api.wmata.com/gtfs/rail-gtfsrt-vehiclepositions.pb"
+      "rail-vehicle-positions": "https://api.wmata.com/gtfs/rail-gtfsrt-vehiclepositions.pb",
+      "bus-vehicle-positions": "https://api.wmata.com/gtfs/bus-gtfsrt-vehiclepositions.pb"
     },
     "api_key_env": "WMATA_API_KEY",
     "api_key_param": "api_key",
     "requests_per_day_limit": 50000,
-    "static_gtfs": "https://api.wmata.com/gtfs/rail-gtfs-static.zip",
+    "static_gtfs": [
+      "https://api.wmata.com/gtfs/rail-gtfs-static.zip",
+      "https://api.wmata.com/gtfs/bus-gtfs-static.zip"
+    ],
     "drop_route_ids": ["NR"],
     "bbox": {
       "lat_min": 38.737,

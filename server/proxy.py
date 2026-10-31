@@ -43,6 +43,7 @@ import argparse
 import csv
 import io
 import json
+import math
 import os
 import re
 import sys
@@ -130,6 +131,9 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
         if source == "511" and ("api_key_env" in cfg or "api_key_param" in cfg):
             raise ValueError(f"registry entry {agency_id!r}: 'api_key_env'/'api_key_param' "
                              "are gtfs-rt fields; 511 keys are the FIVE11_API_KEY env")
+        if source == "511" and "static_gtfs" in cfg:
+            raise ValueError(f"registry entry {agency_id!r}: 'static_gtfs' is a gtfs-rt "
+                             "field; 511 agencies get their static datafeed by operator id")
         env_name = cfg.get("api_key_env")
         if env_name is not None:
             if not isinstance(env_name, str) or not ENV_NAME_RE.match(env_name):
@@ -162,8 +166,21 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
                 raise ValueError(f"registry entry {agency_id!r} needs a non-empty "
                                  "'feeds' object of https URLs")
             static = cfg.get("static_gtfs")
-            if not isinstance(static, str) or not static.startswith("http"):
-                raise ValueError(f"registry entry {agency_id!r} needs a 'static_gtfs' URL")
+            # One URL, or a list of them when an agency splits its modes
+            # across separate static feeds (WMATA rail + bus). Every entry
+            # in the list is downloaded and merged into one routes/station
+            # table on each refresh. Order matters only on a key collision,
+            # which refresh_routes warns about; duplicates are dropped here
+            # so one zip is never fetched twice per refresh.
+            urls = [static] if isinstance(static, str) else static
+            if (not isinstance(urls, list) or not urls
+                    or not all(isinstance(url, str) and url.startswith("https://")
+                               for url in urls)):
+                raise ValueError(f"registry entry {agency_id!r} needs a 'static_gtfs' "
+                                 "https:// URL or a list of them")
+            if len(set(urls)) != len(urls):
+                raise ValueError(f"registry entry {agency_id!r} lists a 'static_gtfs' "
+                                 "URL twice; that would download it twice per refresh")
         for key in ("lat_min", "lat_max", "lon_min", "lon_max"):
             if not isinstance(cfg["bbox"].get(key), (int, float)):
                 raise ValueError(f"registry entry {agency_id!r} bbox.{key} missing or not a number")
@@ -207,7 +224,13 @@ class AgencyState:
         self.siri_agency = cfg.get("siri_agency", "")
         # gtfs-rt: the per-agency upstream endpoints named by the registry.
         self.feeds = dict(cfg.get("feeds") or {})
-        self.static_gtfs = cfg.get("static_gtfs", "")
+        # One static zip, or several when the modes ship separate feeds
+        # (WMATA rail + bus); refresh_routes merges them into one table.
+        # Absent/null becomes (), so a 511 entry never carries a truthy
+        # sentinel and a bad registry value cannot crash module import.
+        static = cfg.get("static_gtfs") or ()
+        self.static_gtfs = tuple(
+            url for url in ([static] if isinstance(static, str) else static) if url)
         # Keyed gtfs-rt feeds (TriMet): the registry names the env var and the
         # query parameter. Missing key at construction is not fatal — a
         # deployment may not serve this agency at all — so it is recorded and
@@ -387,6 +410,10 @@ def parse_routes_txt(routes_txt: str) -> dict[str, dict]:
         route_id = cells[idx["route_id"]].strip()
         short = cells[idx["route_short_name"]].strip().upper() or route_id.upper()
         entry = {
+            # Canonical id: the same entry is keyed under route_id and under
+            # the short name, and for bus agencies those two are usually
+            # equal. Counts and collision reports read this, not the keys.
+            "rid": route_id,
             "type": int(float(cells[idx["route_type"]].strip() or 3)),
             "long": cells[idx["route_long_name"]].strip(),
         }
@@ -399,34 +426,84 @@ def parse_routes_txt(routes_txt: str) -> dict[str, dict]:
     return routes
 
 
+def distinct_routes(routes: dict[str, dict]) -> int:
+    """How many routes a routes cache holds.
+
+    parse_routes_txt stores one entry object under both the route id and the
+    short name, and bus agencies often have the two identical, so the dict
+    length is not the route count. Count canonical route ids instead.
+    """
+    return len({entry.get("rid") or key for key, entry in routes.items()})
+
+
 def refresh_routes(api_key: str | None, state: AgencyState, quiet: bool = False) -> None:
-    """Download the agency's GTFS static feed and cache route types/colors.
+    """Download the agency's GTFS static feed(s) and cache route types/colors.
 
     The upstream differs by source: 511 datafeeds (keyed) for member
-    agencies, and for gtfs-rt agencies the public static GTFS zip named
-    by their registry entry — which also supplies the station coordinate
-    table the RT feeds lack. quiet=True
-    logs to stderr so callers that print a payload on stdout (--once)
-    keep their output clean.
+    agencies, and for gtfs-rt agencies the public static GTFS zip(s) named
+    by their registry entry — which also supply the station coordinate
+    table the RT feeds lack. An entry may name several zips when the modes
+    ship separately (WMATA rail + bus): route tables are merged and so are
+    station ids, so one poll serves both modes through one classify path.
+    quiet=True logs to stderr so callers that print a payload on stdout
+    (--once) keep their output clean.
+
+    All-or-nothing on purpose: a half-merged table would classify a mode's
+    vehicles as the wrong type (a rail route missing from the table falls
+    through to generic bus blue), so a refresh either produces a complete
+    merged table or leaves the previous one in place. Every failing URL is
+    named, because a stuck zip must be diagnosable from the log alone.
     """
     log = (lambda msg: print(msg, file=sys.stderr)) if quiet else print
     if state.source == "gtfs-rt":
+        if not state.static_gtfs:
+            raise RuntimeError(f"{state.id}: no static_gtfs URL in the registry")
         # Keyed agencies gate their static zip as well as their feeds
-        # (WMATA 401s on both), so the registry key rides this request too.
-        # MTA, Metro Transit, CTA and TriMet serve theirs keyless, where
+        # (WMATA 401s on both), so the registry key rides these requests too.
+        # MTA, Metro Transit, CTA and TriMet serve their zips keyless, where
         # feed_params is empty and no parameter is sent.
-        response = httpx.get(state.static_gtfs, params=state.feed_params or None,
-                             timeout=120.0, follow_redirects=True)
-        response.raise_for_status()
-        with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-            routes = parse_routes_txt(archive.read("routes.txt").decode("utf-8-sig"))
-            stations = gtfs_rt.parse_stops(archive.read("stops.txt").decode("utf-8-sig"))
+        routes: dict[str, dict] = {}
+        stations: dict[str, tuple[float, float]] = {}
+        failures: list[str] = []
+        for url in state.static_gtfs:
+            try:
+                response = httpx.get(url, params=state.feed_params or None,
+                                     timeout=180.0, follow_redirects=True)
+                response.raise_for_status()
+                with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+                    zipped_routes = parse_routes_txt(
+                        archive.read("routes.txt").decode("utf-8-sig"))
+                    zipped_stations = gtfs_rt.parse_stops(
+                        archive.read("stops.txt").decode("utf-8-sig"))
+            except Exception as error:  # reported per URL, re-raised after the loop
+                failures.append(f"{url}: {redact(str(error))}")
+                continue
+            # A zip that parses to nothing is a broken feed, not an empty
+            # agency: keep its failure visible instead of merging silence.
+            if not zipped_routes or not zipped_stations:
+                failures.append(f"{url}: parsed to {len(zipped_routes)} route keys / "
+                                f"{len(zipped_stations)} stops")
+                continue
+            for name in ("routes", "stations"):
+                table = zipped_routes if name == "routes" else zipped_stations
+                merged = routes if name == "routes" else stations
+                clashes = [key for key in table if key in merged
+                           and merged[key] != table[key]]
+                if clashes:
+                    print(f"[routes] WARNING: {url} redefines {len(clashes)} {name} "
+                          f"key(s) already merged ({', '.join(sorted(clashes)[:4])}); "
+                          "the later zip wins", file=sys.stderr)
+            routes.update(zipped_routes)
+            stations.update(zipped_stations)
+        if failures:
+            raise RuntimeError("; ".join(failures))
         state.routes_path.write_text(json.dumps(routes, indent=0))
         state.routes = routes
         state.stations_path.write_text(json.dumps({k: list(v) for k, v in stations.items()}))
         state.stations = stations
-        log(f"[routes] cached {len(routes)//2} {state.name} routes + "
-            f"{len(stations)} stations")
+        log(f"[routes] cached {distinct_routes(routes)} {state.name} routes + "
+            f"{len(stations)} stations"
+            + (f" from {len(state.static_gtfs)} zips" if len(state.static_gtfs) > 1 else ""))
         return
 
     if not api_key:
@@ -445,8 +522,8 @@ def refresh_routes(api_key: str | None, state: AgencyState, quiet: bool = False)
 
     state.routes_path.write_text(json.dumps(routes, indent=0))
     state.routes = routes
-    print(f"[routes] cached {len(routes)//2} {state.name} routes -> {state.routes_path.name}",
-          flush=True)
+    print(f"[routes] cached {distinct_routes(routes)} {state.name} routes -> "
+          f"{state.routes_path.name}", flush=True)
 
 
 def check_operator_codes(api_key: str) -> None:
@@ -493,11 +570,22 @@ def fetch_station_snapshot(state: AgencyState) -> list[dict]:
         raise RuntimeError(f"{state.id}: no station table (first routes refresh failed?)")
     vehicles = []
     missing = 0
-    for url in state.feeds.values():
-        response = httpx.get(url, params=state.feed_params or None,
-                             timeout=20.0, follow_redirects=True)
-        response.raise_for_status()
-        for vp in gtfs_rt.parse_rt(response.content):
+    failures = []
+    for name, url in state.feeds.items():
+        # One feed per mode (WMATA rail + bus): a failure on one must not
+        # blank the other, so collect what answers and raise only if every
+        # feed failed.
+        try:
+            response = httpx.get(url, params=state.feed_params or None,
+                                 timeout=20.0, follow_redirects=True)
+            response.raise_for_status()
+            records = gtfs_rt.parse_rt(response.content)
+        except Exception as error:  # reported per URL, re-raised after the loop
+            failures.append(f"{name}: {redact(str(error))}")
+            print(f"[poll:{state.id}] feed {name} failed ({redact(str(error))})",
+                  file=sys.stderr)
+            continue
+        for vp in records:
             if vp["lat"] is not None:
                 lat, lon = vp["lat"], vp["lon"]
             else:
@@ -508,6 +596,8 @@ def fetch_station_snapshot(state: AgencyState) -> list[dict]:
                 lat, lon = loc
             vehicles.append({"line": vp["line"], "lat": lat, "lon": lon,
                              "bearing": None, "direction": "", "id": vp["id"]})
+    if failures and len(failures) == len(state.feeds):
+        raise RuntimeError(f"{state.id}: every feed failed ({'; '.join(failures)})")
     if missing:
         print(f"[poll:{state.id}] NOTE: skipped {missing} reports with unknown "
               "station ids (refresh the static GTFS cache)", file=sys.stderr)
@@ -517,9 +607,10 @@ def fetch_station_snapshot(state: AgencyState) -> list[dict]:
 # Static GTFS (route types/colors, station coords) is (re)fetched on the
 # first poll cycle and every ROUTES_REFRESH_SECONDS after: agency timetables
 # change, and no per-agency derived table should stay pinned in git or in
-# process memory for the life of the container. One zip fetch per agency per
-# day is negligible against the 511 60 req/hr budget; a failed refresh keeps
-# the current tables and retries after ROUTES_RETRY_SECONDS.
+# process memory for the life of the container. One zip fetch per static feed
+# per agency per day (two for the combined WMATA entry) is negligible against
+# the 511 60 req/hr budget; a failed refresh keeps the current tables and
+# retries after ROUTES_RETRY_SECONDS.
 ROUTES_REFRESH_SECONDS = 24 * 3600
 ROUTES_RETRY_SECONDS = 600
 
@@ -541,6 +632,12 @@ def poll_loop(state: AgencyState, api_key: str | None, fixture: Path | None,
     next_routes_refresh = 0.0  # the first cycle always refreshes
     while True:
         next_slot += interval
+        # A refresh that overruns its slot (two zips, large bodies) used to
+        # make the next poll fire immediately. Skip the slots that passed so
+        # the absolute phase holds and the upstream is not stamped.
+        behind = time.monotonic() - next_slot
+        if behind > 0:
+            next_slot += interval * math.ceil(behind / interval)
         try:
             due = time.monotonic() >= next_routes_refresh
             if due and (api_key or state.source != "511"):
@@ -725,6 +822,11 @@ def main() -> None:
     if api_key:
         check_operator_codes(api_key)
 
+    # Before the first fetch the payload would otherwise advertise next=0,
+    # which the firmware reads as "poll again in a second" — for the whole
+    # cold start (two static zips for WMATA). Announce the real interval now.
+    for state in STATES.values():
+        state.arm_next_poll(interval)
     for i, state in enumerate(STATES.values()):
         threading.Thread(
             target=poll_loop,

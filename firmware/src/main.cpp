@@ -349,8 +349,13 @@ static void mergeVehicles(uint32_t nowMs, float upstreamAge, uint32_t nextS) {
   }
   int gone = activeCount - w;
   activeCount = w;
-  Serial.printf("[poll] %d vehicles (%d moved, %d new, %d gone, heap %u)\n",
-                vehicleCount, moved, fresh, gone, ESP.getFreeHeap());
+  // min-heap since boot, not free heap now: the JSON document is destroyed
+  // before mergeVehicles runs, so the free figure never shows the parse peak.
+  // The parse budget is what a larger fleet tests, so log the high-water mark.
+  Serial.printf("[poll] %d vehicles (%d moved, %d new, %d gone, heap %u, "
+                "min %u)\n",
+                vehicleCount, moved, fresh, gone, ESP.getFreeHeap(),
+                ESP.getMinFreeHeap());
 }
 
 // Animation tick at RENDER_FPS: only rewrites pixels whose dot moved. With

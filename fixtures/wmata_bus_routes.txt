@@ -1,0 +1,127 @@
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
+A11,1,A11,Pentagon-Huntington,,3,,0091c8,ffffff
+A12,1,A12,Ballston-Hunting Point,,3,,0091c8,ffffff
+A1X,1,A1X,Pentagon City-Braddock Rd,,3,,005594,ffffff
+A25,1,A25,Pentagon-S Fairlington-Landmark,,3,,0091c8,ffffff
+A27,1,A27,Pentagon-Shirlington-Van Dorn St,,3,,0091c8,ffffff
+A28,1,A28,Pentagon-Holmes Run-Landmark,,3,,0091c8,ffffff
+A29,1,A29,Metro Ctr-Alexandria W,,3,,0091c8,ffffff
+A40,1,A40,Columbia Pike-National Landing,,3,,d83a1f,ffffff
+A49,1,A49,Columbia Pike-Metro Center,,3,,005594,ffffff
+A58,1,A58,Wilson Blvd-Farragut Sq,,3,,005594,ffffff
+A66,1,A66,Pentagon-Shirlington-Culmore,,3,,0091c8,ffffff
+A70,1,A70,Glebe Rd,,3,,005594,ffffff
+A71,1,A71,Ballston-King St,,3,,735fa9,ffffff
+A76,1,A76,Carlin Springs Rd,,3,,735fa9,ffffff
+A90,1,A90,Pentagon-Mark Center,,3,,005594,ffffff
+C11,1,C11,S Capitol St,,3,,005594,ffffff
+C13,1,C13,MLK Av-Washington Highlands,,3,,d83a1f,ffffff
+C15,1,C15,MLK Av-Southern Av,,3,,005594,ffffff
+C17,1,C17,MLK Av-Bellevue,,3,,0091c8,ffffff
+C21,1,C21,Alabama Av-Benning Rd,,3,,d83a1f,ffffff
+C23,1,C23,Alabama Av-Division Av,,3,,0091c8,ffffff
+C25,1,C25,Pomeroy Rd-Skyland,,3,,0091c8,ffffff
+C26,1,C26,Stanton Rd-Skyland,,3,,0091c8,ffffff
+C27,1,C27,Naylor Rd-Shepherd Pkwy,,3,,0091c8,ffffff
+C29,1,C29,Anacostia-Southern Av,,3,,005594,ffffff
+C31,1,C31,Minnesota Av,,3,,d83a1f,ffffff
+C33,1,C33,Sheriff Rd,,3,,0091c8,ffffff
+C35,1,C35,Deanwood-Naylor Road,,3,,0091c8,ffffff
+C37,1,C37,Lincoln Hts-Potomac Av,,3,,005594,ffffff
+C41,1,C41,Bladensburg Rd,,3,,d83a1f,ffffff
+C43,1,C43,Maryland Av,,3,,735fa9,ffffff
+C51,1,C51,U St-Anacostia,,3,,005594,ffffff
+C53,1,C53,U St-Congress Hts,,3,,d83a1f,ffffff
+C55,1,C55,Union Station-L'Enfant Plaza,,3,,0091c8,ffffff
+C57,1,C57,U St-Capitol Hts,,3,,0091c8,ffffff
+C61,1,C61,Brookland-Tenleytown,,3,,d83a1f,ffffff
+C63,1,C63,Deanwood-Georgia Av,,3,,0091c8,ffffff
+C71,1,C71,18 St,,3,,0091c8,ffffff
+C75,1,C75,Takoma-Georgia Av,,3,,005594,ffffff
+C77,1,C77,Takoma-Fort Totten,,3,,0091c8,ffffff
+C81,1,C81,Military Rd,,3,,005594,ffffff
+C83,1,C83,Barnaby Woods-Friendship Hts,,3,,0091c8,ffffff
+C85,1,C85,Nebraska Av-Foggy Bottom,,3,,0091c8,ffffff
+C87,1,C87,Silver Spring-Tenleytown,,3,,005594,ffffff
+C91,1,C91,LeDroit Park-Georgetown,,3,,0091c8,ffffff
+D10,1,D10,Pennsylvania Av,,3,,005594,ffffff
+D1X,1,D1X,Pennsylvania Av Limited,,3,,005594,ffffff
+D20,1,D20,H St,,3,,d83a1f,ffffff
+D24,1,D24,E Capitol St,,3,,0091c8,ffffff
+D2X,1,D2X,H St Limited,,3,,005594,ffffff
+D30,1,D30,N Capitol St,,3,,005594,ffffff
+D32,1,D32,Rhode Island Av-Fort Lincoln,,3,,005594,ffffff
+D34,1,D34,W Hyattsville-Edgewood-Metro Ctr,,3,,0091c8,ffffff
+D36,1,D36,K St-Ivy City,,3,,005594,ffffff
+D40,1,D40,7 St-Georgia Av,,3,,005594,ffffff
+D44,1,D44,11 St,,3,,005594,ffffff
+D4X,1,D4X,7 St-Georgia Av Limited,,3,,d83a1f,ffffff
+D50,1,D50,14 St,,3,,005594,ffffff
+D5X,1,D5X,14 St Limited,,3,,d83a1f,ffffff
+D60,1,D60,16 St,,3,,005594,ffffff
+D6X,1,D6X,16 St Limited,,3,,d83a1f,ffffff
+D70,1,D70,Connecticut Av,,3,,005594,ffffff
+D72,1,D72,Connecticut Av-Mt Pleasant,,3,,d83a1f,ffffff
+D74,1,D74,Rhode Island Av-Foggy Bottom,,3,,005594,ffffff
+D80,1,D80,Wisconsin Av-Union Station,,3,,d83a1f,ffffff
+D82,1,D82,Wisconsin Av-Foggy Bottom,,3,,005594,ffffff
+D90,1,D90,Massachusetts Av-Tenleytown,,3,,0091c8,ffffff
+D94,1,D94,Gallery Place-Sibley Hospital,,3,,0091c8,ffffff
+D96,1,D96,Massachusetts Av-Bethesda,,3,,0091c8,ffffff
+F19,1,F19,Mt Vernon Estate Exp,,3,,0091c8,ffffff
+F1X,1,F1X,Richmond Hwy,,3,,005594,ffffff
+F20,1,F20,Leesburg Pike,,3,,d83a1f,ffffff
+F23,1,F23,Little River Tpk-George Mason,,3,,735fa9,ffffff
+F24,1,F24,Little River Tpk-Vienna,,3,,735fa9,ffffff
+F26,1,F26,E Falls Church-Annandale,,3,,735fa9,ffffff
+F28,1,F28,Kings Park W Exp,,3,,0091c8,ffffff
+F29,1,F29,Braddock Rd,,3,,0091c8,ffffff
+F44,1,F44,Columbia Pike-Pentagon,,3,,0091c8,ffffff
+F50,1,F50,Washington Blvd,,3,,735fa9,ffffff
+F60,1,F60,Arlington Blvd-Fair Oaks,,3,,735fa9,ffffff
+F61,1,F61,Arlington Blvd-Jermantown Rd,,3,,0091c8,ffffff
+F62,1,F62,Rosslyn-Arlington Blvd-Dunn Lori,,3,,0091c8,ffffff
+F81,1,F81,Burke Centre Exp,,3,,0091c8,ffffff
+F83,1,F83,Cardinal Forest Exp,,3,,0091c8,ffffff
+F85,1,F85,Little River Tpk-Pentagon,,3,,0091c8,ffffff
+M12,1,M12,University Blvd,,3,,d83a1f,ffffff
+M20,1,M20,Wheaton-Silver Spring,,3,,d83a1f,ffffff
+M22,1,M22,Olney-Bethesda,,3,,0091c8,ffffff
+M42,1,M42,Randolph Rd-College Park,,3,,735fa9,ffffff
+M44,1,M44,Randolph Rd-Hyattsville Crossing,,3,,735fa9,ffffff
+M52,1,M52,Colesville Rd-Burtonsville,,3,,0091c8,ffffff
+M54,1,M54,Colesville Rd-Greencastle,,3,,0091c8,ffffff
+M60,1,M60,New Hampshire Av,,3,,d83a1f,ffffff
+M6X,1,M6X,New Hampshire Av Limited,,3,,005594,ffffff
+M70,1,M70,East West Hwy,,3,,d83a1f,ffffff
+M82,1,M82,River Rd-Falls Rd,,3,,0091c8,ffffff
+P10,1,P10,Baltimore Av,,3,,0091c8,ffffff
+P12,1,P12,Laurel-Greenbelt,,3,,735fa9,ffffff
+P14,1,P14,Kenilworth Av,,3,,0091c8,ffffff
+P15,1,P15,Riggs Rd-Adelphi,,3,,0091c8,ffffff
+P16,1,P16,Riggs Rd-White Oak,,3,,0091c8,ffffff
+P1X,1,P1X,Baltimore Av Limited,,3,,005594,ffffff
+P20,1,P20,Greenbelt Rd-New Carrollton,,3,,0091c8,ffffff
+P21,1,P21,Hanover Pkwy-New Carrollton,,3,,735fa9,ffffff
+P24,1,P24,Good Luck Rd,,3,,735fa9,ffffff
+P30,1,P30,New Carrollton-Silver Spring,,3,,d83a1f,ffffff
+P31,1,P31,New Carrollton-Takoma Langley,,3,,0091c8,ffffff
+P32,1,P32,Greenbelt-Fort Totten,,3,,735fa9,ffffff
+P33,1,P33,Queens Chapel Rd,,3,,0091c8,ffffff
+P35,1,P35,New Carrollton-Fort Totten,,3,,735fa9,ffffff
+P40,1,P40,Annapolis Rd,,3,,d83a1f,ffffff
+P41,1,P41,Landover Rd,,3,,005594,ffffff
+P42,1,P42,Chillum Rd-New Carrollton,,3,,735fa9,ffffff
+P60,1,P60,MLK Hwy-Suitland,,3,,d83a1f,ffffff
+P61,1,P61,Glenarden-Suitland,,3,,0091c8,ffffff
+P62,1,P62,Deanwood-Branch Av,,3,,735fa9,ffffff
+P63,1,P63,Central Av-Naylor Rd,,3,,735fa9,ffffff
+P66,1,P66,Forestville-Suitland,,3,,0091c8,ffffff
+P72,1,P72,Central Av-Bowie,,3,,735fa9,ffffff
+P73,1,P73,Central Av-Trade Zone,,3,,735fa9,ffffff
+P87,1,P87,Brinkley Rd,,3,,735fa9,ffffff
+P90,1,P90,St Barnabas Rd,,3,,0091c8,ffffff
+P93,1,P93,Suitland-Birchwood,,3,,005594,ffffff
+P94,1,P94,Suitland-National Harbor,,3,,005594,ffffff
+P96,1,P96,Suitland-Oxon Hill,,3,,0091c8,ffffff
+P97,1,P97,Southern Av-Ft Washington,,3,,735fa9,ffffff
