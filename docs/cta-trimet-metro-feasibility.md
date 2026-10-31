@@ -35,6 +35,24 @@ Agency-by-agency:
 Measured detail is below. The unknowns that block each agency are named at
 the end.
 
+## Implementation status (updated 2026-10-31)
+
+- Metro Transit: implemented. Keyless, position-first, live.
+- TriMet: implemented (branch `trimet-implementation`). Shipped: the
+  `trimet` registry entry (source `gtfs-rt`, `api_key_env`
+  `TRIMET_APPID`, `api_key_param` `appID`, `requests_per_day_limit`
+  1,000,000); the keyed-fetch plumbing in `proxy.py` (per-agency query
+  parameter, key redaction from error strings, startup refusal to serve
+  a keyless agency, the startup allowance line); the `classify` type-6
+  cable-amber line; and the 34 km rail-centered viewport with named
+  crops (Hillsboro west edge, far-Gresham east edge, Wilsonville south
+  edge, nothing north). Registry, key plumbing, classification, and
+  viewport are pinned by offline tests against the recorded static
+  fixtures. Open: register the self-service AppID, then record the RT
+  fixture and run the keyed probe for coordinate coverage and
+  `vehicle.id` shape.
+- CTA: not started; still gated on the API-key issue.
+
 ## Measured live feeds (2026-10-31 06:02-06:05 UTC)
 
 ### Metro Transit - keyless, geolocated, fresh

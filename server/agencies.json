@@ -44,6 +44,23 @@
       "lon_max": -93.041
     }
   },
+  "trimet": {
+    "name": "TriMet (Portland)",
+    "source": "gtfs-rt",
+    "feeds": {
+      "vehicle-positions": "https://developer.trimet.org/ws/V1/VehiclePositions"
+    },
+    "api_key_env": "TRIMET_APPID",
+    "api_key_param": "appID",
+    "requests_per_day_limit": 1000000,
+    "static_gtfs": "https://developer.trimet.org/schedule/gtfs.zip",
+    "bbox": {
+      "lat_min": 45.3639,
+      "lat_max": 45.6693,
+      "lon_min": -122.8893,
+      "lon_max": -122.4534
+    }
+  },
   "ct": {
     "name": "Caltrain",
     "siri_agency": "CT",

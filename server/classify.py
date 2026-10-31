@@ -46,7 +46,9 @@ MUNI_FALLBACK = {
 }
 
 METRO_TYPES = {0, 1, 2}
-CABLE_TYPES = {5, 7}
+# GTFS 5 is a cable car and 7 its inverted variant; 6 is an aerial cable
+# tram (TriMet's Aerial Tram) — it renders in the same cable amber.
+CABLE_TYPES = {5, 6, 7}
 
 # 14R, 9R, 38R, 8BX, 30X, 76X ... (digits then R/RX/BX/X)
 RAPID_PATTERN = re.compile(r"^\d{1,3}(R|RX|BX|X)$", re.IGNORECASE)

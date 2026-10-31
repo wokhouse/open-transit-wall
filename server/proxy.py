@@ -5,7 +5,10 @@ Each served agency is polled from its upstream on its own timer (POLL_SECONDS
 per agency): 511 member agencies from the 511 SIRI VehicleMonitoring feed,
 registry entries with `"source": "gtfs-rt"` (rail agencies, e.g. NYC subway)
 from the public GTFS-RT feeds + static GTFS zip named in their registry
-entry. Each agency is served as a compact vehicle list for the ESP32
+entry. A gtfs-rt feed that requires a key names the env var in its registry
+entry (`api_key_env` / `api_key_param`); the proxy appends it to every
+request of that agency (e.g. TriMet's AppID). Each agency is served as a
+compact vehicle list for the ESP32
 display. Which agencies a deployment runs is set by SERVED_AGENCIES; the
 payload carries the agency's bbox, refresh cadence, and vehicle-color
 palette (per-line for metro) so clients are configured entirely from the
@@ -24,6 +27,13 @@ Configuration via environment (or server/.env):
                     len(SERVED_AGENCIES) * 3600/POLL_SECONDS under the token
                     cap (511's default is 60 req/hour); the server warns at
                     startup if it would exceed that, but does not enforce.
+                    The startup log also states each agency's documented
+                    request allowance (`requests_per_day_limit` in the
+                    registry) next to what the chosen interval costs per day.
+  Additional keys are named by the served registry entries themselves: a
+  gtfs-rt entry with "api_key_env" makes that variable required (the proxy
+  refuses to start without it) and appends its value to the feed URLs as
+  that entry's "api_key_param" query parameter (e.g. TRIMET_APPID).
   HOST / PORT       bind address (default 0.0.0.0:8000)
 """
 
@@ -86,17 +96,25 @@ DEFAULT_PALETTE = {
 }
 
 AGENCY_ID_RE = re.compile(r"^[a-z0-9]{1,8}$")
+# Registry-named key plumbing for gtfs-rt feeds (see api_key_env below).
+ENV_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+PARAM_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,31}$")
 
 
 def redact(text: str) -> str:
-    """Strip the API key from an error/log string before printing.
+    """Strip API keys from an error/log string before printing.
 
     httpx's HTTPStatusError embeds the full request URL, and 511 only
     accepts the key as a query param (header auth 401s), so every upstream
-    4xx/5xx — including expected 429s — would otherwise log the key."""
+    4xx/5xx — including expected 429s — would otherwise log the key.
+    Keyed gtfs-rt agencies (TriMet's AppID) ride the URL the same way, so
+    every served agency's resolved key is redacted too."""
     api_key = os.environ.get("FIVE11_API_KEY")
     if api_key:
         text = text.replace(api_key, "[api-key]")
+    for state in STATES.values():
+        if state.api_key:
+            text = text.replace(state.api_key, "[api-key]")
     return text
 
 
@@ -109,6 +127,23 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
         source = cfg.get("source", "511")
         if source not in ("511", "gtfs-rt"):
             raise ValueError(f"registry entry {agency_id!r} has unknown source {source!r}")
+        if source == "511" and ("api_key_env" in cfg or "api_key_param" in cfg):
+            raise ValueError(f"registry entry {agency_id!r}: 'api_key_env'/'api_key_param' "
+                             "are gtfs-rt fields; 511 keys are the FIVE11_API_KEY env")
+        env_name = cfg.get("api_key_env")
+        if env_name is not None:
+            if not isinstance(env_name, str) or not ENV_NAME_RE.match(env_name):
+                raise ValueError(f"registry entry {agency_id!r} 'api_key_env' must name an "
+                                 "env var (uppercase letters, digits, underscore)")
+            param = cfg.get("api_key_param")
+            if not isinstance(param, str) or not PARAM_NAME_RE.match(param):
+                raise ValueError(f"registry entry {agency_id!r} with 'api_key_env' needs a valid "
+                                 "'api_key_param' (the query parameter the key rides under)")
+        limit = cfg.get("requests_per_day_limit")
+        if limit is not None and (not isinstance(limit, int) or isinstance(limit, bool)
+                                  or limit <= 0):
+            raise ValueError(f"registry entry {agency_id!r} 'requests_per_day_limit' "
+                             "must be a positive integer")
         required = ("name", "bbox") if source != "511" else ("name", "siri_agency", "bbox")
         for key in required:
             if key not in cfg:
@@ -167,6 +202,15 @@ class AgencyState:
         # gtfs-rt: the per-agency upstream endpoints named by the registry.
         self.feeds = dict(cfg.get("feeds") or {})
         self.static_gtfs = cfg.get("static_gtfs", "")
+        # Keyed gtfs-rt feeds (TriMet): the registry names the env var and the
+        # query parameter. Missing key at construction is not fatal — a
+        # deployment may not serve this agency at all — so it is recorded and
+        # enforced: main() refuses to serve without it, and the fetch raises
+        # rather than polling 403s forever.
+        self.api_key_env = cfg.get("api_key_env", "")
+        self.api_key = os.environ.get(self.api_key_env, "").strip() if self.api_key_env else ""
+        self.feed_params = {cfg["api_key_param"]: self.api_key} if self.api_key else {}
+        self.requests_per_day_limit = cfg.get("requests_per_day_limit")
         self.bbox = [cfg["bbox"]["lat_min"], cfg["bbox"]["lat_max"],
                      cfg["bbox"]["lon_min"], cfg["bbox"]["lon_max"]]
         self.palette = {**DEFAULT_PALETTE, **(cfg.get("palette") or {})}
@@ -422,12 +466,16 @@ def fetch_station_snapshot(state: AgencyState) -> list[dict]:
     static table are skipped and counted — that mismatch means the
     routes cache needs refreshing.
     """
+    if state.api_key_env and not state.api_key:
+        raise RuntimeError(f"agency {state.id} needs the {state.api_key_env} "
+                           "environment variable (see server/.env.example)")
     if not state.stations:
         raise RuntimeError(f"{state.id}: no station table (first routes refresh failed?)")
     vehicles = []
     missing = 0
     for url in state.feeds.values():
-        response = httpx.get(url, timeout=20.0, follow_redirects=True)
+        response = httpx.get(url, params=state.feed_params or None,
+                             timeout=20.0, follow_redirects=True)
         response.raise_for_status()
         for vp in gtfs_rt.parse_rt(response.content):
             if vp["lat"] is not None:
@@ -625,6 +673,13 @@ def main() -> None:
         print(json.dumps(wire_payload(state), indent=1))
         return
 
+    keyless = [state for state in STATES.values()
+               if state.api_key_env and not state.api_key]
+    if keyless:
+        print("[startup] ERROR: served agencies missing their API keys: "
+              + ", ".join(f"{state.id} (set {state.api_key_env}, see server/.env.example)"
+                          for state in keyless), file=sys.stderr)
+        raise SystemExit(2)
     print(f"[poll] serving {len(STATES)} agencies ({', '.join(SERVED)}) "
           f"each every {interval:g}s", flush=True)
     total_rph = len(STATES) * 3600.0 / interval
@@ -632,6 +687,19 @@ def main() -> None:
         print(f"[poll] WARNING: {total_rph:.1f} req/h total is over the "
               f"{DEFAULT_TOKEN_RPH} req/h default token; raise POLL_SECONDS "
               "or drop an agency", file=sys.stderr)
+    # State each agency's documented request allowance next to what this
+    # deployment's interval costs (TriMet documents 1M/day per AppID; the
+    # budgets here are orders of magnitude above the 511 cap, so they are
+    # informational, not warnings that gate anything).
+    for state in STATES.values():
+        if not state.requests_per_day_limit:
+            continue
+        per_poll = len(state.feeds) if state.source == "gtfs-rt" else 1
+        per_day = per_poll * 86400.0 / interval
+        verdict = ("within" if per_day <= state.requests_per_day_limit else "OVER")
+        print(f"[poll] {state.id}: {per_day:.0f} feed requests/day is {verdict} "
+              f"the documented {state.requests_per_day_limit:,}/day allowance",
+              file=sys.stderr if verdict == "OVER" else sys.stdout)
     if api_key:
         check_operator_codes(api_key)
 

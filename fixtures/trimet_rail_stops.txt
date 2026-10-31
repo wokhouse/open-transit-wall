@@ -1,0 +1,243 @@
+stop_id,stop_code,stop_name,tts_stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station,wheelchair_boarding,platform_code,direction,position
+2167,2167,SE Grand & E Burnside,southeast grand & east burnside,Northbound stop in Portland (Stop ID 2167),45.52281,-122.660621,B,https://trimet.org/home/stop/2167,0,,1,,North,Nearside
+2169,2169,NE Grand & Hoyt,northeast grand & hoyt,Northbound stop in Portland (Stop ID 2169),45.527516,-122.660593,B,https://trimet.org/home/stop/2169,0,,1,,North,Opposite
+2171,2171,SE Grand & Mill,southeast grand & mill,Northbound stop in Portland (Stop ID 2171),45.510003,-122.660702,B,https://trimet.org/home/stop/2171,0,,1,,North,Nearside
+2175,2175,NE Grand & Holladay,northeast grand & holladay,Northbound stop in Portland (Stop ID 2175),45.529728,-122.660582,B,https://trimet.org/home/stop/2175,0,,1,,North,Farside
+3595,3595,NW 21st & Lovejoy,northwest 21st & lovejoy street,Eastbound stop in Portland (Stop ID 3595),45.529833,-122.694676,B,https://trimet.org/home/stop/3595,0,,1,,East,Nearside
+3596,3596,NW 22nd & Lovejoy,northwest 22nd & lovejoy street,Eastbound stop in Portland (Stop ID 3596),45.529794,-122.696698,B,https://trimet.org/home/stop/3596,0,,1,,East,Nearside
+5901,5901,NE M L King & E Burnside,northeast martin luther king & east burnside,Southbound stop in Portland (Stop ID 5901),45.523368,-122.661841,B,https://trimet.org/home/stop/5901,0,,1,,South,Nearside
+5912,5912,NE M L King & Hoyt,northeast martin luther king & hoyt,Southbound stop in Portland (Stop ID 5912),45.527377,-122.661806,B,https://trimet.org/home/stop/5912,0,,1,,South,Nearside
+5933,5933,SE M L King & Mill,southeast martin luther king & mill,Southbound stop in Portland (Stop ID 5933),45.509644,-122.661974,B,https://trimet.org/home/stop/5933,0,,1,,South,Farside
+6493,6493,Art Museum,art museum,Northbound stop in Portland (Stop ID 6493),45.516305,-122.683991,B,https://trimet.org/home/stop/6493,0,,1,,North,Farside
+7601,7601,Union Station/NW 5th & Glisan MAX Stn,"union station, northwest 5th & gleesun max station",Southbound stop in Portland (Stop ID 7601),45.526732,-122.675604,R,https://trimet.org/home/stop/7601,0,,1,,South,Nearside
+7606,7606,PSU South/SW 5th & Jackson MAX Stn,"p s u south, southwest 5th & jackson max station",Southbound stop in Portland (Stop ID 7606),45.508979,-122.682999,R,https://trimet.org/home/stop/7606,0,,1,,South,Nearside
+7608,7608,City Hall/SW 5th & Jefferson MAX Station,"city hall, southwest 5th & jefferson max station",Southbound stop in Portland (Stop ID 7608),45.514914,-122.679742,R,https://trimet.org/home/stop/7608,0,,1,,South,Nearside
+7618,7618,PSU Urban Center/SW 5th & Mill MAX Station,"p s u urban center, southwest 5th & mill max station",Southbound stop in Portland (Stop ID 7618),45.511645,-122.681551,R,https://trimet.org/home/stop/7618,0,,1,,South,Farside
+7627,7627,SW 5th & Oak St MAX Station,southwest 5th & oak street max station,Southbound stop in Portland (Stop ID 7627),45.521573,-122.676178,R,https://trimet.org/home/stop/7627,0,,1,,South,Nearside
+7646,7646,Pioneer Place/SW 5th Ave MAX Station,"pioneer place, southwest 5th avenue max station",Southbound stop in Portland (Stop ID 7646),45.518255,-122.677934,R,https://trimet.org/home/stop/7646,0,,1,,South,Nearside
+7763,7763,Union Station/NW 6th & Hoyt MAX Stn,"union station, northwest 6th & hoyt max station",Northbound stop in Portland (Stop ID 7763),45.527222,-122.676517,R,https://trimet.org/home/stop/7763,0,,1,,North,At
+7774,7774,PSU Urban Center/SW 6th & Montgomery MAX Stn,"p s u urban center, southwest 6th & montgomry max station",Northbound stop in Portland (Stop ID 7774),45.511597,-122.68255,R,https://trimet.org/home/stop/7774,0,,1,,North,Opposite
+7777,7777,Pioneer Courthouse/SW 6th Ave MAX Stn,"pioneer courthouse, southwest 6th avenue max station",Northbound stop in Portland (Stop ID 7777),45.518964,-122.678558,R,https://trimet.org/home/stop/7777,0,,1,,North,Nearside
+7787,7787,SW 6th & Pine MAX Station,southwest 6th & pine max station,Northbound stop in Portland (Stop ID 7787),45.522323,-122.676756,R,https://trimet.org/home/stop/7787,0,,1,,North,Opposite
+8333,8333,Library/SW 9th Ave MAX Station,"library, southwest 9th avenue max station",Eastbound stop in Portland (Stop ID 8333),45.51916,-122.68162,R,https://trimet.org/home/stop/8333,0,,1,,East,At
+8334,8334,Pioneer Square South MAX Station,pioneer square south max station,Eastbound stop in Portland (Stop ID 8334),45.518496,-122.679145,R,https://trimet.org/home/stop/8334,0,,1,,East,At
+8336,8336,Yamhill District MAX Station,yammhill district max station,Eastbound stop in Portland (Stop ID 8336),45.517153,-122.674172,R,https://trimet.org/home/stop/8336,0,,1,,East,At
+8337,8337,Oak/ SW 1st Ave MAX Station,oak/ southwest 1st avenue max station,Northbound stop in Portland (Stop ID 8337),45.52028,-122.672146,R,https://trimet.org/home/stop/8337,0,station-138,1,,North,Nearside
+8339,8339,Old Town/Chinatown MAX Station,"old town, chinatown max station",Northbound stop in Portland (Stop ID 8339),45.52518,-122.671353,R,https://trimet.org/home/stop/8339,0,station-110,1,,North,At
+8340,8340,Rose Quarter TC MAX Station,rose quarter transit-center max station,Eastbound stop in Portland (Stop ID 8340),45.530057,-122.664917,R,https://trimet.org/home/stop/8340,0,station-137,1,,East,At
+8341,8341,Convention Center MAX Station,convention center max station,Eastbound stop in Portland (Stop ID 8341),45.530052,-122.661908,R,https://trimet.org/home/stop/8341,0,station-119,1,,East,At
+8342,8342,NE 7th Ave MAX Station,northeast 7th avenue max station,Eastbound stop in Portland (Stop ID 8342),45.530055,-122.65774,R,https://trimet.org/home/stop/8342,0,station-120,1,,East,Farside
+8343,8343,Lloyd Center/NE 11th Ave MAX Station,"lloyd center, northeast 11th avenue max station",Eastbound stop in Portland (Stop ID 8343),45.530067,-122.653638,R,https://trimet.org/home/stop/8343,0,station-121,1,,East,At
+8344,8344,Hollywood/NE 42nd Ave MAX Station,"hollywood, northeast 42nd avenue max station",Eastbound stop in Portland (Stop ID 8344),45.532772,-122.620708,R,https://trimet.org/home/stop/8344,0,station-122,1,,East,At
+8345,8345,NE 60th Ave MAX Station,northeast sixtieth avenue max station,Eastbound stop in Portland (Stop ID 8345),45.528764,-122.602703,R,https://trimet.org/home/stop/8345,0,station-136,1,,East,At
+8346,8346,NE 82nd Ave MAX Station,northeast eightysecond avenue max station,Eastbound stop in Portland (Stop ID 8346),45.533237,-122.577811,R,https://trimet.org/home/stop/8346,0,station-123,1,,East,At
+8347,8347,Gateway/NE 99th Ave TC MAX Station,"gateway, northeast 99th avenue transit-center max station",Southbound stop in Portland (Stop ID 8347),45.530269,-122.563578,R,https://trimet.org/home/stop/8347,0,station-135,1,,South,At
+8348,8348,E 102nd Ave MAX Station,east 102nd avenue max station,Eastbound stop in Portland (Stop ID 8348),45.52258,-122.557314,R,https://trimet.org/home/stop/8348,0,station-134,1,,East,Farside
+8349,8349,E 122nd Ave MAX Station,east one hundred twentysecond avenue max station,Eastbound stop in Portland (Stop ID 8349),45.522447,-122.536799,R,https://trimet.org/home/stop/8349,0,station-133,1,,East,Farside
+8350,8350,E 148th Ave MAX Station,east 148th avenue max station,Eastbound stop in Portland (Stop ID 8350),45.522237,-122.509687,R,https://trimet.org/home/stop/8350,0,station-124,1,,East,Farside
+8351,8351,E 162nd Ave MAX Station,east one hundred sixty second avenue max station,Eastbound stop in Gresham (Stop ID 8351),45.522121,-122.495467,R,https://trimet.org/home/stop/8351,0,station-125,1,,East,Farside
+8352,8352,E 172nd Ave MAX Station,east 172nd avenue max station,Eastbound stop in Gresham (Stop ID 8352),45.522048,-122.485173,R,https://trimet.org/home/stop/8352,0,station-132,1,,East,Farside
+8353,8353,E 181st Ave MAX Station,east 181st avenue max station,Eastbound stop in Gresham (Stop ID 8353),45.521932,-122.476143,R,https://trimet.org/home/stop/8353,0,station-126,1,,East,Farside
+8354,8354,Rockwood/E 188th Ave MAX Station,"rockwood, east 188th avenue max station",Eastbound stop in Gresham (Stop ID 8354),45.520398,-122.470537,R,https://trimet.org/home/stop/8354,0,station-127,1,,East,Nearside
+8355,8355,Ruby Junction/E 197th Ave MAX Station,"ruby junction, east 197th avenue max station",Eastbound stop in Gresham (Stop ID 8355),45.515577,-122.459174,R,https://trimet.org/home/stop/8355,0,station-128,1,,East,Farside
+8356,8356,Gresham City Hall MAX Station,gresham city hall max station,Eastbound stop in Gresham (Stop ID 8356),45.505687,-122.435826,R,https://trimet.org/home/stop/8356,0,station-129,1,,East,Opposite
+8357,8357,Gresham Central TC MAX Station,gresham central transit-center max station,Eastbound stop in Gresham (Stop ID 8357),45.502473,-122.426643,R,https://trimet.org/home/stop/8357,0,station-130,1,,East,At
+8359,8359,Cleveland Ave MAX Station,cleveland avenue max station,Westbound stop in Gresham (Stop ID 8359),45.501772,-122.41845,R,https://trimet.org/home/stop/8359,0,,1,,West,Nearside
+8360,8360,Gresham Central TC MAX Station,gresham central transit-center max station,Westbound stop in Gresham (Stop ID 8360),45.502705,-122.427348,R,https://trimet.org/home/stop/8360,0,station-130,1,,West,At
+8361,8361,Gresham City Hall MAX Station,gresham city hall max station,Westbound stop in Gresham (Stop ID 8361),45.505981,-122.436285,R,https://trimet.org/home/stop/8361,0,station-129,1,,West,At
+8362,8362,Ruby Junction/E 197th Ave MAX Station,"ruby junction, east 197th avenue max station",Westbound stop in Gresham (Stop ID 8362),45.516502,-122.461119,R,https://trimet.org/home/stop/8362,0,station-128,1,,West,Farside
+8363,8363,Rockwood/E 188th Ave MAX Station,"rockwood, east 188th avenue max station",Westbound stop in Gresham (Stop ID 8363),45.520723,-122.471093,R,https://trimet.org/home/stop/8363,0,station-127,1,,West,Farside
+8364,8364,E 181st Ave MAX Station,east 181st avenue max station,Westbound stop in Gresham (Stop ID 8364),45.522065,-122.478074,R,https://trimet.org/home/stop/8364,0,station-126,1,,West,Farside
+8365,8365,E 172nd Ave MAX Station,east 172nd avenue max station,Westbound stop in Gresham (Stop ID 8365),45.52214,-122.48714,R,https://trimet.org/home/stop/8365,0,station-132,1,,West,Farside
+8366,8366,E 162nd Ave MAX Station,east one hundred sixty second avenue max station,Westbound stop in Gresham (Stop ID 8366),45.522235,-122.497432,R,https://trimet.org/home/stop/8366,0,station-125,1,,West,Farside
+8367,8367,E 148th Ave MAX Station,east 148th avenue max station,Westbound stop in Portland (Stop ID 8367),45.522344,-122.511614,R,https://trimet.org/home/stop/8367,0,station-124,1,,West,Farside
+8368,8368,E 122nd Ave MAX Station,east one hundred twentysecond avenue max station,Westbound stop in Portland (Stop ID 8368),45.522556,-122.538704,R,https://trimet.org/home/stop/8368,0,station-133,1,,West,Farside
+8369,8369,E 102nd Ave MAX Station,east 102nd avenue max station,Westbound stop in Portland (Stop ID 8369),45.522691,-122.559244,R,https://trimet.org/home/stop/8369,0,station-134,1,,West,Farside
+8370,8370,Gateway/NE 99th Ave TC MAX Station,"gateway, northeast 99th avenue transit-center max station",Northbound stop in Portland (Stop ID 8370),45.530839,-122.563627,R,https://trimet.org/home/stop/8370,0,station-135,1,,North,At
+8371,8371,NE 82nd Ave MAX Station,northeast eightysecond avenue max station,Westbound stop in Portland (Stop ID 8371),45.533486,-122.578479,R,https://trimet.org/home/stop/8371,0,station-123,1,,West,At
+8372,8372,NE 60th Ave MAX Station,northeast sixtieth avenue max station,Westbound stop in Portland (Stop ID 8372),45.528491,-122.603342,R,https://trimet.org/home/stop/8372,0,station-136,1,,West,At
+8373,8373,Hollywood/NE 42nd Ave MAX Station,"hollywood, northeast 42nd avenue max station",Westbound stop in Portland (Stop ID 8373),45.532957,-122.621367,R,https://trimet.org/home/stop/8373,0,station-122,1,,West,At
+8374,8374,Lloyd Center/NE 11th Ave MAX Station,"lloyd center, northeast 11th avenue max station",Westbound stop in Portland (Stop ID 8374),45.530146,-122.654335,R,https://trimet.org/home/stop/8374,0,station-121,1,,West,At
+8375,8375,NE 7th Ave MAX Station,northeast 7th avenue max station,Westbound stop in Portland (Stop ID 8375),45.53015,-122.658277,R,https://trimet.org/home/stop/8375,0,station-120,1,,West,Nearside
+8376,8376,Convention Center MAX Station,convention center max station,Westbound stop in Portland (Stop ID 8376),45.530138,-122.66254,R,https://trimet.org/home/stop/8376,0,station-119,1,,West,At
+8377,8377,Rose Quarter TC MAX Station,rose quarter transit-center max station,Westbound stop in Portland (Stop ID 8377),45.530235,-122.665557,R,https://trimet.org/home/stop/8377,0,station-137,1,,West,At
+8378,8378,Old Town/Chinatown MAX Station,"old town, chinatown max station",Southbound stop in Portland (Stop ID 8378),45.524695,-122.671467,R,https://trimet.org/home/stop/8378,0,station-110,1,,South,At
+8380,8380,Oak/ SW 1st Ave MAX Station,oak/ southwest 1st avenue max station,Southbound stop in Portland (Stop ID 8380),45.51986,-122.672523,R,https://trimet.org/home/stop/8380,0,station-138,1,,South,Farside
+8381,8381,Morrison/SW 3rd Ave MAX Station,"morrison, southwest 3rd avenue max station",Westbound stop in Portland (Stop ID 8381),45.518181,-122.675386,R,https://trimet.org/home/stop/8381,0,,1,,West,Nearside
+8383,8383,Pioneer Square North MAX Station,pioneer square north max station,Westbound stop in Portland (Stop ID 8383),45.519253,-122.679475,R,https://trimet.org/home/stop/8383,0,,1,,West,At
+8384,8384,Galleria/SW 10th Ave MAX Station,"galleria, southwest 10th avenue max station",Westbound stop in Portland (Stop ID 8384),45.51991,-122.681919,R,https://trimet.org/home/stop/8384,0,,1,,West,At
+8989,8989,NW 23rd & Marshall,northwest 23rd & marshall,Southbound stop in Portland (Stop ID 8989),45.530612,-122.698688,B,https://trimet.org/home/stop/8989,0,,1,,South,Nearside
+9299,9299,NW 6th & Davis MAX Station,northwest 6th & davis max station,Northbound stop in Portland (Stop ID 9299),45.524405,-122.676429,R,https://trimet.org/home/stop/9299,0,,1,,North,Nearside
+9303,9303,NW 5th & Couch MAX Station,northwest 5th & kooch max station,Southbound stop in Portland (Stop ID 9303),45.523885,-122.675498,R,https://trimet.org/home/stop/9303,0,,1,,South,Nearside
+9343,9343,NE Grand & Multnomah,northeast grand & multnomah,Northbound stop in Portland (Stop ID 9343),45.531852,-122.660555,B,https://trimet.org/home/stop/9343,0,,1,,North,Farside
+9600,9600,SW 11th & Alder,southwest 11th & alder,Southbound stop in Portland (Stop ID 9600),45.521094,-122.682819,B,https://trimet.org/home/stop/9600,0,,1,,South,Nearside
+9624,9624,Sunset TC MAX Station,sunset transit-center max station,Westbound stop in Beaverton (Stop ID 9624),45.510383,-122.781299,R,https://trimet.org/home/stop/9624,0,station-143,1,,West,At
+9633,9633,SW 11th & Taylor,southwest 11th & taylor,Southbound stop in Portland (Stop ID 9633),45.519059,-122.683873,B,https://trimet.org/home/stop/9633,0,,1,,South,Nearside
+9757,9757,Providence Park MAX Station,providence park max station,Westbound stop in Portland (Stop ID 9757),45.521833,-122.689816,R,https://trimet.org/home/stop/9757,0,station-93,1,,West,At
+9758,9758,Providence Park MAX Station,providence park max station,Eastbound stop in Portland (Stop ID 9758),45.521321,-122.689886,R,https://trimet.org/home/stop/9758,0,station-93,1,,East,At
+9818,9818,Beaverton TC MAX Station,beaverton transit-center max station,Southbound stop in Beaverton (Stop ID 9818),45.49133,-122.801723,R,https://trimet.org/home/stop/9818,0,station-96,1,,South,At
+9819,9819,Beaverton Creek MAX Station,beaverton creek max station,Northbound stop in Beaverton (Stop ID 9819),45.500584,-122.833325,R,https://trimet.org/home/stop/9819,0,station-95,1,,North,At
+9821,9821,Beaverton TC MAX Station,beaverton transit-center max station,Northbound stop in Beaverton (Stop ID 9821),45.491696,-122.8012,R,https://trimet.org/home/stop/9821,0,station-96,1,,North,At
+9822,9822,Beaverton Creek MAX Station,beaverton creek max station,Southbound stop in Beaverton (Stop ID 9822),45.500249,-122.832785,R,https://trimet.org/home/stop/9822,0,station-95,1,,South,At
+9823,9823,Beaverton Central MAX Station,beaverton central max station,Westbound stop in Beaverton (Stop ID 9823),45.490425,-122.807441,R,https://trimet.org/home/stop/9823,0,station-97,1,,West,At
+9824,9824,Beaverton Central MAX Station,beaverton central max station,Eastbound stop in Beaverton (Stop ID 9824),45.490501,-122.806766,R,https://trimet.org/home/stop/9824,0,station-97,1,,East,At
+9825,9825,Millikan Way MAX Station,millican way max station,Westbound stop in Beaverton (Stop ID 9825),45.495421,-122.821806,R,https://trimet.org/home/stop/9825,0,station-98,1,,West,At
+9826,9826,Millikan Way MAX Station,millican way max station,Eastbound stop in Beaverton (Stop ID 9826),45.495102,-122.821238,R,https://trimet.org/home/stop/9826,0,station-98,1,,East,At
+9827,9827,Merlo Rd/SW 158th Ave MAX Station,"murlo road, southwest 158th avenue max station",Westbound stop in Beaverton (Stop ID 9827),45.505399,-122.842424,R,https://trimet.org/home/stop/9827,0,station-99,1,,West,At
+9828,9828,Merlo Rd/SW 158th Ave MAX Station,"murlo road, southwest 158th avenue max station",Eastbound stop in Beaverton (Stop ID 9828),45.505058,-122.841872,R,https://trimet.org/home/stop/9828,0,station-99,1,,East,At
+9829,9829,Elmonica/SW 170th Ave MAX Station,"elmonica, southwest 170th avenue max station",Westbound stop in Beaverton (Stop ID 9829),45.510134,-122.851732,R,https://trimet.org/home/stop/9829,0,station-100,1,,West,At
+9830,9830,Elmonica/SW 170th Ave MAX Station,"elmonica, southwest 170th avenue max station",Eastbound stop in Beaverton (Stop ID 9830),45.509777,-122.851193,R,https://trimet.org/home/stop/9830,0,station-100,1,,East,At
+9831,9831,Willow Creek/SW 185th Ave TC MAX Station,"willow creek, southwest 185th avenue transit-center max station",Eastbound stop in Hillsboro (Stop ID 9831),45.517117,-122.869874,R,https://trimet.org/home/stop/9831,0,station-101,1,,East,At
+9832,9832,Willow Creek/SW 185th Ave TC MAX Station,"willow creek, southwest 185th avenue transit-center max station",Westbound stop in Hillsboro (Stop ID 9832),45.517375,-122.870518,R,https://trimet.org/home/stop/9832,0,station-101,1,,West,At
+9833,9833,Quatama MAX Station,quatama max station,Westbound stop in Hillsboro (Stop ID 9833),45.523319,-122.889131,R,https://trimet.org/home/stop/9833,0,station-102,1,,West,At
+9834,9834,Quatama MAX Station,quatama max station,Eastbound stop in Hillsboro (Stop ID 9834),45.523082,-122.888511,R,https://trimet.org/home/stop/9834,0,station-102,1,,East,At
+9835,9835,Orenco MAX Station,oreignco max station,Eastbound stop in Hillsboro (Stop ID 9835),45.530257,-122.915467,R,https://trimet.org/home/stop/9835,0,station-103,1,,East,At
+9836,9836,Orenco MAX Station,oreignco max station,Westbound stop in Hillsboro (Stop ID 9836),45.530298,-122.916198,R,https://trimet.org/home/stop/9836,0,station-103,1,,West,At
+9837,9837,Hillsboro Airport/Fairgrounds MAX Stn,"hills-boro airport, fairgrounds max station",Westbound stop in Hillsboro (Stop ID 9837),45.526924,-122.946499,R,https://trimet.org/home/stop/9837,0,station-104,1,,West,At
+9838,9838,Hillsboro Airport/Fairgrounds MAX Stn,"hills-boro airport, fairgrounds max station",Eastbound stop in Hillsboro (Stop ID 9838),45.527041,-122.945808,R,https://trimet.org/home/stop/9838,0,station-104,1,,East,At
+9839,9839,Hawthorn Farm MAX Station,hawthorn farm max station,Eastbound stop in Hillsboro (Stop ID 9839),45.530012,-122.93038,R,https://trimet.org/home/stop/9839,0,station-105,1,,East,At
+9840,9840,Hawthorn Farm MAX Station,hawthorn farm max station,Westbound stop in Hillsboro (Stop ID 9840),45.529921,-122.93112,R,https://trimet.org/home/stop/9840,0,station-105,1,,West,At
+9841,9841,Washington/SE 12th Ave MAX Station,"washington, southeast twelfth avenue max station",Eastbound stop in Hillsboro (Stop ID 9841),45.521102,-122.969152,R,https://trimet.org/home/stop/9841,0,station-106,1,,East,At
+9842,9842,Washington/SE 12th Ave MAX Station,"washington, southeast twelfth avenue max station",Westbound stop in Hillsboro (Stop ID 9842),45.521231,-122.969867,R,https://trimet.org/home/stop/9842,0,station-106,1,,West,At
+9843,9843,Hillsboro Health District MAX Station,hills-boro health district max station,Eastbound stop in Hillsboro (Stop ID 9843),45.521288,-122.978017,R,https://trimet.org/home/stop/9843,0,station-107,1,,East,At
+9844,9844,Hillsboro Health District MAX Station,hills-boro health district max station,Westbound stop in Hillsboro (Stop ID 9844),45.521315,-122.978728,R,https://trimet.org/home/stop/9844,0,station-107,1,,West,At
+9845,9845,Hillsboro Central/SE 3rd TC MAX Station,"hills-boro central, southeast 3rd transit-center max station",Westbound stop in Hillsboro (Stop ID 9845),45.521431,-122.985653,R,https://trimet.org/home/stop/9845,0,station-108,1,,West,At
+9846,9846,Hillsboro Central/SE 3rd TC MAX Station,"hills-boro central, southeast 3rd transit-center max station",Eastbound stop in Hillsboro (Stop ID 9846),45.521357,-122.984926,R,https://trimet.org/home/stop/9846,0,station-108,1,,East,At
+9848,9848,Hatfield Government Center MAX Station,hatfield government center max station,Southbound stop in Hillsboro (Stop ID 9848),45.522204,-122.991022,R,https://trimet.org/home/stop/9848,0,,1,,South,At
+9969,9969,Sunset TC MAX Station,sunset transit-center max station,Eastbound stop in Beaverton (Stop ID 9969),45.510098,-122.780757,R,https://trimet.org/home/stop/9969,0,station-143,1,,East,At
+10117,10117,Goose Hollow/SW Jefferson St MAX Station,"goose hollow, southwest jefferson street max station",Westbound stop in Portland (Stop ID 10117),45.518236,-122.694089,R,https://trimet.org/home/stop/10117,0,station-112,1,,West,At
+10118,10118,Goose Hollow/SW Jefferson St MAX Station,"goose hollow, southwest jefferson street max station",Eastbound stop in Portland (Stop ID 10118),45.517989,-122.693544,R,https://trimet.org/home/stop/10118,0,station-112,1,,East,At
+10120,10120,Washington Park MAX Station,washington park max station,Eastbound stop in Portland (Stop ID 10120),45.510653,-122.71634,R,https://trimet.org/home/stop/10120,0,station-113,1,,East,At
+10121,10121,Washington Park MAX Station,washington park max station,Westbound stop in Portland (Stop ID 10121),45.510661,-122.717244,R,https://trimet.org/home/stop/10121,0,station-113,1,,West,At
+10293,10293,PSU South/SW 6th & College MAX Stn,"p s u south, southwest 6th & college max station",Northbound stop in Portland (Stop ID 10293),45.509616,-122.683593,R,https://trimet.org/home/stop/10293,0,,1,,North,Nearside
+10572,10572,Parkrose/Sumner TC MAX Station,"parkrose, sumner transit-center max station",Northbound stop in Portland (Stop ID 10572),45.559201,-122.56538,R,https://trimet.org/home/stop/10572,0,station-144,1,,North,At
+10573,10573,Parkrose/Sumner TC MAX Station,"parkrose, sumner transit-center max station",Southbound stop in Portland (Stop ID 10573),45.558829,-122.565861,R,https://trimet.org/home/stop/10573,0,station-144,1,,South,At
+10574,10574,Cascades MAX Station,cascades max station,Westbound stop in Portland (Stop ID 10574),45.57239,-122.55829,R,https://trimet.org/home/stop/10574,0,station-111,1,,West,At
+10575,10575,Cascades MAX Station,cascades max station,Eastbound stop in Portland (Stop ID 10575),45.572075,-122.5577,R,https://trimet.org/home/stop/10575,0,station-111,1,,East,At
+10576,10576,Mt Hood Ave MAX Station,mount hood avenue max station,Northbound stop in Portland (Stop ID 10576),45.577359,-122.567151,R,https://trimet.org/home/stop/10576,0,station-145,1,,North,At
+10577,10577,Mt Hood Ave MAX Station,mount hood avenue max station,Southbound stop in Portland (Stop ID 10577),45.576861,-122.567141,R,https://trimet.org/home/stop/10577,0,station-145,1,,South,At
+10579,10579,Portland Int'l Airport MAX Station,portland int'l airport max station,Bidirectional stop in Portland (Stop ID 10579),45.587584,-122.5931,R,https://trimet.org/home/stop/10579,0,,1,,,At
+10751,10751,NW 18th & Lovejoy,northwest 18th & lovejoy street,Eastbound stop in Portland (Stop ID 10751),45.529925,-122.689587,B,https://trimet.org/home/stop/10751,0,,1,,East,Nearside
+10752,10752,NW 13th & Lovejoy,northwest 13th & lovejoy street,Eastbound stop in Portland (Stop ID 10752),45.529997,-122.684611,B,https://trimet.org/home/stop/10752,0,,1,,East,Nearside
+10753,10753,NW 11th & Johnson,northwest 11th & johnson,Southbound stop in Portland (Stop ID 10753),45.528742,-122.682374,B,https://trimet.org/home/stop/10753,0,,1,,South,Nearside
+10754,10754,NW 11th & Glisan,northwest 11th & gleesun,Southbound stop in Portland (Stop ID 10754),45.526605,-122.682297,B,https://trimet.org/home/stop/10754,0,,1,,South,Nearside
+10756,10756,NW 11th & Couch,northwest 11th & kooch,Southbound stop in Portland (Stop ID 10756),45.523784,-122.682223,B,https://trimet.org/home/stop/10756,0,,1,,South,Nearside
+10759,10759,SW 11th & Jefferson,southwest 11th & jefferson,Southbound stop in Portland (Stop ID 10759),45.516402,-122.685301,B,https://trimet.org/home/stop/10759,0,,1,,South,Nearside
+10760,10760,SW 11th & Clay,southwest 11th & clay,Southbound stop in Portland (Stop ID 10760),45.515106,-122.686081,B,https://trimet.org/home/stop/10760,0,,1,,South,Nearside
+10762,10762,SW 5th & Market,southwest 5th & market,Eastbound stop in Portland (Stop ID 10762),45.512922,-122.681042,B,https://trimet.org/home/stop/10762,0,,1,,East,Nearside
+10763,10763,SW 5th & Montgomery,southwest 5th & montgomry,Southbound stop in Portland (Stop ID 10763),45.511708,-122.681315,B,https://trimet.org/home/stop/10763,0,,1,,South,Nearside
+10764,10764,PSU Urban Center,p s u urban center,Northbound stop in Portland (Stop ID 10764),45.51222,-122.682078,B,https://trimet.org/home/stop/10764,0,,1,,North,At
+10765,10765,SW 10th & Clay,southwest 10th & clay,Northbound stop in Portland (Stop ID 10765),45.514548,-122.68498,B,https://trimet.org/home/stop/10765,0,,1,,North,Nearside
+10766,10766,SW Park & Mill,southwest park & mill,Westbound stop in Portland (Stop ID 10766),45.513054,-122.684553,B,https://trimet.org/home/stop/10766,0,,1,,West,Nearside
+10767,10767,Central Library,central library,Northbound stop in Portland (Stop ID 10767),45.519207,-122.682443,B,https://trimet.org/home/stop/10767,0,,1,,North,Nearside
+10768,10768,SW 10th & Alder,southwest 10th & alder,Northbound stop in Portland (Stop ID 10768),45.520567,-122.681724,B,https://trimet.org/home/stop/10768,0,,1,,North,Nearside
+10770,10770,NW 10th & Couch,northwest 10th & kooch,Northbound stop in Portland (Stop ID 10770),45.523593,-122.681083,B,https://trimet.org/home/stop/10770,0,,1,,North,Nearside
+10772,10772,NW 10th & Glisan,northwest 10th & gleesun,Northbound stop in Portland (Stop ID 10772),45.526446,-122.68118,B,https://trimet.org/home/stop/10772,0,,1,,North,Nearside
+10773,10773,NW 10th & Johnson,northwest 10th & johnson,Northbound stop in Portland (Stop ID 10773),45.528572,-122.68125,B,https://trimet.org/home/stop/10773,0,,1,,North,Nearside
+10775,10775,NW 14th & Northrup,northwest 14th & northrup,Westbound stop in Portland (Stop ID 10775),45.531503,-122.685357,B,https://trimet.org/home/stop/10775,0,,1,,West,Nearside
+10776,10776,NW 18th & Northrup,northwest 18th & northrup,Westbound stop in Portland (Stop ID 10776),45.531434,-122.689417,B,https://trimet.org/home/stop/10776,0,,1,,West,Nearside
+10777,10777,NW 21st & Northrup,northwest 21st & northrup,Westbound stop in Portland (Stop ID 10777),45.531346,-122.694455,B,https://trimet.org/home/stop/10777,0,,1,,West,Nearside
+10778,10778,NW 22nd & Northrup,northwest 22nd & northrup,Westbound stop in Portland (Stop ID 10778),45.531308,-122.696445,B,https://trimet.org/home/stop/10778,0,,1,,West,Nearside
+11011,11011,SW Park & Market,southwest park & market,Eastbound stop in Portland (Stop ID 11011),45.513704,-122.683913,B,https://trimet.org/home/stop/11011,0,,1,,East,Nearside
+11483,11483,SE Grand & Taylor,southeast grand & taylor,Northbound stop in Portland (Stop ID 11483),45.514994,-122.660668,B,https://trimet.org/home/stop/11483,0,,1,,North,Nearside
+11484,11484,SE Grand & Belmont,southeast grand & belmont,Northbound stop in Portland (Stop ID 11484),45.516858,-122.660629,B,https://trimet.org/home/stop/11484,0,,1,,North,Farside
+11498,11498,Expo Center MAX Station,expo center max station,Southbound stop in Portland (Stop ID 11498),45.605354,-122.685706,R,https://trimet.org/home/stop/11498,0,,1,,South,At
+11499,11499,Delta Park/Vanport MAX Station,"delta park, vanport max station",Southbound stop in Portland (Stop ID 11499),45.596116,-122.685731,R,https://trimet.org/home/stop/11499,0,station-92,1,,South,At
+11500,11500,Kenton/N Denver Ave MAX Station,"kenton, north denver avenue max station",Southbound stop in Portland (Stop ID 11500),45.583792,-122.685879,R,https://trimet.org/home/stop/11500,0,station-84,1,,South,At
+11501,11501,N Lombard TC MAX Station,north lombard transit-center max station,Southbound stop in Portland (Stop ID 11501),45.576578,-122.682163,R,https://trimet.org/home/stop/11501,0,station-85,1,,South,At
+11502,11502,Rosa Parks MAX Station,rosa parks max station,Southbound stop in Portland (Stop ID 11502),45.569349,-122.682217,R,https://trimet.org/home/stop/11502,0,station-86,1,,South,At
+11503,11503,N Killingsworth St MAX Station,north killings worth street max station,Southbound stop in Portland (Stop ID 11503),45.562205,-122.682297,R,https://trimet.org/home/stop/11503,0,station-91,1,,South,At
+11504,11504,N Prescott St MAX Station,north prescott street max station,Southbound stop in Portland (Stop ID 11504),45.555097,-122.682294,R,https://trimet.org/home/stop/11504,0,station-90,1,,South,At
+11505,11505,Overlook Park MAX Station,overlook park max station,Southbound stop in Portland (Stop ID 11505),45.549123,-122.681061,R,https://trimet.org/home/stop/11505,0,station-87,1,,South,At
+11506,11506,Albina/Mississippi MAX Station,"albeina, mississippi max station",Southbound stop in Portland (Stop ID 11506),45.539481,-122.67536,R,https://trimet.org/home/stop/11506,0,station-89,1,,South,At
+11507,11507,Interstate/Rose Quarter MAX Station,"interstate, rose quarter max station",Southbound stop in Portland (Stop ID 11507),45.530091,-122.667769,R,https://trimet.org/home/stop/11507,0,station-88,1,,South,At
+11508,11508,Interstate/Rose Quarter MAX Station,"interstate, rose quarter max station",Northbound stop in Portland (Stop ID 11508),45.53028,-122.667879,R,https://trimet.org/home/stop/11508,0,station-88,1,,North,At
+11509,11509,Albina/Mississippi MAX Station,"albeina, mississippi max station",Northbound stop in Portland (Stop ID 11509),45.539626,-122.675617,R,https://trimet.org/home/stop/11509,0,station-89,1,,North,At
+11510,11510,Overlook Park MAX Station,overlook park max station,Northbound stop in Portland (Stop ID 11510),45.548308,-122.680925,R,https://trimet.org/home/stop/11510,0,station-87,1,,North,At
+11511,11511,N Prescott St MAX Station,north prescott street max station,Northbound stop in Portland (Stop ID 11511),45.555278,-122.682282,R,https://trimet.org/home/stop/11511,0,station-90,1,,North,At
+11512,11512,N Killingsworth St MAX Station,north killings worth street max station,Northbound stop in Portland (Stop ID 11512),45.563117,-122.68215,R,https://trimet.org/home/stop/11512,0,station-91,1,,North,At
+11513,11513,Rosa Parks MAX Station,rosa parks max station,Northbound stop in Portland (Stop ID 11513),45.570416,-122.682062,R,https://trimet.org/home/stop/11513,0,station-86,1,,North,At
+11514,11514,N Lombard TC MAX Station,north lombard transit-center max station,Northbound stop in Portland (Stop ID 11514),45.577642,-122.682004,R,https://trimet.org/home/stop/11514,0,station-85,1,,North,At
+11515,11515,Kenton/N Denver Ave MAX Station,"kenton, north denver avenue max station",Northbound stop in Portland (Stop ID 11515),45.583927,-122.685944,R,https://trimet.org/home/stop/11515,0,station-84,1,,North,At
+11516,11516,Delta Park/Vanport MAX Station,"delta park, vanport max station",Northbound stop in Portland (Stop ID 11516),45.596147,-122.685562,R,https://trimet.org/home/stop/11516,0,station-92,1,,North,At
+12375,12375,SW 3rd & Harrison,southwest 3rd & harrison,Eastbound stop in Portland (Stop ID 12375),45.510203,-122.679598,B,https://trimet.org/home/stop/12375,0,,1,,East,Farside
+12377,12377,SW Harrison Street,southwest harrison street,Southbound stop in Portland (Stop ID 12377),45.508792,-122.676574,B,https://trimet.org/home/stop/12377,0,,1,,South,Farside
+12378,12378,S River Pkwy & Moody,south river parkway & moody,Eastbound stop in Portland (Stop ID 12378),45.507069,-122.673924,B,https://trimet.org/home/stop/12378,0,,1,,East,Farside
+12379,12379,S River Pkwy & Moody,south river parkway & moody,Westbound stop in Portland (Stop ID 12379),45.507139,-122.67414,B,https://trimet.org/home/stop/12379,0,,1,,West,Nearside
+12380,12380,SW Harrison Street,southwest harrison street,Northbound stop in Portland (Stop ID 12380),45.50895,-122.676531,B,https://trimet.org/home/stop/12380,0,,1,,North,Nearside
+12382,12382,SW 3rd & Harrison,southwest 3rd & harrison,Westbound stop in Portland (Stop ID 12382),45.510277,-122.679813,B,https://trimet.org/home/stop/12382,0,,1,,West,Nearside
+12760,12760,S Moody & Gibbs,south moody & gibbs,Southbound stop in Portland (Stop ID 12760),45.499337,-122.671815,B,https://trimet.org/home/stop/12760,0,,1,,South,Nearside
+12796,12796,NW 12th & Northrup,northwest twelfth & northrup,Westbound stop in Portland (Stop ID 12796),45.531535,-122.68332,B,https://trimet.org/home/stop/12796,0,,1,,West,Nearside
+12844,12844,Marquam Hill Upper Tram Terminal,markum hill upper tram terminal,Eastbound stop in Portland (Stop ID 12844),45.499497,-122.683919,T,https://trimet.org/home/stop/12844,0,,1,,East,At
+12845,12845,South Waterfront Lower Tram Terminal,south waterfront lower tram terminal,Westbound stop in Portland (Stop ID 12845),45.499271,-122.67101,T,https://trimet.org/home/stop/12845,0,,1,,West,At
+12880,12880,S Moody & Gaines,south moody & gaines,Southbound stop in Portland (Stop ID 12880),45.496182,-122.671942,B,https://trimet.org/home/stop/12880,0,,1,,South,Farside
+12881,12881,S Lowell & Bond,south lowell & bond,Eastbound stop in Portland (Stop ID 12881),45.493891,-122.671376,B,https://trimet.org/home/stop/12881,0,,1,,East,Farside
+12882,12882,S Bond & Lane,south bond & lane,Northbound stop in Portland (Stop ID 12882),45.495594,-122.670933,B,https://trimet.org/home/stop/12882,0,,1,,North,Nearside
+12883,12883,OHSU Plaza,o h es u plahza,Northbound stop in Portland (Stop ID 12883),45.498939,-122.670739,B,https://trimet.org/home/stop/12883,0,,1,,North,Farside
+13066,13066,Beaverton TC WES Station,beaverton transit-center wes station,Bidirectional stop in Beaverton (Stop ID 13066),45.49064,-122.801157,R,https://trimet.org/home/stop/13066,0,,1,,,At
+13067,13067,Hall/Nimbus WES Station,"hall, nimbus wes station",Bidirectional stop in Beaverton (Stop ID 13067),45.457587,-122.786997,R,https://trimet.org/home/stop/13067,0,,1,,,At
+13068,13068,Tigard TC WES Station,tigard transit-center wes station,Southbound stop in Tigard (Stop ID 13068),45.429936,-122.769527,R,https://trimet.org/home/stop/13068,0,station-2563,1,,South,At
+13069,13069,Tualatin WES Station,tuall atin wes station,Bidirectional stop in Tualatin (Stop ID 13069),45.383621,-122.764504,R,https://trimet.org/home/stop/13069,0,,1,,,At
+13070,13070,Wilsonville WES Station,wilsonville wes station,Bidirectional stop in Wilsonville (Stop ID 13070),45.311358,-122.775303,R,https://trimet.org/home/stop/13070,0,,1,,,At
+13073,13073,Tigard TC WES Station,tigard transit-center wes station,Northbound stop in Tigard (Stop ID 13073),45.430229,-122.769834,R,https://trimet.org/home/stop/13073,0,station-2563,1,,North,At
+13123,13123,SW 6th & Madison MAX Station,southwest 6th & madison max station,Northbound stop in Portland (Stop ID 13123),45.515633,-122.680381,R,https://trimet.org/home/stop/13123,0,,1,,North,Nearside
+13124,13124,SE Main St MAX Station,southeast main street max station,Southbound stop in Portland (Stop ID 13124),45.513986,-122.564467,R,https://trimet.org/home/stop/13124,0,station-1522,1,,South,Nearside
+13125,13125,SE Division St MAX Station,southeast division street max station,Southbound stop in Portland (Stop ID 13125),45.503123,-122.566663,R,https://trimet.org/home/stop/13125,0,station-1521,1,,South,Farside
+13126,13126,SE Powell Blvd MAX Station,southeast powell blvd max station,Southbound stop in Portland (Stop ID 13126),45.495503,-122.56617,R,https://trimet.org/home/stop/13126,0,station-1520,1,,South,Farside
+13127,13127,SE Holgate Blvd MAX Station,southeast holgate blvd max station,Southbound stop in Portland (Stop ID 13127),45.490868,-122.566315,R,https://trimet.org/home/stop/13127,0,station-1519,1,,South,Nearside
+13128,13128,Lents/SE Foster Rd MAX Station,"lents, southeast foster road max station",Southbound stop in Portland (Stop ID 13128),45.480188,-122.566871,R,https://trimet.org/home/stop/13128,0,station-1518,1,,South,Nearside
+13129,13129,SE Flavel St MAX Station,southeast fluh vell street max station,Southbound stop in Portland (Stop ID 13129),45.467602,-122.566761,R,https://trimet.org/home/stop/13129,0,station-1517,1,,South,Farside
+13130,13130,SE Fuller Rd MAX Station,southeast fuller road max station,Southbound stop in Clackamas Co. (Stop ID 13130),45.453138,-122.573578,R,https://trimet.org/home/stop/13130,0,station-1515,1,,South,At
+13132,13132,Clackamas Town Center TC MAX Station,clackamas.town.center transit-center max station,Bidirectional stop in Clackamas Co. (Stop ID 13132),45.435721,-122.567769,R,https://trimet.org/home/stop/13132,0,,1,,,At
+13133,13133,SE Fuller Rd MAX Station,southeast fuller road max station,Northbound stop in Clackamas Co. (Stop ID 13133),45.453637,-122.573656,R,https://trimet.org/home/stop/13133,0,station-1515,1,,North,At
+13134,13134,SE Flavel St MAX Station,southeast fluh vell street max station,Northbound stop in Portland (Stop ID 13134),45.468068,-122.566542,R,https://trimet.org/home/stop/13134,0,station-1517,1,,North,Nearside
+13135,13135,Lents/SE Foster Rd MAX Station,"lents, southeast foster road max station",Northbound stop in Portland (Stop ID 13135),45.480686,-122.566745,R,https://trimet.org/home/stop/13135,0,station-1518,1,,North,Farside
+13136,13136,SE Holgate Blvd MAX Station,southeast holgate blvd max station,Northbound stop in Portland (Stop ID 13136),45.491369,-122.566229,R,https://trimet.org/home/stop/13136,0,station-1519,1,,North,Farside
+13137,13137,SE Powell Blvd MAX Station,southeast powell blvd max station,Northbound stop in Portland (Stop ID 13137),45.495991,-122.566198,R,https://trimet.org/home/stop/13137,0,station-1520,1,,North,Nearside
+13138,13138,SE Division St MAX Station,southeast division street max station,Northbound stop in Portland (Stop ID 13138),45.503608,-122.566584,R,https://trimet.org/home/stop/13138,0,station-1521,1,,North,Nearside
+13139,13139,SE Main St MAX Station,southeast main street max station,Northbound stop in Portland (Stop ID 13139),45.514525,-122.564413,R,https://trimet.org/home/stop/13139,0,station-1522,1,,North,Farside
+13449,13449,Civic Drive MAX Station,civic drive max station,Westbound stop in Gresham (Stop ID 13449),45.508293,-122.441843,R,https://trimet.org/home/stop/13449,0,station-2566,1,,West,At
+13450,13450,Civic Drive MAX Station,civic drive max station,Eastbound stop in Gresham (Stop ID 13450),45.507972,-122.441302,R,https://trimet.org/home/stop/13450,0,station-2566,1,,East,At
+13584,13584,SE M L King & Morrison,southeast martin luther king & morrison,Southbound stop in Portland (Stop ID 13584),45.51696,-122.661919,B,https://trimet.org/home/stop/13584,0,,1,,South,Farside
+13585,13585,SE M L King & Taylor,southeast martin luther king & taylor,Southbound stop in Portland (Stop ID 13585),45.514669,-122.661902,B,https://trimet.org/home/stop/13585,0,,1,,South,Nearside
+13597,13597,SE Grand & Stark,southeast grand & stark,Northbound stop in Portland (Stop ID 13597),45.519626,-122.660644,B,https://trimet.org/home/stop/13597,0,,1,,North,Farside
+13601,13601,S Moody & Meade South,south moody & meade south,Southbound stop in Portland (Stop ID 13601),45.503115,-122.672793,B,https://trimet.org/home/stop/13601,0,,1,,South,At
+13602,13602,S Moody & Meade North,south moody & meade north,Northbound stop in Portland (Stop ID 13602),45.503287,-122.672734,B,https://trimet.org/home/stop/13602,0,,1,,North,At
+13604,13604,NW 10th & Northrup,northwest 10th & northrup,Northbound stop in Portland (Stop ID 13604),45.53128,-122.681364,B,https://trimet.org/home/stop/13604,0,,1,,North,Nearside
+13606,13606,NW 9th & Lovejoy,northwest 9th & lovejoy street,Eastbound stop in Portland (Stop ID 13606),45.530059,-122.680499,B,https://trimet.org/home/stop/13606,0,,1,,East,Nearside
+13607,13607,N Weidler & Ross,north weidler & ross,Eastbound stop in Portland (Stop ID 13607),45.534433,-122.669221,B,https://trimet.org/home/stop/13607,0,,1,,East,Farside
+13608,13608,NE Weidler & 2nd (Streetcar),northeast weidler & 2nd (streetcar),Eastbound stop in Portland (Stop ID 13608),45.534426,-122.663835,B,https://trimet.org/home/stop/13608,0,,1,,East,Nearside
+13609,13609,NE Weidler & Grand,northeast weidler & grand,Eastbound stop in Portland (Stop ID 13609),45.53441,-122.660223,B,https://trimet.org/home/stop/13609,0,,1,,East,Farside
+13610,13610,NE 7th & Halsey,northeast 7th & haulzy,Southbound stop in Portland (Stop ID 13610),45.533339,-122.658607,B,https://trimet.org/home/stop/13610,0,,1,,South,Farside
+13611,13611,NE 7th & Holladay,northeast 7th & holladay,Southbound stop in Portland (Stop ID 13611),45.530714,-122.658623,B,https://trimet.org/home/stop/13611,0,,1,,South,Nearside
+13612,13612,NE Oregon & Grand,northeast oregon & grand,Westbound stop in Portland (Stop ID 13612),45.528685,-122.660504,B,https://trimet.org/home/stop/13612,0,,1,,West,Nearside
+13613,13613,SE M L King & Stark,southeast martin luther king & stark,Southbound stop in Portland (Stop ID 13613),45.519102,-122.661874,B,https://trimet.org/home/stop/13613,0,,1,,South,Farside
+13614,13614,SE M L King & Hawthorne,southeast martin luther king & hawthorne,Southbound stop in Portland (Stop ID 13614),45.512514,-122.661954,B,https://trimet.org/home/stop/13614,0,,1,,South,Nearside
+13615,13615,SE Water/OMSI (Streetcar),"southeast water, omsi (streetcar)",Northbound stop in Portland (Stop ID 13615),45.507038,-122.663345,B,https://trimet.org/home/stop/13615,0,,1,,North,At
+13616,13616,SE Grand & Hawthorne,southeast grand & hawthorne,Northbound stop in Portland (Stop ID 13616),45.512829,-122.660687,B,https://trimet.org/home/stop/13616,0,,1,,North,Nearside
+13617,13617,NE Grand & Broadway,northeast grand & broadway,Northbound stop in Portland (Stop ID 13617),45.534798,-122.660548,B,https://trimet.org/home/stop/13617,0,,1,,North,Nearside
+13618,13618,NE Broadway & 2nd (Streetcar),northeast broadway & 2nd (streetcar),Westbound stop in Portland (Stop ID 13618),45.535034,-122.663538,B,https://trimet.org/home/stop/13618,0,,1,,West,Nearside
+13619,13619,NE Broadway & Ross (Streetcar),northeast broadway & ross (streetcar),Westbound stop in Portland (Stop ID 13619),45.53445,-122.669522,B,https://trimet.org/home/stop/13619,0,,1,,West,Opposite
+13620,13620,NW 11th & Marshall,northwest 11th & marshall,Southbound stop in Portland (Stop ID 13620),45.530904,-122.682456,B,https://trimet.org/home/stop/13620,0,,1,,South,Nearside
+13709,13709,SE Water/OMSI (Streetcar),"southeast water, omsi (streetcar)",Southbound stop in Portland (Stop ID 13709),45.506951,-122.663364,B,https://trimet.org/home/stop/13709,0,,1,,South,At
+13710,13710,Lincoln St/SW 3rd Ave MAX Station,"lincoln street, southwest 3rd avenue max station",Eastbound stop in Portland (Stop ID 13710),45.507902,-122.680154,R,https://trimet.org/home/stop/13710,0,station-2551,1,,East,At
+13711,13711,South Waterfront/S Moody MAX Station,"south waterfront, south moody max station",Eastbound stop in Portland (Stop ID 13711),45.502693,-122.671141,R,https://trimet.org/home/stop/13711,0,station-2552,1,,East,At
+13712,13712,OMSI/SE Water MAX Station,"omsi, southeast water max station",Eastbound stop in Portland (Stop ID 13712),45.506475,-122.662559,R,https://trimet.org/home/stop/13712,0,station-2553,1,,East,At
+13713,13713,Clinton St/SE 12th Ave MAX Station,"clinton street, southeast twelfth avenue max station",Eastbound stop in Portland (Stop ID 13713),45.502604,-122.652986,R,https://trimet.org/home/stop/13713,0,station-2554,1,,East,At
+13714,13714,SE 17th Ave & Rhine St MAX Station,southeast 17th avenue & rhine street max station,Southbound stop in Portland (Stop ID 13714),45.497644,-122.648178,R,https://trimet.org/home/stop/13714,0,station-2555,1,,South,At
+13715,13715,SE 17th Ave & Holgate Blvd MAX Station,southeast 17th avenue & holgate blvd max station,Southbound stop in Portland (Stop ID 13715),45.490639,-122.64854,R,https://trimet.org/home/stop/13715,0,station-2556,1,,South,At
+13716,13716,SE Bybee Blvd MAX Station,southeast bybee blvd max station,Southbound stop in Portland (Stop ID 13716),45.474667,-122.63999,R,https://trimet.org/home/stop/13716,0,station-2557,1,,South,At
+13717,13717,SE Tacoma/Johnson Creek MAX Station,"southeast tacoma, johnsoncreek max station",Southbound stop in Portland (Stop ID 13717),45.462631,-122.637423,R,https://trimet.org/home/stop/13717,0,station-2558,1,,South,At
+13718,13718,Milwaukie/Main St MAX Station,"milwaukie, main street max station",Southbound stop in Milwaukie (Stop ID 13718),45.441027,-122.640056,R,https://trimet.org/home/stop/13718,0,station-2559,1,,South,At
+13720,13720,SE Park Ave MAX Station,southeast park avenue max station,Northbound stop in Clackamas Co. (Stop ID 13720),45.430734,-122.635065,R,https://trimet.org/home/stop/13720,0,,1,,North,At
+13721,13721,Milwaukie/Main St MAX Station,"milwaukie, main street max station",Northbound stop in Milwaukie (Stop ID 13721),45.44143,-122.63982,R,https://trimet.org/home/stop/13721,0,station-2559,1,,North,At
+13722,13722,SE Tacoma/Johnson Creek MAX Station,"southeast tacoma, johnsoncreek max station",Northbound stop in Portland (Stop ID 13722),45.462984,-122.63785,R,https://trimet.org/home/stop/13722,0,station-2558,1,,North,At
+13723,13723,SE Bybee Blvd MAX Station,southeast bybee blvd max station,Northbound stop in Portland (Stop ID 13723),45.475104,-122.640055,R,https://trimet.org/home/stop/13723,0,station-2557,1,,North,At
+13724,13724,SE 17th Ave & Holgate Blvd MAX Station,southeast 17th avenue & holgate blvd max station,Northbound stop in Portland (Stop ID 13724),45.491139,-122.648456,R,https://trimet.org/home/stop/13724,0,station-2556,1,,North,At
+13725,13725,SE 17th Ave & Rhine St MAX Station,southeast 17th avenue & rhine street max station,Northbound stop in Portland (Stop ID 13725),45.498131,-122.648142,R,https://trimet.org/home/stop/13725,0,station-2555,1,,North,At
+13726,13726,Clinton St/SE 12th Ave MAX Station,"clinton street, southeast twelfth avenue max station",Westbound stop in Portland (Stop ID 13726),45.502953,-122.653516,R,https://trimet.org/home/stop/13726,0,station-2554,1,,West,At
+13727,13727,OMSI/SE Water MAX Station,"omsi, southeast water max station",Westbound stop in Portland (Stop ID 13727),45.506618,-122.662862,R,https://trimet.org/home/stop/13727,0,station-2553,1,,West,At
+13728,13728,South Waterfront/S Moody MAX Station,"south waterfront, south moody max station",Westbound stop in Portland (Stop ID 13728),45.502716,-122.671539,R,https://trimet.org/home/stop/13728,0,station-2552,1,,West,At
+13729,13729,Lincoln St/SW 3rd Ave MAX Station,"lincoln street, southwest 3rd avenue max station",Westbound stop in Portland (Stop ID 13729),45.507942,-122.680858,R,https://trimet.org/home/stop/13729,0,station-2551,1,,West,At
+14250,14250,Gateway North MAX Station,gateway north max station,Southbound stop in Portland (Stop ID 14250),45.532331,-122.563749,R,https://trimet.org/home/stop/14250,0,,1,,South,At
+14641,14641,Gateway Transit Center,gateway transit center,Bidirectional stop in Portland (Stop ID 14641),45.530588,-122.563619,R,https://trimet.org/home/stop/14641,0,,1,,,At

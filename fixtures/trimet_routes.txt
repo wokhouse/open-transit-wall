@@ -1,0 +1,83 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_url,route_color,route_text_color,route_sort_order,network_id
+1,TRIMET,1,Vermont,3,https://trimet.org/schedules/r001.htm,4679AA,FFFFFF,400,TRIMET
+2,TRIMET,FX2,Division,3,https://trimet.org/schedules/r002.htm,61A60E,000000,500,TRIMET
+4,TRIMET,4,Fessenden/Woodstock,3,https://trimet.org/schedules/r004.htm,4679AA,FFFFFF,600,TRIMET
+6,TRIMET,6,Martin Luther King Jr Blvd,3,https://trimet.org/schedules/r006.htm,4679AA,FFFFFF,800,TRIMET
+8,TRIMET,8,Jackson Park/NE 15th,3,https://trimet.org/schedules/r008.htm,4679AA,FFFFFF,1000,TRIMET
+9,TRIMET,9,Powell Blvd,3,https://trimet.org/schedules/r009.htm,4679AA,FFFFFF,1100,TRIMET
+10,TRIMET,10,Steele,3,https://trimet.org/schedules/r010.htm,4679AA,FFFFFF,1300,TRIMET
+11,TRIMET,11,Rivergate/Marine Dr,3,https://trimet.org/schedules/r011.htm,4679AA,FFFFFF,1400,TRIMET
+12,TRIMET,12,Barbur/Sandy Blvd,3,https://trimet.org/schedules/r012.htm,4679AA,FFFFFF,1500,TRIMET
+14,TRIMET,14,Hawthorne/Foster,3,https://trimet.org/schedules/r014.htm,4679AA,FFFFFF,1700,TRIMET
+15,TRIMET,15,Belmont/NW 23rd,3,https://trimet.org/schedules/r015.htm,4679AA,FFFFFF,1800,TRIMET
+16,TRIMET,16,NW Front Ave,3,https://trimet.org/schedules/r016.htm,4679AA,FFFFFF,1900,TRIMET
+17,TRIMET,17,Holgate/NE 33rd,3,https://trimet.org/schedules/r017.htm,4679AA,FFFFFF,2000,TRIMET
+18,TRIMET,18,Hillside,3,https://trimet.org/schedules/r018.htm,4679AA,FFFFFF,2300,TRIMET
+19,TRIMET,19,Glisan/Canyon Rd,3,https://trimet.org/schedules/r019.htm,4679AA,FFFFFF,2450,TRIMET
+20,TRIMET,20,Burnside/Stark,3,https://trimet.org/schedules/r020.htm,4679AA,FFFFFF,2600,TRIMET
+21,TRIMET,21,Sandy Blvd/223rd,3,https://trimet.org/schedules/r021.htm,4679AA,FFFFFF,2650,TRIMET
+22,TRIMET,22,Parkrose,3,https://trimet.org/schedules/r022.htm,4679AA,FFFFFF,2700,TRIMET
+23,TRIMET,23,San Rafael,3,https://trimet.org/schedules/r023.htm,4679AA,FFFFFF,2800,TRIMET
+24,TRIMET,24,Fremont/NW 18th,3,https://trimet.org/schedules/r024.htm,4679AA,FFFFFF,2850,TRIMET
+25,TRIMET,25,Glisan/Troutdale Rd,3,https://trimet.org/schedules/r025.htm,4679AA,FFFFFF,2900,TRIMET
+26,TRIMET,26,Thurman/NW 18th,3,https://trimet.org/schedules/r026.htm,4679AA,FFFFFF,3000,TRIMET
+29,TRIMET,29,International Way,3,https://trimet.org/schedules/r029.htm,4679AA,FFFFFF,3200,TRIMET
+30,TRIMET,30,Estacada,3,https://trimet.org/schedules/r030.htm,4679AA,FFFFFF,3250,TRIMET
+31,TRIMET,31,Webster/Beavercreek,3,https://trimet.org/schedules/r031.htm,4679AA,FFFFFF,3325,TRIMET
+33,TRIMET,33,McLoughlin/King Rd,3,https://trimet.org/schedules/r033.htm,4679AA,FFFFFF,3500,TRIMET
+34,TRIMET,34,Oatfield/River Rd,3,https://trimet.org/schedules/r034.htm,4679AA,FFFFFF,3625,TRIMET
+35,TRIMET,35,Macadam/Greeley,3,https://trimet.org/schedules/r035.htm,4679AA,FFFFFF,3750,TRIMET
+40,TRIMET,40,Tacoma/Swan Island,3,https://trimet.org/schedules/r040.htm,4679AA,FFFFFF,4300,TRIMET
+43,TRIMET,43,Taylors Ferry/Marquam Hill,3,https://trimet.org/schedules/r043.htm,4679AA,FFFFFF,4500,TRIMET
+44,TRIMET,44,Capitol Hwy/N Rosa Parks,3,https://trimet.org/schedules/r044.htm,4679AA,FFFFFF,4650,TRIMET
+45,TRIMET,45,Garden Home/Arnold Creek,3,https://trimet.org/schedules/r045.htm,4679AA,FFFFFF,4700,TRIMET
+46,TRIMET,46,North Hillsboro,3,https://trimet.org/schedules/r046.htm,4679AA,FFFFFF,4800,TRIMET
+47,TRIMET,47,Main/Baseline,3,https://trimet.org/schedules/r047.htm,4679AA,FFFFFF,4900,TRIMET
+48,TRIMET,48,Cornell,3,https://trimet.org/schedules/r048.htm,4679AA,FFFFFF,5000,TRIMET
+51,TRIMET,51,Vista/Sunset Blvd,3,https://trimet.org/schedules/r051.htm,4679AA,FFFFFF,5300,TRIMET
+52,TRIMET,52,Farmington/185th,3,https://trimet.org/schedules/r052.htm,4679AA,FFFFFF,5400,TRIMET
+53,TRIMET,53,Arctic/Allen,3,https://trimet.org/schedules/r053.htm,4679AA,FFFFFF,5500,TRIMET
+54,TRIMET,54,Beaverton-Hillsdale Hwy,3,https://trimet.org/schedules/r054.htm,4679AA,FFFFFF,5600,TRIMET
+55,TRIMET,55,Hamilton,3,https://trimet.org/schedules/r055.htm,4679AA,FFFFFF,5700,TRIMET
+56,TRIMET,56,Scholls Ferry/Marquam Hill,3,https://trimet.org/schedules/r056.htm,4679AA,FFFFFF,5800,TRIMET
+57,TRIMET,57,TV Hwy/Forest Grove,3,https://trimet.org/schedules/r057.htm,4679AA,FFFFFF,5900,TRIMET
+59,TRIMET,59,Walker/Park Way,3,https://trimet.org/schedules/r059.htm,4679AA,FFFFFF,6100,TRIMET
+62,TRIMET,62,Murray Blvd,3,https://trimet.org/schedules/r062.htm,4679AA,FFFFFF,6400,TRIMET
+63,TRIMET,63,Washington Park/SW 6th,3,https://trimet.org/schedules/r063.htm,4679AA,FFFFFF,6500,TRIMET
+67,TRIMET,67,Bethany/158th,3,https://trimet.org/schedules/r067.htm,4679AA,FFFFFF,6900,TRIMET
+70,TRIMET,70,Milwaukie Ave/12th,3,https://trimet.org/schedules/r070.htm,4679AA,FFFFFF,7100,TRIMET
+71,TRIMET,71,60th Ave,3,https://trimet.org/schedules/r071.htm,4679AA,FFFFFF,7200,TRIMET
+72,TRIMET,72,Killingsworth/82nd Ave,3,https://trimet.org/schedules/r072.htm,4679AA,FFFFFF,7300,TRIMET
+73,TRIMET,73,122nd Ave,3,https://trimet.org/schedules/r073.htm,4679AA,FFFFFF,7400,TRIMET
+74,TRIMET,74,162nd Ave,3,https://trimet.org/schedules/r074.htm,4679AA,FFFFFF,7450,TRIMET
+75,TRIMET,75,Cesar Chavez/Lombard,3,https://trimet.org/schedules/r075.htm,4679AA,FFFFFF,7500,TRIMET
+76,TRIMET,76,Hall/Greenburg,3,https://trimet.org/schedules/r076.htm,4679AA,FFFFFF,7600,TRIMET
+77,TRIMET,77,Broadway/Halsey,3,https://trimet.org/schedules/r077.htm,4679AA,FFFFFF,7700,TRIMET
+78,TRIMET,78,Denney/Kerr Pkwy,3,https://trimet.org/schedules/r078.htm,4679AA,FFFFFF,7800,TRIMET
+79,TRIMET,79,Clackamas/Oregon City,3,https://trimet.org/schedules/r079.htm,4679AA,FFFFFF,7900,TRIMET
+81,TRIMET,81,Kane/257th,3,https://trimet.org/schedules/r081.htm,4679AA,FFFFFF,8100,TRIMET
+84,TRIMET,84,Powell Valley/Orient Dr,3,https://trimet.org/schedules/r084.htm,4679AA,FFFFFF,8400,TRIMET
+86,TRIMET,86,148th Ave,3,https://trimet.org/schedules/r086.htm,4679AA,FFFFFF,8500,TRIMET
+87,TRIMET,87,Airport Way/181st,3,https://trimet.org/schedules/r087.htm,4679AA,FFFFFF,8600,TRIMET
+88,TRIMET,88,Hart/198th,3,https://trimet.org/schedules/r088.htm,4679AA,FFFFFF,8700,TRIMET
+90,TRIMET,,MAX Red Line,0,https://trimet.org/schedules/r090.htm,C41F3E,FFFFFF,130,TRIMET
+94,TRIMET,94,Tigard/Sherwood,3,https://trimet.org/schedules/r094.htm,4679AA,FFFFFF,9100,TRIMET
+96,TRIMET,96,Boones Ferry Rd,3,https://trimet.org/schedules/r096.htm,4679AA,FFFFFF,9266,TRIMET
+97,TRIMET,97,Tualatin-Sherwood/Kruse Way,3,https://trimet.org/schedules/r097.htm,4679AA,FFFFFF,9432,TRIMET
+100,TRIMET,,MAX Blue Line,0,https://trimet.org/schedules/r100.htm,1359AE,FFFFFF,100,TRIMET
+155,TRIMET,155,Sunnyside,3,https://trimet.org/schedules/r155.htm,4679AA,FFFFFF,9600,TRIMET
+156,TRIMET,156,Mather Rd,3,https://trimet.org/schedules/r156.htm,4679AA,FFFFFF,9700,TRIMET
+190,TRIMET,,MAX Yellow Line,0,https://trimet.org/schedules/r190.htm,FFC52F,000000,140,TRIMET
+193,PSC,NS,Portland Streetcar - NS Line,0,https://portlandstreetcar.org/,72A130,000000,200,PSC
+194,PSC,A,Portland Streetcar - A Loop,0,https://portlandstreetcar.org/,D91965,FFFFFF,250,PSC
+195,PSC,B,Portland Streetcar - B Loop,0,https://portlandstreetcar.org/,4650BE,FFFFFF,275,PSC
+200,TRIMET,,MAX Green Line,0,https://trimet.org/schedules/r200.htm,008342,FFFFFF,110,TRIMET
+203,TRIMET,,WES Commuter Rail,2,https://trimet.org/schedules/r203.htm,6E6E6E,FFFFFF,150,TRIMET
+208,TRAM,,Portland Aerial Tram,6,http://www.gobytram.com/,898E91,000000,300,TRAM
+287,TRIMET,287,Blue Eastside Bus,3,https://trimet.org/schedules/r287.htm,1359AE,FFFFFF,9750,TRIMET
+288,TRIMET,288,Blue Westside Bus,3,https://trimet.org/schedules/r288.htm,1359AE,FFFFFF,9800,TRIMET
+290,TRIMET,,MAX Orange Line,0,https://trimet.org/schedules/r290.htm,D05F27,000000,120,TRIMET
+291,TRIMET,291,Orange Bus,3,https://trimet.org/schedules/r291.htm,D05F27,000000,9850,TRIMET
+292,TRIMET,292,Red Bus,3,https://trimet.org/schedules/r292.htm,C41F3E,FFFFFF,9900,TRIMET
+293,TRIMET,293,Yellow Bus,3,https://trimet.org/schedules/r293.htm,FFC52F,000000,9950,TRIMET
+313,TRIMET,,MAX Yellow Line Shuttle,3,https://trimet.org/schedules/r313.htm,FFC52F,000000,900000,
