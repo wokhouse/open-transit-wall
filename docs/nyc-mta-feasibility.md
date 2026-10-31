@@ -250,6 +250,71 @@ data: 234 trains, 21 line keys, 1 report outside the north edge (the 1
 north of 238 St — deliberate crop, unchanged), 0 outside every other edge.
 The bottom edge now fully contains both Rockaway branches.
 
+## Viewport update (2026-10-31, third crop: traffic centered)
+
+Weekday/weekend daytime traffic was now visible on a live wall, and Jade
+asked to move the picture on the wall ~20% to the right so the traffic
+sits centered; Staten Island appearing was explicitly not a priority,
+just a tell. Note the direction: moving the *picture* right = moving the
+*bbox* west. The first candidate (frame east 20%) moves the picture
+left, jams the Manhattan core on the left border, and drops 53 live
+rows — measured, not inspected.
+
+The chosen box keeps the same 35.8 km square (lat edges unchanged) and
+shifts lon west by 20% of the span: lon -74.1697/-73.7455. The picture
+on the wall moves +12.6 px right; the live traffic pattern spans px
+20-61 with its mass center at px 33.9 (panel center 31.5). West edge at
+-74.1697: the lower-left now covers northeastern Staten Island — 14 of
+the 24 SIR stations (Tompkinsville to Prince's Bay) fall inside — still
+no dots, SIR remains unpolled. East edge at -73.7455: the east-most
+served subway stop (Lefferts Blvd, -73.7554) keeps a ~1.5 px margin;
+the 179 St tip is ~5 px inside. Verified on live data (weekend, 423
+rows): 0 rows outside any edge except the north crop, unchanged at 1.
+No served station drops at the west edge — the west edge crosses only
+unpolled land.
+
+Trade-off accepted: a ~24 px black band at the lower-left where Staten
+Island is (no feed), and the Lefferts branch tip sits 1.5 px from the
+east border. Polling SIR was the obvious follow-up; it shipped the same
+day — see the next section.
+
+## SIR feed added (2026-10-31)
+
+The lower-left black band asked for it. The feed is
+`nyct%2Fgtfs-si`, keyless, same update cadence. The guessed
+`mta/gtfs-sir` path does not exist: api-endpoint answers unknown
+paths with HTTP 200 + an XML `NoSuchKey` body, which surfaces as a
+corrupt protobuf wire format — a trap worth remembering for any
+MTA feed URL edit.
+
+Measured on a Sunday morning: 6 SIR vehicles, route_id `SI`, colored
+from the static routes.txt (#08179C) like every other subway route —
+zero code. SIR station ids in RT carry direction suffixes (`S21N`),
+same as the subway's, and all resolve against the station table. 14 of
+24 unique SIR stations fall inside the box; the outer tail
+(Tottenville..Prince's Bay side, S20 and south) clips at the bottom
+edge like the Riverdale tips clip at the top. Recorded as
+`fixtures/mta_subway_si.pb`; the viewport test now asserts the south
+clip as a documented edge.
+
+Live `--once` after wiring it in: 439 rows, 6 SIR, 3 drawing pixels
+in the old black band (rows px (11,57) and (14,46)); the rest clip
+south as designed. The frame's only off-frame rows are the documented
+north and south crops. The band is filled — on a weekend the SIR
+fleet is small, so it is sparse dots, not a mass.
+
+## Viewport update (2026-10-31, fourth crop: picture 5% left)
+
+Jade: "move it to the left like 5%" after seeing the SIR-inclusive
+frame. Picture left = bbox east: lon shifts +0.0212° (5% of span) to
+-74.1485/-73.7243; lat edges unchanged. Measured on one live payload
+(439 rows): dot-mass center moves px 34.2 → 31.0 (panel center 31.5),
+traffic span 13–62 → 10–58, left margin grows to 10 px of SI land,
+right margin 1 → 5 px. Off-frame rows unchanged at 6: nothing drops
+at the east edge (the edge simply extends the slack beyond the
+Lefferts/179 St tips; their margin grows 1.5/5 px → ~14/17 px). The
+south and north crop behavior is untouched.
+
 ## Still open
 
 Weekday ET peak fleet count (next weekday morning), the heap

@@ -16,7 +16,7 @@ from classify import classify
 from proxy import compact_vehicles, load_registry, parse_routes_txt, to_wire
 
 FIXTURES = Path(__file__).resolve().parent.parent.parent / "fixtures"
-RT_FEEDS = ["mta_subway_17.pb", "mta_subway_ace.pb"]
+RT_FEEDS = ["mta_subway_17.pb", "mta_subway_ace.pb", "mta_subway_si.pb"]
 
 
 @pytest.fixture(scope="module")
@@ -58,14 +58,20 @@ def test_station_table_usable(stations):
 def test_feed_reports_resolve_into_the_viewport(stations):
     """The station-snap contract: the overwhelming majority of recorded
     reports resolve to a station, and every resolved one is either inside
-    the served viewport or north of its top edge — the Riverdale crop
-    deliberately clips the Van Cortlandt, Dyre Avenue, and 238 St branch
-    tips, like the sf viewport clips lines running past its edges. A
-    resolved point outside any other edge would be a viewport bug. A
-    small unresolved tail (two station ids missing from the static GTFS)
-    is skipped and counted at runtime — see fetch_station_snapshot."""
+    the served viewport or beyond one of its two deliberately cropped
+    edges — the Riverdale crop clips the Van Cortlandt, Dyre Avenue,
+    and 238 St branch tips at the north edge, and the south edge clips
+    the outer-SI tail of the Staten Island Railway (records below the
+    S21N/S22S pair, e.g. Tottenville). The other two edges contain the
+    system: the east edge sits ~14 px beyond the Lefferts and 179 St
+    branch tips, and the west edge is west of every station it serves
+    (it crosses only SI land west of the S21 line, where no station
+    exists). A resolved point outside any other edge would be a
+    viewport bug. A small unresolved tail (two station ids missing from
+    the static GTFS) is skipped and counted at runtime — see
+    fetch_station_snapshot."""
     bbox = load_registry()["mta"]["bbox"]
-    total = resolved = clipped = 0
+    total = resolved = clipped_north = clipped_south = 0
     for feed in RT_FEEDS:
         for vp in gtfs_rt.parse_rt((FIXTURES / feed).read_bytes()):
             total += 1
@@ -75,13 +81,18 @@ def test_feed_reports_resolve_into_the_viewport(stations):
             resolved += 1
             lat, lon = loc
             if lat > bbox["lat_max"]:
-                clipped += 1
+                clipped_north += 1
+                continue
+            if lat < bbox["lat_min"]:
+                clipped_south += 1
                 continue
             assert bbox["lat_min"] <= lat
             assert bbox["lon_min"] <= lon <= bbox["lon_max"]
     assert total > 250
     assert resolved / total > 0.90
-    assert 0 < clipped < 0.05 * resolved  # only the cropped branch tips
+    # only the branch tips past the two cropped edges may clip
+    assert 0 < clipped_north < 0.05 * resolved
+    assert 0 < clipped_south < 0.15 * resolved
 
 
 def test_route_colors_and_style_keys(routes):

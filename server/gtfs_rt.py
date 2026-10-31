@@ -10,10 +10,15 @@ agency-specific — the feed URLs and the static zip — lives in
 `server/agencies.json` (`feeds`, `static_gtfs`); this module holds only
 the parsing.
 
-Facts verified live 2026-10-30 on MTA NYCT (see docs/nyc-mta-feasibility.md):
-- Its seven polled division feeds update every ~30 s and need no API key.
-  (SIR is deliberately unpolled there: the mta viewport excludes Staten
-  Island.) The %2F path encoding is required on api-endpoint.mta.info; a
+Facts verified live 2026-10-30 on MTA NYCT (see docs/nyc-mta-feasibility.md;
+the eighth feed, SIR, verified live 2026-10-31):
+- Its eight polled division feeds (seven subway + the Staten Island
+  Railway) update every ~30 s and need no API key. The SIR feed is at
+  nyct%2Fgtfs-si — gtfs-sir is NOT a path there: api-endpoint answers
+  unknown paths with HTTP 200 and an XML NoSuchKey body, which the
+  protobuf parse reports as a corrupt wire format. Its route_id is SI,
+  colored from the static routes.txt (#08179C). The %2F path
+  encoding is required on api-endpoint.mta.info; a
   literal slash returns 403.
 - Every subway VehiclePosition carried a stop_id; none carried lat/lon.
 - route_id is the bare line name ("1", "6X", "A"), which feeds the

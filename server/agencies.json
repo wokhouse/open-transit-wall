@@ -19,14 +19,15 @@
       "G": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-g",
       "JZ": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-jz",
       "L": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-l",
-      "NQRW": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw"
+      "NQRW": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw",
+      "SIR": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-si"
     },
     "static_gtfs": "https://web.mta.info/developers/data/nyct/subway/google_transit.zip",
     "bbox": {
       "lat_min": 40.559,
       "lat_max": 40.8805,
-      "lon_min": -74.0849,
-      "lon_max": -73.6607
+      "lon_min": -74.1485,
+      "lon_max": -73.7243
     }
   },
   "ct": {
