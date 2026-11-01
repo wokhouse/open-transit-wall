@@ -51,10 +51,15 @@ Facts probed 2026-10-31 for TriMet (Portland):
   "190", "200", "290") carrying their official route_color; Portland
   Streetcar rides the same feed as type 0; WES is type 2; the Portland
   Aerial Tram is type 6 (classify: cable amber).
-- The keyed probe that confirms this feed's coordinate coverage and
-  vehicle.id shape is still pending the AppID. The parser needs no
-  change for either answer: position-first placement, station-snap
-  fallback, vehicle.id identity.
+- Verified live 2026-10-31 with a registered self-service AppID:
+  /ws/V1/VehiclePositions returns GTFS-RT protobuf, so the generic
+  parser works unchanged. The deployed poll runs fresh (<20 s age);
+  the 34 km viewport carried 392 vehicles (310 bus, 82 across the five
+  MAX lines) at 15:40 PT — far under MAX_VEHICLES. Line colors resolve
+  through the static routes cache with TriMet's own route_color values.
+  An invalid or unregistered AppID gets HTTP 403 with a plain-text body
+  on EVERY TriMet web service — including the /ws/gtfs/ and /ws/v2/
+  aliases Transitland and the current docs use; neither alias is needed.
 """
 
 from __future__ import annotations

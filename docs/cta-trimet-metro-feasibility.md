@@ -38,7 +38,8 @@ the end.
 ## Implementation status (updated 2026-10-31)
 
 - Metro Transit: implemented. Keyless, position-first, live.
-- TriMet: implemented (branch `trimet-implementation`). Shipped: the
+- TriMet: implemented and live on transit.fungj.net (2026-10-31).
+  Shipped: the
   `trimet` registry entry (source `gtfs-rt`, `api_key_env`
   `TRIMET_APPID`, `api_key_param` `appID`, `requests_per_day_limit`
   1,000,000); the keyed-fetch plumbing in `proxy.py` (per-agency query
@@ -49,9 +50,11 @@ the end.
   crops (Hillsboro west edge, far-Gresham east edge, Wilsonville south
   edge, nothing north). Registry, key plumbing, classification, and
   viewport are pinned by offline tests against the recorded static
-  fixtures. Open: register the self-service AppID, then record the RT
-  fixture and run the keyed probe for coordinate coverage and
-  `vehicle.id` shape.
+  fixtures. Verified live 2026-10-31 with the registered AppID: the
+  feed is GTFS-RT protobuf, the generic parser needs no change, the
+  poll is fresh (<20 s), and the viewport measured 392 vehicles at
+  15:40 PT. Open: record a real RT fixture for key-free parse tests —
+  `curl -s "https://developer.trimet.org/ws/V1/VehiclePositions?appID=$TRIMET_APPID" -o fixtures/trimet_vehiclepositions.pb`.
 - CTA: not started; still gated on the API-key issue.
 
 ## Measured live feeds (2026-10-31 06:02-06:05 UTC)
