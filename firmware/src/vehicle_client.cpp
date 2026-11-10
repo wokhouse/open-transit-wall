@@ -224,11 +224,16 @@ int fetchAgencies(const char *scheme, const char *host, uint16_t port,
     if (!label || !label[0]) {
       continue;
     }
+    // Drop (never truncate) an oversized label: a mid-codepoint cut would
+    // emit invalid UTF-8 into the discovery JSON. The server caps served
+    // labels at 40 UTF-8 bytes, so this only catches foreign proxies.
+    if (strlen(label) > AGENCY_LABEL_MAX) {
+      continue;
+    }
     if (n >= max) {
       break;
     }
     AgencyEntry &e = out[n++];
-    // snprintf copies and truncates safely (no strlcpy portability bets).
     snprintf(e.id, sizeof(e.id), "%s", id);
     snprintf(e.label, sizeof(e.label), "%s", label);
   }

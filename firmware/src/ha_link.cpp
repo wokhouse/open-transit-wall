@@ -159,7 +159,7 @@ static void publishDiscovery() {
            "\"model\":\"ESP32 LED matrix wall\",\"manufacturer\":\"open-transit-wall\","
            "\"sw_version\":\"otw-fw-%d\"}}",
            idHex, idHex, idHex, idHex, idHex, idHex, idHex, idHex,
-           idHex, OTW_FW_VERSION);
+           OTW_FW_VERSION);
   mqtt.publish(topicDisc, buf, true);
 }
 
@@ -169,22 +169,44 @@ static void publishDiscovery() {
 // select card lands on topicSetAgency; the id is applied and persisted via
 // provSetAgency.
 
-// Copy `in` into `out` escaping " and \ for JSON. The server already
-// rejects control characters in labels, so these two are the only cases.
+// Copy `in` into `out` escaping for JSON: " and \ get a backslash, bytes
+// below 0x20 become \u00xx. The server rejects control characters in
+// labels, but a malformed feed must never publish a config HA cannot
+// parse, so escape them anyway. Each escape is written whole or not at
+// all, so the output is always valid JSON.
 static void jsonEscape(const char *in, char *out, size_t outSize) {
   size_t o = 0;
-  for (size_t i = 0; in[i] && o + 2 < outSize - 1; i++) {
-    if (in[i] == '"' || in[i] == '\\') {
+  for (size_t i = 0; in[i]; i++) {
+    unsigned char c = (unsigned char)in[i];
+    if (c < 0x20) {
+      if (o + 6 >= outSize) {
+        break;
+      }
+      o += (size_t)snprintf(out + o, outSize - o, "\\u%04x", c);
+      continue;
+    }
+    size_t need = (c == '"' || c == '\\') ? 2 : 1;
+    if (o + need >= outSize) {
+      break;
+    }
+    if (need == 2) {
       out[o++] = '\\';
     }
-    out[o++] = in[i];
+    out[o++] = (char)c;
   }
   out[o] = '\0';
 }
 
-// Roster index whose label matches `want` case-insensitively: a voice
-// pipeline or a hand-made card can drift the case. -1 = no match.
+// Roster index whose label matches `want`. Exact match first: HA hands
+// back the option string unchanged, so exact is unambiguous. Case-
+// insensitive only as a fallback for a voice pipeline that drifted case
+// (the server rejects case-folded duplicate labels). -1 = no match.
 static int agencyByLabel(const char *want) {
+  for (int i = 0; i < agencyCount; i++) {
+    if (strcmp(agencyRoster[i].label, want) == 0) {
+      return i;
+    }
+  }
   for (int i = 0; i < agencyCount; i++) {
     if (strcasecmp(agencyRoster[i].label, want) == 0) {
       return i;
@@ -205,6 +227,8 @@ static int agencyById(const char *id) {
 // Bounds-checked append for a discovery document: if any fragment fails to
 // fit, the whole config is dropped rather than publishing half a JSON
 // document.
+static bool appendFrag(char *buf, size_t cap, size_t *len, const char *fmt, ...)
+    __attribute__((format(printf, 4, 5)));
 static bool appendFrag(char *buf, size_t cap, size_t *len, const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -219,7 +243,9 @@ static bool appendFrag(char *buf, size_t cap, size_t *len, const char *fmt, ...)
 
 // One retained discovery config for the select entity. The device block is
 // identical to the light's, so HA merges both entities into the same
-// device entry instead of showing a second device.
+// device entry instead of showing a second device. Entity name "Agency
+// <wall-id>" matches the light's per-wall naming: HA prefixes it with the
+// device name, and two walls on one broker stay distinguishable.
 static void publishAgencyDiscovery() {
   if (agencyCount == 0) {
     return;
@@ -227,9 +253,10 @@ static void publishAgencyDiscovery() {
   static char buf[HA_BUF];  // not on the render loop's stack
   size_t len = 0;
   bool ok = appendFrag(buf, sizeof(buf), &len,
-                       "{\"name\":\"Transit Wall Agency\","
+                       "{\"name\":\"Agency %s\","
                        "\"unique_id\":\"otw-%s-agency\",\"icon\":\"mdi:bus\","
-                       "\"options\":[", idHex);
+                       "\"options\":[",
+                       idHex, idHex);
   for (int i = 0; ok && i < agencyCount; i++) {
     char esc[2 * AGENCY_LABEL_MAX + 2];
     jsonEscape(agencyRoster[i].label, esc, sizeof(esc));
@@ -246,7 +273,7 @@ static void publishAgencyDiscovery() {
                         "\"model\":\"ESP32 LED matrix wall\","
                         "\"manufacturer\":\"open-transit-wall\","
                         "\"sw_version\":\"otw-fw-%d\"}}",
-                        idHex, idHex, idHex, idHex, idHex, OTW_FW_VERSION);
+                        idHex, idHex, idHex, idHex, OTW_FW_VERSION);
   if (!ok) {
     Serial.println("[ha] agency config exceeded the buffer; not published");
     return;
@@ -254,21 +281,22 @@ static void publishAgencyDiscovery() {
   mqtt.publish(topicDiscAgency, buf, true);
 }
 
-// Retained selection state. No agency set (single-agency mode) leaves the
-// entity unknown rather than claiming an option it never chose.
+// Retained selection state. HA's select rejects a state outside its
+// options (it logs an error and keeps the last option), so anything the
+// wall cannot name — no agency set, or a stored id the server no longer
+// serves — publishes "None", the payload documented to reset the entity
+// to unknown. The serial log shows why.
 static void publishAgencyState() {
   if (agencyCount == 0) {
     return;
   }
   const char *cur = provAgency();
-  if (!cur[0]) {
-    return;
+  int idx = cur[0] ? agencyById(cur) : -1;
+  if (idx < 0 && cur[0]) {
+    Serial.printf("[ha] stored agency \"%s\" is not in the roster; select shows unknown\n",
+                  cur);
   }
-  int idx = agencyById(cur);
-  // An id outside the roster (a stored id the server no longer serves):
-  // publish the raw id, since a state beyond the options is exactly the
-  // visible symptom of that mismatch.
-  mqtt.publish(topicAgency, idx >= 0 ? agencyRoster[idx].label : cur, true);
+  mqtt.publish(topicAgency, idx >= 0 ? agencyRoster[idx].label : "None", true);
 }
 
 static void mqttMsg(char *topic, byte *payload, unsigned int len) {
@@ -403,6 +431,12 @@ void haService() {
       // The roster arrived while the broker was down: announce it now.
       publishAgencyDiscovery();
       publishAgencyState();
+    } else {
+      // No roster this run (the proxy was unreachable): drop any select
+      // config retained from a previous boot. An empty retained config
+      // payload removes the entity — better a missing select than one
+      // whose commands all fall.
+      mqtt.publish(topicDiscAgency, "", true);
     }
     Serial.printf("[ha] mqtt broker %s:%u — light entity announced%s\n",
                   brokerHost(), brokerPort(),
@@ -412,22 +446,25 @@ void haService() {
   mqtt.loop();  // keepalive + command delivery
 }
 
-void haSetAgencies(const AgencyEntry *list, int count) {
-  if (!list || count <= 0) {
-    return;
+// Fetch the agency roster from the proxy (docs/agency-select.md) and
+// announce the select entity if the broker is already up. The roster
+// lives here only: main.cpp calls this and keeps no copy. Returns the
+// entry count, 0 on any failure (the caller retries).
+int haFetchRoster(const char *scheme, const char *host, uint16_t port) {
+  if (agencyCount > 0) {
+    return agencyCount;
   }
-  if (count > AGENCY_MAX) {
-    count = AGENCY_MAX;
+  int n = fetchAgencies(scheme, host, port, agencyRoster, AGENCY_MAX);
+  if (n <= 0) {
+    return 0;
   }
-  for (int i = 0; i < count; i++) {
-    agencyRoster[i] = list[i];
-  }
-  agencyCount = count;
+  agencyCount = n;
   // Announce now if the broker is up; the connect path publishes if not.
   if (mqtt.connected()) {
     publishAgencyDiscovery();
     publishAgencyState();
   }
+  return agencyCount;
 }
 
 bool haTakeAgencyRepoll() {

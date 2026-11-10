@@ -15,11 +15,21 @@ TEST_CFG = {"name": "Test", "siri_agency": "TS",
 def test_load_registry_accepts_shipped_file():
     registry = proxy.load_registry()
     assert "sf" in registry
+    spoken: dict[str, str] = {}
     for agency_id, cfg in registry.items():
         assert cfg["name"]
         if cfg.get("source", "511") == "511":
             assert cfg["siri_agency"], f"{agency_id} is 511-source without siri_agency"
         assert set(cfg["bbox"]) == {"lat_min", "lat_max", "lon_min", "lon_max"}
+        # The shipped file is the fence for what actually rides the wire:
+        # every label the wall's Home Assistant select would offer must fit
+        # the firmware buffer and be unique, or voice control silently
+        # loses an agency.
+        label = cfg.get("short") or cfg["name"]
+        assert proxy.label_problem(label) is None, f"{agency_id} ships an unusable label"
+        folded = label.casefold()
+        assert folded not in spoken, f"{agency_id} and {spoken[folded]} share {label!r}"
+        spoken[folded] = agency_id
 
 
 def test_load_registry_rejects_bad_entries(tmp_path):
@@ -53,26 +63,80 @@ def test_load_registry_validates_short(tmp_path):
     path = tmp_path / "agencies.json"
     path.write_text(json.dumps({"ok": {**TEST_CFG, "short": "OK"}}))
     assert proxy.load_registry(path)["ok"]["short"] == "OK"
+    # The 32-char limit is the documented boundary: exactly 32 must load.
+    path.write_text(json.dumps({"ok": {**TEST_CFG, "short": "x" * 32}}))
+    assert proxy.load_registry(path)["ok"]["short"] == "x" * 32
+    # A CJK short is fine while it fits the firmware's 40-BYTE buffer:
+    # 13 CJK chars are 39 bytes.
+    path.write_text(json.dumps({"ok": {**TEST_CFG, "short": "地" * 13}}))
+    assert proxy.load_registry(path)["ok"]["short"] == "地" * 13
     # Empty, padded, multiline, oversized, or non-string: the label rides
     # into a Home Assistant select options list, so it must be clean text.
-    for bad in ("", " ", "x" * 33, "two\nlines", " lead", "trail ", 5):
+    # Byte size is checked, not just code points: 14 CJK chars are 42
+    # bytes and 11 emoji are 44, both over the firmware buffer. Zero-width
+    # and DEL marks are invisible in the option text and unmatchable
+    # aloud, so they are rejected too.
+    for bad in ("", " ", "x" * 33, "地" * 14, "🚇" * 11, "two\nlines", " lead",
+                "trail ", 5, "a\u200db", "a\x7fb"):
         path.write_text(json.dumps({"ok": {**TEST_CFG, "short": bad}}))
         with pytest.raises(ValueError):
             proxy.load_registry(path)
 
 
+def test_load_registry_validates_name_fallback(tmp_path):
+    # Without a `short`, `name` IS the served label, so it faces the same
+    # checks: a 41-char name cannot become a 40-byte option, and a tab in
+    # a name would break the select discovery JSON.
+    path = tmp_path / "agencies.json"
+    for bad_name in ("A" * 41, "AC\tTransit", "Trail "):
+        path.write_text(json.dumps({"ok": {**TEST_CFG, "name": bad_name}}))
+        with pytest.raises(ValueError):
+            proxy.load_registry(path)
+    # A long descriptive name is fine once the entry carries a short.
+    path.write_text(json.dumps({"ok": {**TEST_CFG, "name": "A" * 60,
+                                       "short": "OK"}}))
+    assert proxy.load_registry(path)["ok"]["short"] == "OK"
+
+
+def test_load_registry_rejects_duplicate_spoken_labels(tmp_path):
+    # Two options with the same text make one agency unreachable: HA hands
+    # back the option string and the firmware maps it to the first entry.
+    path = tmp_path / "agencies.json"
+    dup = {
+        "one": {**TEST_CFG, "short": "Dup"},
+        "two": {**TEST_CFG, "short": "Dup"},
+    }
+    path.write_text(json.dumps(dup))
+    with pytest.raises(ValueError):
+        proxy.load_registry(path)
+    # A `short` colliding with another entry's `name` fallback counts too,
+    # case-insensitively (the firmware also falls back to case folding).
+    dup = {
+        "one": {**TEST_CFG, "name": "Metro Transit"},
+        "two": {**TEST_CFG, "short": "metro transit"},
+    }
+    path.write_text(json.dumps(dup))
+    with pytest.raises(ValueError):
+        proxy.load_registry(path)
+
+
 def test_agencies_endpoint_ships_spoken_labels(monkeypatch):
-    # The wall builds its Home Assistant select options from these: the
-    # registry `short` when present, else the full name.
+    # The wall builds its Home Assistant select options from this payload:
+    # the registry `short` when present, else the full name. Go over HTTP
+    # so the serialized response the flasher and the ESP32 parse is what
+    # is pinned, not the in-process dict.
     with_short = proxy.AgencyState("sf", {**TEST_CFG, "short": "SF Test"})
-    no_short = proxy.AgencyState("xx", TEST_CFG)
+    no_short = proxy.AgencyState("xx", {**TEST_CFG, "name": "X Test"})
     assert with_short.short == "SF Test"
-    assert no_short.short == "Test"  # fallback is the name itself
+    assert no_short.short == "X Test"  # fallback is the name itself
     monkeypatch.setattr(proxy, "STATES", {"sf": with_short, "xx": no_short})
-    assert proxy.agencies()["agencies"] == [
+    from fastapi.testclient import TestClient
+    r = TestClient(proxy.app).get("/agencies")
+    assert r.status_code == 200
+    assert r.json() == {"agencies": [
         {"id": "sf", "name": "Test", "short": "SF Test"},
-        {"id": "xx", "name": "Test", "short": "Test"},
-    ]
+        {"id": "xx", "name": "X Test", "short": "X Test"},
+    ]}
 
 
 def test_compact_drops_no_line_but_keeps_all_types():

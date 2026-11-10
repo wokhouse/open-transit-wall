@@ -164,7 +164,8 @@ announces itself through Home Assistant MQTT auto-discovery: a real
 automations, with no HA YAML. A broker elsewhere still works: `set mhost=`
 / `mport=` override the discovery. The wall keeps its own brightness in
 NVS, so it comes back at the last setting after a power cut. With no
-credentials provisioned this whole path stays off — nothing changes. The
+broker host and no MQTT credentials provisioned this whole path stays
+off — nothing changes. The
 proxy is not involved: it serves many walls, and brightness belongs to the
 room.
 `set bmin=<0-255>` / `set bmax=<0-255>` (the web flasher shows them as
@@ -177,11 +178,13 @@ configured but down — stay lit at about 1% so a dark wall still shows it
 is alive.
 Design and topics: [`docs/brightness-plan.md`](docs/brightness-plan.md).
 
-The same link also announces a **select entity**, "Transit Wall Agency":
+The same link also announces a **select entity**, "Agency <wall-id>":
 its options are the agencies that wall's proxy serves, named as people
-say them (the registry's `short` names — "SFMTA", "MTA", "Caltrain").
-"change the transit wall agency to SFMTA" in HA voice switches the wall
-in seconds and persists through reboots; the select card does the same.
+say them (the registry's `short` name, or its `name` where that is
+already clean — "SFMTA", "MTA", "Caltrain"). "change the transit wall
+agency to SFMTA" through an LLM conversation agent in HA switches the
+wall in seconds and persists through reboots; the select card does the
+same.
 The option list is the proxy's `GET /agencies` roster, fetched at boot:
 if the server starts serving a new agency, the wall picks it up on its
 next power cycle. Design and topics:

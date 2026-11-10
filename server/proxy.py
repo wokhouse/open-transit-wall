@@ -101,6 +101,34 @@ AGENCY_ID_RE = re.compile(r"^[a-z0-9]{1,8}$")
 ENV_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 PARAM_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,31}$")
 
+# Spoken-label caps shared with the firmware (vehicle_client.h
+# AGENCY_LABEL_MAX): characters and wire bytes, so a served label is
+# never cut mid-buffer or mid-codepoint on the wall.
+WIRE_LABEL_MAX_CHARS = 32
+WIRE_LABEL_MAX_BYTES = 40
+
+
+def label_problem(label: object) -> str | None:
+    """None if `label` is safe to serve as a spoken name, else why not.
+
+    It becomes a Home Assistant select option and an ESP32 fixed-buffer
+    copy, so it must fit the wire: 1-32 characters, at most 40 UTF-8
+    bytes (the firmware buffer counts BYTES; code points do not), single
+    line, all printable (isprintable also rejects DEL, C1, and
+    zero-width/bidi marks, which no spoken phrase can match). Change the
+    caps here and in vehicle_client.h together."""
+    if not isinstance(label, str):
+        return "must be a string"
+    if not 1 <= len(label) <= WIRE_LABEL_MAX_CHARS:
+        return f"must be 1-{WIRE_LABEL_MAX_CHARS} characters"
+    if len(label.encode("utf-8")) > WIRE_LABEL_MAX_BYTES:
+        return f"must be at most {WIRE_LABEL_MAX_BYTES} UTF-8 bytes"
+    if label != label.strip():
+        return "must not start or end with whitespace"
+    if not all(ch.isprintable() for ch in label):
+        return "must not contain control or invisible characters"
+    return None
+
 
 def redact(text: str) -> str:
     """Strip API keys from an error/log string before printing.
@@ -122,6 +150,8 @@ def redact(text: str) -> str:
 def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
     """Read agencies.json and sanity-check every entry before anything starts."""
     registry = json.loads(path.read_text())
+    # case-folded spoken label -> agency id (uniqueness check below).
+    spoken_labels: dict[str, str] = {}
     for agency_id, cfg in registry.items():
         if not AGENCY_ID_RE.match(agency_id):
             raise ValueError(f"registry id {agency_id!r} must match {AGENCY_ID_RE.pattern}")
@@ -158,16 +188,34 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
         # person says to a voice assistant ("SFMTA", not "SFMTA (Muni)").
         # Only entries whose name carries extra prose need one; the proxy
         # falls back to `name` when it is absent.
-        short = cfg.get("short")
-        if short is not None:
-            if (not isinstance(short, str) or not 1 <= len(short) <= 32
-                    or short != short.strip() or any(ord(c) < 32 for c in short)):
-                raise ValueError(f"registry entry {agency_id!r} 'short' must be a 1-32 char "
-                                 "single-line name with no leading/trailing space")
         required = ("name", "bbox") if source != "511" else ("name", "siri_agency", "bbox")
         for key in required:
             if key not in cfg:
                 raise ValueError(f"registry entry {agency_id!r} missing {key!r}")
+        # What actually rides the wire is the spoken label: `short` if set,
+        # else `name` (mirror of AgencyState.short). An explicit but empty
+        # `short` is a typo, not a fallback, so it is checked on its own
+        # before the fallback runs; then whatever is served is checked, so
+        # a long or control-bearing `name` cannot slip through either.
+        if cfg.get("short") is not None:
+            problem = label_problem(cfg["short"])
+            if problem:
+                raise ValueError(f"registry entry {agency_id!r} 'short' {problem}")
+        label = cfg.get("short") or cfg["name"]
+        problem = label_problem(label)
+        if problem:
+            raise ValueError(
+                f"registry entry {agency_id!r} spoken label {label!r} {problem}; "
+                'add a spoken-friendly "short"')
+        # Voice control and HA options match labels exactly, so two entries
+        # sharing one label leave one agency unreachable. The firmware's
+        # case-insensitive fallback makes case-folded collisions the same bug.
+        folded = label.casefold()
+        if folded in spoken_labels:
+            raise ValueError(
+                f"registry entries {spoken_labels[folded]!r} and {agency_id!r} share the "
+                f"spoken label {label!r}; only one of them would ever be selectable")
+        spoken_labels[folded] = agency_id
         if source == "gtfs-rt":
             feeds = cfg.get("feeds")
             if (not isinstance(feeds, dict) or not feeds

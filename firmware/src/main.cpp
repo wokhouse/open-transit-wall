@@ -50,9 +50,9 @@ static uint8_t pollFailures = 0;
 
 // The Home Assistant agency select is built from the proxy's /agencies
 // roster (docs/agency-select.md): fetched once per run, retried at a slow
-// rate until it succeeds.
-static AgencyEntry agencyRoster[AGENCY_MAX];
-static int agencyRosterCount = 0;
+// rate until it succeeds. The roster itself lives in ha_link.cpp; main
+// only owns the retry schedule.
+static bool rosterFetched = false;
 static uint32_t nextRosterMs = 0;
 static constexpr uint32_t ROSTER_RETRY_MS = 30000;
 
@@ -551,15 +551,14 @@ void loop() {
   // even while the vehicle poll is failing — a stored agency id the server
   // no longer serves is exactly when voice control should be able to fix
   // the wall.
-  if (agencyRosterCount == 0 && !provNeeded() &&
+  if (!rosterFetched && !provNeeded() &&
       (int32_t)(now - nextRosterMs) >= 0) {
     nextRosterMs = now + ROSTER_RETRY_MS;  // arm before trying: no retry storm
     if (WiFi.status() == WL_CONNECTED) {
-      agencyRosterCount = fetchAgencies(provScheme(), provPollHost(), provPort(),
-                                        agencyRoster, AGENCY_MAX);
-      if (agencyRosterCount > 0) {
-        haSetAgencies(agencyRoster, agencyRosterCount);
-        Serial.printf("[agencies] got %d agencies from %s\n", agencyRosterCount,
+      int n = haFetchRoster(provScheme(), provPollHost(), provPort());
+      if (n > 0) {
+        rosterFetched = true;
+        Serial.printf("[agencies] got %d agencies from %s\n", n,
                       provPollHost());
       }
     }

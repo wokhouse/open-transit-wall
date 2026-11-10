@@ -36,8 +36,10 @@ PollResult fetchVehicles(const char *scheme, const char *host, uint16_t port,
 // One entry of the server's /agencies roster. `id` is the registry id the
 // wall polls with; `label` is the short spoken name the server ships for
 // voice control (its `short`, already fallen back to `name` server-side).
-// Sizes match the registry validation ([a-z0-9]{1,8} ids, 1-32 char
-// labels) with room to spare.
+// The server caps served labels at 32 chars AND 40 UTF-8 bytes; ids are
+// [a-z0-9]{1,8}. An entry that does not fit here is dropped whole — a
+// truncated label could cut a multi-byte character in half and make the
+// discovery JSON unparseable.
 #define AGENCY_MAX 16
 #define AGENCY_ID_MAX 8
 #define AGENCY_LABEL_MAX 40

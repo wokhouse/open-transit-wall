@@ -4,7 +4,8 @@
 // Home Assistant MQTT auto-discovery (brightness slider, scenes,
 // automations — no HA YAML). It also registers a select entity listing
 // the agencies the proxy serves, so "change the transit wall to SFMTA"
-// works in HA voice (docs/agency-select.md). The broker is found by
+// works through an LLM conversation agent in HA (docs/agency-select.md).
+// The broker is found by
 // itself: with no `mhost` provisioned the wall browses mDNS for the Home
 // Assistant host (ha_discover.h) and uses its MQTT port; `set mhost=...`
 // overrides that for brokers elsewhere. Credentials (`muser`/`mpass`)
@@ -19,8 +20,6 @@
 // docs/brightness-plan.md.
 
 #include <Arduino.h>
-
-struct AgencyEntry;  // full definition in vehicle_client.h
 
 // Load the stored brightness and wire up the MQTT callback. `apply` is
 // called with the effective brightness whenever it changes (and may be
@@ -47,11 +46,12 @@ bool haEnabled();
 // the mDNS-discovered one when none was provisioned. Empty = unknown yet.
 const char *haBroker();
 
-// Hands the proxy's /agencies roster (vehicle_client.h's fetchAgencies) to
-// the link: it announces the agency select entity with those options. Safe
-// before the broker connects — the connect path publishes then. Re-calling
-// replaces the roster and republishes.
-void haSetAgencies(const AgencyEntry *list, int count);
+// Fetch the proxy's /agencies roster (vehicle_client.h's fetchAgencies)
+// into this module and announce the agency select entity with those
+// options. Safe before the broker connects — the connect path publishes
+// then. Returns the roster count, or 0 on any failure; the caller retries.
+// Already-successful calls return the existing count without fetching.
+int haFetchRoster(const char *scheme, const char *host, uint16_t port);
 
 // True exactly once after Home Assistant selected a different agency than
 // the one polled. Lets the main loop fetch the new fleet immediately

@@ -7,7 +7,9 @@
 //
 // Values live in two places: RAM (the live session — a `set` takes effect
 // immediately, no reflash, no reboot) and NVS namespace "otw" (survives
-// power cycles, written only by `save`). An empty SSID means unprovisioned.
+// power cycles; written by `save`, and written straight away by the
+// Home Assistant link for the `bright` and `agency` keys). An empty SSID
+// means unprovisioned.
 
 #include "provisioner.h"
 
