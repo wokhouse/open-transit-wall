@@ -154,6 +154,21 @@ static void printStatus() {
   Serial.printf("STATUS heap=%u\n", ESP.getFreeHeap());
 }
 
+// Registry agency ids are [a-z0-9]{1,8}; the proxy 404s anything else.
+static bool agencyIdOk(const char *value) {
+  size_t n = strlen(value);
+  if (n < 1 || n > PROV_AGENCY_MAX) {
+    return false;
+  }
+  for (size_t i = 0; i < n; i++) {
+    char c = value[i];
+    if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static void cmdSet(const String &arg) {
   int eq = arg.indexOf('=');
   if (eq <= 0) {
@@ -203,12 +218,7 @@ static void cmdSet(const String &arg) {
     snprintf(curPort, sizeof(curPort), "%d", v);
     Serial.printf("OK port=%d (send save to persist)\n", v);
   } else if (key == "agency") {
-    bool ok = n >= 1 && n <= PROV_AGENCY_MAX;
-    for (size_t i = 0; ok && i < n; i++) {
-      char c = val[i];
-      ok = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
-    }
-    if (!ok) {
+    if (!agencyIdOk(val.c_str())) {
       Serial.println("ERR agency: 1-8 chars, lowercase a-z0-9");
       return;
     }
@@ -454,6 +464,20 @@ uint16_t provPort() {
   return p ? p : 443;
 }
 const char *provAgency() { return curAgency; }
+
+// Sets the agency from outside the serial console (the Home Assistant
+// select command). Unlike a flasher session edit there is no save step:
+// a voice command is a finished action, so it persists to NVS immediately
+// and survives the next reboot. False = malformed id, nothing changed.
+bool provSetAgency(const char *id) {
+  if (!agencyIdOk(id)) {
+    return false;
+  }
+  strncpy(curAgency, id, PROV_AGENCY_MAX);
+  curAgency[PROV_AGENCY_MAX] = 0;
+  prefs.putString("agency", curAgency);
+  return true;
+}
 // Optional Home Assistant broker. An empty host turns the HA link off;
 // an empty port means the MQTT default (1883) at connect time.
 const char *provMqttHost() { return curMhost; }

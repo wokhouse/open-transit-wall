@@ -27,6 +27,10 @@ uint16_t provPort();
 // Registry id of the agency this wall displays ("" = no agency param, which
 // works against single-agency servers).
 const char *provAgency();
+// Sets the agency outside the serial console (Home Assistant select command)
+// and persists it to NVS right away. Validates the registry id format;
+// false = malformed, nothing changed.
+bool provSetAgency(const char *id);
 // Optional Home Assistant MQTT broker (see ha_link.h). Empty host means the
 // HA link is off — the wall works exactly as before without one.
 const char *provMqttHost();

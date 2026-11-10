@@ -49,6 +49,32 @@ def test_parse_served_defaults_and_validates():
         proxy.parse_served("sf,nope", registry)
 
 
+def test_load_registry_validates_short(tmp_path):
+    path = tmp_path / "agencies.json"
+    path.write_text(json.dumps({"ok": {**TEST_CFG, "short": "OK"}}))
+    assert proxy.load_registry(path)["ok"]["short"] == "OK"
+    # Empty, padded, multiline, oversized, or non-string: the label rides
+    # into a Home Assistant select options list, so it must be clean text.
+    for bad in ("", " ", "x" * 33, "two\nlines", " lead", "trail ", 5):
+        path.write_text(json.dumps({"ok": {**TEST_CFG, "short": bad}}))
+        with pytest.raises(ValueError):
+            proxy.load_registry(path)
+
+
+def test_agencies_endpoint_ships_spoken_labels(monkeypatch):
+    # The wall builds its Home Assistant select options from these: the
+    # registry `short` when present, else the full name.
+    with_short = proxy.AgencyState("sf", {**TEST_CFG, "short": "SF Test"})
+    no_short = proxy.AgencyState("xx", TEST_CFG)
+    assert with_short.short == "SF Test"
+    assert no_short.short == "Test"  # fallback is the name itself
+    monkeypatch.setattr(proxy, "STATES", {"sf": with_short, "xx": no_short})
+    assert proxy.agencies()["agencies"] == [
+        {"id": "sf", "name": "Test", "short": "SF Test"},
+        {"id": "xx", "name": "Test", "short": "Test"},
+    ]
+
+
 def test_compact_drops_no_line_but_keeps_all_types():
     raw = [
         {"line": "N", "lat": 37.76, "lon": -122.47, "bearing": 90, "direction": "1", "id": "1"},

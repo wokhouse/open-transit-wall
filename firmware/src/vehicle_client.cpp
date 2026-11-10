@@ -174,3 +174,63 @@ PollResult fetchVehicles(const char *scheme, const char *host, uint16_t port,
   res.ok = true;
   return res;
 }
+
+int fetchAgencies(const char *scheme, const char *host, uint16_t port,
+                  AgencyEntry *out, int max) {
+  String url = String(scheme) + host + ":" + String(port) + "/agencies";
+
+  HTTPClient http;
+  const bool secure = strncmp(scheme, "https", 5) == 0;
+  if (secure) {
+    ensureCa();
+  }
+  http.setTimeout(8000);
+  if (!http.begin(secure ? secureClient : plainClient, url)) {
+    return 0;
+  }
+  if (http.GET() != 200) {
+    http.end();
+    return 0;
+  }
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, http.getStream());
+  http.end();
+  if (err) {
+    return 0;
+  }
+
+  // The roster is the select entity's option list and the id map, so every
+  // entry must carry a well-formed registry id. Malformed entries are
+  // skipped: a half-broken option list is worse than a smaller one.
+  int n = 0;
+  for (JsonObject a : doc["agencies"].as<JsonArray>()) {
+    const char *id = a["id"];
+    if (!id) {
+      continue;
+    }
+    size_t idLen = strlen(id);
+    bool ok = idLen >= 1 && idLen <= AGENCY_ID_MAX;
+    for (size_t i = 0; ok && i < idLen; i++) {
+      char c = id[i];
+      ok = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+    }
+    if (!ok) {
+      continue;
+    }
+    const char *label = a["short"];
+    if (!label || !label[0]) {
+      label = a["name"];
+    }
+    if (!label || !label[0]) {
+      continue;
+    }
+    if (n >= max) {
+      break;
+    }
+    AgencyEntry &e = out[n++];
+    // snprintf copies and truncates safely (no strlcpy portability bets).
+    snprintf(e.id, sizeof(e.id), "%s", id);
+    snprintf(e.label, sizeof(e.label), "%s", label);
+  }
+  return n;
+}

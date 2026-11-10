@@ -140,7 +140,7 @@ The protocol is line-based text over the USB serial bridge (115200):
 | you send | the wall answers |
 |---|---|
 | `set ssid=…` / `set pass=…` / `set host=…` / `set agency=…` | `OK …` — takes effect immediately |
-| `set muser=…` / `set mpass=…` (optional) | `OK …` — Home Assistant MQTT credentials; the wall finds the broker itself; see [Brightness from Home Assistant](#brightness-from-home-assistant) |
+| `set muser=…` / `set mpass=…` (optional) | `OK …` — Home Assistant MQTT credentials; the wall finds the broker itself; see [Home Assistant: brightness and agency](#home-assistant-brightness-and-agency) |
 | `set bmin=…` / `set bmax=…` (optional) | `OK …` — brightness floor/ceiling: the HA slider's 0% dims only to `bmin`, its 100% reaches only `bmax` |
 | `save` | `OK saved` — persists to NVS, survives power loss |
 | `get all` / `status` | current values / live health |
@@ -153,7 +153,7 @@ LAN dev against `server/proxy.py` (empty means HTTPS/443). See
 [`docs/provisioning-protocol.md`](docs/provisioning-protocol.md)
 for the exact grammar, limits, and error replies.
 
-### Brightness from Home Assistant
+### Home Assistant: brightness and agency
 
 If your home runs Home Assistant with its Mosquitto add-on, just give the
 wall an MQTT username and password (`set muser=…` / `set mpass=…` — create
@@ -176,6 +176,16 @@ freshness, purple while the Home Assistant link is up and red when it is
 configured but down — stay lit at about 1% so a dark wall still shows it
 is alive.
 Design and topics: [`docs/brightness-plan.md`](docs/brightness-plan.md).
+
+The same link also announces a **select entity**, "Transit Wall Agency":
+its options are the agencies that wall's proxy serves, named as people
+say them (the registry's `short` names — "SFMTA", "MTA", "Caltrain").
+"change the transit wall agency to SFMTA" in HA voice switches the wall
+in seconds and persists through reboots; the select card does the same.
+The option list is the proxy's `GET /agencies` roster, fetched at boot:
+if the server starts serving a new agency, the wall picks it up on its
+next power cycle. Design and topics:
+[`docs/agency-select.md`](docs/agency-select.md).
 
 ### 3. Simulator (no hardware)
 
@@ -251,7 +261,7 @@ the same pin map (`firmware/include/config.h`).
   beyond spec; the dot map only needs modest brightness (default 48/255).
   With an MQTT broker provisioned, the live value comes from Home Assistant
   instead and this constant is only the boot fallback (see
-  [Brightness from Home Assistant](#brightness-from-home-assistant)).
+  [Home Assistant: brightness and agency](#home-assistant-brightness-and-agency)).
 
 ### USB serial
 

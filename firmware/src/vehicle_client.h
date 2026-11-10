@@ -32,3 +32,22 @@ struct PollResult {
 // The caller owns the Vehicle array; it is filled up to maxVehicles.
 PollResult fetchVehicles(const char *scheme, const char *host, uint16_t port,
                         const char *agency, Vehicle *out, int maxVehicles);
+
+// One entry of the server's /agencies roster. `id` is the registry id the
+// wall polls with; `label` is the short spoken name the server ships for
+// voice control (its `short`, already fallen back to `name` server-side).
+// Sizes match the registry validation ([a-z0-9]{1,8} ids, 1-32 char
+// labels) with room to spare.
+#define AGENCY_MAX 16
+#define AGENCY_ID_MAX 8
+#define AGENCY_LABEL_MAX 40
+struct AgencyEntry {
+  char id[AGENCY_ID_MAX + 1];
+  char label[AGENCY_LABEL_MAX + 1];
+};
+
+// GETs /agencies into out (up to max), skipping malformed entries. Returns
+// the count (0 = fetch failed or empty); the caller retries later. The
+// roster feeds the Home Assistant agency select (src/ha_link.h).
+int fetchAgencies(const char *scheme, const char *host, uint16_t port,
+                  AgencyEntry *out, int max);

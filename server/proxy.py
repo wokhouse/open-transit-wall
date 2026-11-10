@@ -154,6 +154,16 @@ def load_registry(path: Path = AGENCIES_JSON) -> dict[str, dict]:
                     or not all(isinstance(route, str) and route.strip() for route in drop)):
                 raise ValueError(f"registry entry {agency_id!r} 'drop_route_ids' must be a "
                                  "list of non-empty route ids")
+        # `short` is the name /agencies ships as the spoken label: the one a
+        # person says to a voice assistant ("SFMTA", not "SFMTA (Muni)").
+        # Only entries whose name carries extra prose need one; the proxy
+        # falls back to `name` when it is absent.
+        short = cfg.get("short")
+        if short is not None:
+            if (not isinstance(short, str) or not 1 <= len(short) <= 32
+                    or short != short.strip() or any(ord(c) < 32 for c in short)):
+                raise ValueError(f"registry entry {agency_id!r} 'short' must be a 1-32 char "
+                                 "single-line name with no leading/trailing space")
         required = ("name", "bbox") if source != "511" else ("name", "siri_agency", "bbox")
         for key in required:
             if key not in cfg:
@@ -220,6 +230,9 @@ class AgencyState:
     def __init__(self, agency_id: str, cfg: dict) -> None:
         self.id = agency_id
         self.name = cfg["name"]
+        # Spoken label for /agencies (see the registry validation): the short
+        # voice name when the entry defines one, else the full name.
+        self.short = cfg.get("short") or cfg["name"]
         self.source = cfg.get("source", "511")
         self.siri_agency = cfg.get("siri_agency", "")
         # gtfs-rt: the per-agency upstream endpoints named by the registry.
@@ -712,8 +725,11 @@ def wire_payload(state: AgencyState) -> dict:
 
 @app.get("/agencies")
 def agencies() -> dict:
-    """Static discovery for the WebSerial flasher: what this server runs."""
-    return {"agencies": [{"id": state.id, "name": state.name}
+    """Static discovery for the WebSerial flasher and the wall's Home
+    Assistant agency select: what this server runs. `short` is the label a
+    voice assistant should use (the registry `short` when present, else the
+    full name); `name` stays the descriptive one the flasher shows."""
+    return {"agencies": [{"id": state.id, "name": state.name, "short": state.short}
                          for state in STATES.values()]}
 
 
