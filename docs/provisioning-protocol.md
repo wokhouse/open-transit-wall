@@ -80,6 +80,11 @@ unknown key ...`. Bad value → `ERR <key> must be ...`.
   `set ssid=…`, `set pass=…`, `set host=…`, `save`, then read the next
   `WiFi: connecting…` / `connected, ip=` lines from the firmware log as the
   success signal.
+  One exception: when the Home Assistant link changes a value it persists
+  immediately — a brightness command writes key `bright`, and selecting an
+  agency writes key `agency` (no `save` step exists over MQTT). So a value
+  set from the serial console and then `save`d survives, and one set with
+  `set` but not `save`d is replaced by the HA value after a reboot.
 - Storage: NVS namespace `otw`, keys `ssid`, `pass`, `host`, `scheme`,
   `port`, `agency`, `mhost`, `mport`, `muser`, `mpass`, `bmin`, `bmax`.
   An empty stored `ssid` means unprovisioned. The brightness the wall last

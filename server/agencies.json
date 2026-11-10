@@ -1,6 +1,7 @@
 {
   "sf": {
     "name": "SFMTA (Muni)",
+    "short": "SFMTA",
     "siri_agency": "SF",
     "bbox": {
       "lat_min": 37.705,
@@ -11,6 +12,7 @@
   },
   "mta": {
     "name": "NYC Subway (MTA)",
+    "short": "MTA",
     "source": "gtfs-rt",
     "feeds": {
       "1-7": "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs",
@@ -32,6 +34,7 @@
   },
   "metro": {
     "name": "Metro Transit (Twin Cities)",
+    "short": "Metro Transit",
     "source": "gtfs-rt",
     "feeds": {
       "vehicle-positions": "https://svc.metrotransit.org/mtgtfs/vehiclepositions.pb"
@@ -46,6 +49,7 @@
   },
   "trimet": {
     "name": "TriMet (Portland)",
+    "short": "TriMet",
     "source": "gtfs-rt",
     "feeds": {
       "vehicle-positions": "https://developer.trimet.org/ws/V1/VehiclePositions"
@@ -63,6 +67,7 @@
   },
   "wmata": {
     "name": "WMATA (DC Metrorail + Metrobus)",
+    "short": "WMATA",
     "source": "gtfs-rt",
     "feeds": {
       "rail-vehicle-positions": "https://api.wmata.com/gtfs/rail-gtfsrt-vehiclepositions.pb",

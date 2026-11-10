@@ -48,6 +48,14 @@ static int vehicleCount = 0;
 static uint32_t nextPollMs = 0;
 static uint8_t pollFailures = 0;
 
+// The Home Assistant agency select is built from the proxy's /agencies
+// roster (docs/agency-select.md): fetched once per run, retried at a slow
+// rate until it succeeds. The roster itself lives in ha_link.cpp; main
+// only owns the retry schedule.
+static bool rosterFetched = false;
+static uint32_t nextRosterMs = 0;
+static constexpr uint32_t ROSTER_RETRY_MS = 30000;
+
 // One animatable dot. Positions are display pixels (projected once at merge
 // time, so the render loop is just integer lerps). ~20 B/vehicle for
 // actives plus the snapshot's vehicles[]: at MAX_VEHICLES 1200 the two
@@ -538,6 +546,29 @@ void loop() {
   // Home Assistant link: no-op unless a broker was provisioned. Runs every
   // loop so keepalive and brightness commands land between polls.
   haService();
+
+  // Feed the agency select its options: fetch the roster once. Attempt it
+  // even while the vehicle poll is failing — a stored agency id the server
+  // no longer serves is exactly when voice control should be able to fix
+  // the wall.
+  if (!rosterFetched && !provNeeded() &&
+      (int32_t)(now - nextRosterMs) >= 0) {
+    nextRosterMs = now + ROSTER_RETRY_MS;  // arm before trying: no retry storm
+    if (WiFi.status() == WL_CONNECTED) {
+      int n = haFetchRoster(provScheme(), provPollHost(), provPort());
+      if (n > 0) {
+        rosterFetched = true;
+        Serial.printf("[agencies] got %d agencies from %s\n", n,
+                      provPollHost());
+      }
+    }
+  }
+
+  // Home Assistant just selected a different agency: poll now rather than
+  // waiting for the next slot, so the wall changes within seconds.
+  if (haTakeAgencyRepoll()) {
+    nextPollMs = now;
+  }
 
   if ((int32_t)(now - nextPollMs) >= 0) {
     // Fallback cadence only for failed polls; a successful poll re-arms

@@ -2,18 +2,22 @@
 // Optional Home Assistant link: the wall speaks MQTT on the LAN it is
 // already connected to and registers itself as a native light entity via
 // Home Assistant MQTT auto-discovery (brightness slider, scenes,
-// automations — no HA YAML). The broker is found by itself: with no
-// `mhost` provisioned the wall browses mDNS for the Home Assistant host
-// (ha_discover.h) and uses its MQTT port; `set mhost=...` overrides that
-// for brokers elsewhere. Credentials (`muser`/`mpass`) stay required by
-// the HA Mosquitto add-on. With neither a broker hint nor credentials set,
-// this module does nothing at all.
+// automations — no HA YAML). It also registers a select entity listing
+// the agencies the proxy serves, so "change the transit wall to SFMTA"
+// works through an LLM conversation agent in HA (docs/agency-select.md).
+// The broker is found by
+// itself: with no `mhost` provisioned the wall browses mDNS for the Home
+// Assistant host (ha_discover.h) and uses its MQTT port; `set mhost=...`
+// overrides that for brokers elsewhere. Credentials (`muser`/`mpass`)
+// stay required by the HA Mosquitto add-on. With neither a broker hint
+// nor credentials set, this module does nothing at all.
 //
-// The wall publishes retained state (ON/OFF + brightness 0-255), an LWT
-// availability topic, and one retained discovery config. Commands arrive on
-// the set topics. The brightness value is persisted in NVS (namespace
-// `otw`, key `bright`) so the wall comes back at the last setting without
-// HA being up. The full design is docs/brightness-plan.md.
+// The wall publishes retained state (ON/OFF + brightness 0-255, the
+// selected agency), an LWT availability topic, and retained discovery
+// configs. Commands arrive on the set topics. The brightness value is
+// persisted in NVS (namespace `otw`, key `bright`) so the wall comes
+// back at the last setting without HA being up. The full design is
+// docs/brightness-plan.md.
 
 #include <Arduino.h>
 
@@ -41,3 +45,15 @@ bool haEnabled();
 // The broker this module is using or last tried: the provisioned host, or
 // the mDNS-discovered one when none was provisioned. Empty = unknown yet.
 const char *haBroker();
+
+// Fetch the proxy's /agencies roster (vehicle_client.h's fetchAgencies)
+// into this module and announce the agency select entity with those
+// options. Safe before the broker connects — the connect path publishes
+// then. Returns the roster count, or 0 on any failure; the caller retries.
+// Already-successful calls return the existing count without fetching.
+int haFetchRoster(const char *scheme, const char *host, uint16_t port);
+
+// True exactly once after Home Assistant selected a different agency than
+// the one polled. Lets the main loop fetch the new fleet immediately
+// instead of waiting out POLL_SECONDS.
+bool haTakeAgencyRepoll();

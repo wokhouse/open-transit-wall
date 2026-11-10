@@ -35,9 +35,12 @@ an MQTT username or a broker host is provisioned over WebSerial (see
   itself, plus a 1 KB heap buffer at runtime.
 - Identity: `otw-<id>`, where `<id>` is the last 3 bytes of the WiFi
   MAC in lowercase hex. Unique per wall, zero extra provisioning.
-- Home Assistant MQTT auto-discovery: one retained config on
+- Home Assistant MQTT auto-discovery: a retained config on
   `homeassistant/light/otw-<id>/config` (schema `basic`, brightness
-  scale 255). HA creates the light entity with no YAML.
+  scale 255). HA creates the light entity with no YAML. (A second
+  retained config, the agency select, lives on
+  `homeassistant/select/otw-<id>/config` — see
+  [`agency-select.md`](agency-select.md).)
 - Topics (state-like ones retained):
   - `otw/<id>/set` — `ON` / `OFF`
   - `otw/<id>/set_brightness` — `0`..`255`
@@ -70,7 +73,7 @@ ones (`docs/provisioning-protocol.md` is the spec):
 | `bmin` | brightness floor, 0–255; empty = 0 |
 | `bmax` | brightness ceiling, 0–255; empty = 255 |
 
-`fw_version` is 4 from the brightness-window change (3 introduced the
+`fw_version` is 5 (4 added `bmin`/`bmax`; 3 introduced the
 `m*` keys). Walls on older firmware reject the unknown keys
 (`ERR unknown key`) and keep working unchanged.
 
